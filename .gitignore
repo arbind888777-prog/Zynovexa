@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env
+.dev.vars
+
+# PM2
+.pm2/
+pids/
+logs/
+*.log
+
+# Wrangler local state
+.wrangler/
+
+# Backup files
+*.backup
+*.bak
+*.tar.gz
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Next.js build output
+.next/
+out/
+
+# API build
+apps/api/dist/
+
+# Python venv
+.venv/
+

@@ -1,0 +1,271 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+enum Platform {
+  INSTAGRAM
+  YOUTUBE
+  TIKTOK
+  TWITTER
+  LINKEDIN
+  FACEBOOK
+  SNAPCHAT
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  CAROUSEL
+  TEXT
+  REEL
+  SHORT
+  STORY
+}
+
+enum AiRequestType {
+  CAPTION
+  HASHTAGS
+  VIDEO_SCRIPT
+  IMAGE
+  CHATBOT
+  BEST_TIME
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  name                 String
+  avatarUrl            String?
+  password             String?
+  provider             String   @default("email")
+  role                 Role     @default(USER)
+  plan                 Plan     @default(FREE)
+  niche                String?
+  bio                  String?
+  website              String?
+  onboardingCompleted  Boolean  @default(false)
+  isVerified           Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  timezone             String   @default("UTC")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  posts           Post[]
+  socialAccounts  SocialAccount[]
+  analytics       Analytics[]
+  aiRequests      AiRequest[]
+  subscription    Subscription?
+  notifications   Notification[]
+  refreshTokens   RefreshToken[]
+  activityLogs    ActivityLog[]
+  invoices        Invoice[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model SocialAccount {
+  id               String   @id @default(cuid())
+  userId           String
+  platform         Platform
+  handle           String   @default("")
+  displayName      String   @default("")
+  platformUserId   String?
+  accessToken      String?
+  refreshToken     String?
+  tokenExpiresAt   DateTime?
+  avatarUrl        String?
+  followersCount   Int      @default(0)
+  followingCount   Int      @default(0)
+  postsCount       Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts   PostAccount[]
+
+  @@unique([userId, platform])
+  @@map("social_accounts")
+}
+
+model Post {
+  id            String     @id @default(cuid())
+  userId        String
+  title         String?
+  caption       String
+  mediaUrls     String[]
+  mediaType     MediaType  @default(TEXT)
+  platforms     Platform[]
+  status        PostStatus @default(DRAFT)
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  publishResults Json?
+  aiGenerated   Boolean    @default(false)
+  viralScore    Float      @default(0)
+  hashtags      String[]
+  location      String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics Analytics[]
+  accounts  PostAccount[]
+
+  @@map("posts")
+}
+
+model PostAccount {
+  id              String        @id @default(cuid())
+  postId          String
+  socialAccountId String
+  status          PostStatus    @default(DRAFT)
+  publishedUrl    String?
+  error           String?
+  publishedAt     DateTime?
+
+  post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@map("post_accounts")
+}
+
+model Analytics {
+  id          String   @id @default(cuid())
+  userId      String
+  postId      String?
+  platform    Platform
+  metricName  String
+  metricValue Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  @@map("analytics")
+}
+
+model AiRequest {
+  id           String        @id @default(cuid())
+  userId       String
+  requestType  AiRequestType
+  prompt       String
+  result       String?
+  tokensUsed   Int           @default(0)
+  model        String        @default("gpt-4o")
+  cost         Float         @default(0)
+  createdAt    DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_requests")
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  plan                 Plan      @default(FREE)
+  status               String    @default("ACTIVE")
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  trialEndsAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  userId          String
+  subscriptionId  String?
+  amount          Int      @default(0)
+  currency        String   @default("usd")
+  status          String   @default("PAID")
+  stripeInvoiceId String?
+  invoiceUrl      String?
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@map("invoices")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO")
+  isRead    Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  resource  String?
+  resourceId String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
