@@ -1,202 +1,145 @@
-# 📊 Test Report - Current Progress
+# Test Report - Verified Status (March 5, 2026)
 
-## Test Coverage Summary
+## Current Summary
 
-### ✅ Tests Created: 7 Files | 25+ Test Cases
+- Total test files: 14
+- Total passing suites: 14/14
+- Total passing tests: 144/144
+- Backend: 4 suites, 21 tests
+- Frontend: 3 suites, 9 tests
+- Web (apps/web): 7 suites, 114 tests (button/link tests)
+- Coverage collected: yes (backend and frontend)
 
-#### Backend (4 Services)
-```
-✅ auth.service.spec.ts - 5 test cases
-   - Signup with duplicate detection
-   - Login success/failure 
-   - User validation
-   
-✅ posts.service.spec.ts - 5 test cases
-   - Create posts
-   - Paginated listing
-   - Single post retrieval
-   - Post deletion
-   - Post publishing
+## Verified Test Inventory
 
-✅ analytics.service.spec.ts - 2 test cases
-   - Dashboard stats
-   - Top posts ranking
+### Backend (`backend/src`)
 
-✅ admin.service.spec.ts - 3 test cases
-   - System overview
-   - User pagination
-   - Post deletion
+```text
+auth/auth.service.spec.ts           -> 7 tests
+posts/posts.service.spec.ts         -> 7 tests
+analytics/analytics.service.spec.ts -> 4 tests
+admin/admin.service.spec.ts         -> 3 tests
 ```
 
-#### Frontend (3 Components/Services)
+### Frontend (`frontend/src`)
+
+```text
+services/auth.service.spec.ts  -> 3 tests
+app/auth/login/page.spec.tsx   -> 3 tests
+app/dashboard/page.spec.tsx    -> 3 tests
 ```
-✅ auth.service.spec.ts - 3 test cases
-   - User login
-   - User signup
-   - Logout
 
-✅ login/page.spec.tsx - 3 test cases
-   - Form rendering
-   - Form submission
-   - Error handling
+### Web App (`apps/web/src`) — Button & Link Tests
 
-✅ dashboard/page.spec.tsx - 3 test cases
-   - Stats display
-   - Loading state
-   - Empty state
+```text
+components/__tests__/Navbar.spec.tsx            -> 14 tests (logo, CTAs, dropdowns, mobile hamburger)
+components/__tests__/Footer.spec.tsx            -> 54 tests (all 49 footer links + logo + 4 social links)
+app/__tests__/landing.spec.tsx                  ->  9 tests (hero CTAs, pricing CTAs, bottom CTA, Navbar/Footer)
+app/__tests__/login.spec.tsx                    ->  9 tests (logo, Google btn, submit, show/hide, demo fill, signup link, inputs)
+app/__tests__/signup.spec.tsx                   -> 10 tests (logo, Google btn, submit, show/hide, Terms, Privacy, login link, inputs)
+app/__tests__/dashboard-layout.spec.tsx         -> 12 tests (sidebar nav 9 links, upgrade, sign out, user info)
+app/__tests__/dashboard-page.spec.tsx           ->  6 tests (create post, AI studio, 4 quick actions, view all, stats)
 ```
 
 ---
 
-## Setup Instructions
+## Execution Evidence
 
-### Backend Jest Setup
+### Backend run
 
-```bash
-cd backend
-
-# Install test dependencies
-npm install --save-dev \
-  jest \
-  ts-jest \
-  @types/jest \
-  @nestjs/testing
-
-# Copy Jest config
-cp jest.config.js (already created)
-
-# Run tests
-npm test                    # Run all tests
-npm test -- --coverage      # With coverage report
-npm test -- --watch         # Watch mode
-npm test -- auth.service    # Specific test
-```
-
-### Frontend Jest Setup
-
-```bash
-cd frontend
-
-# Install test dependencies
-npm install --save-dev \
-  @testing-library/react \
-  @testing-library/jest-dom \
-  @testing-library/user-event \
-  jest \
-  ts-jest
-
-# Copy Jest config & setup
-cp jest.config.js jest.setup.js (already created)
-
-# Run tests
-npm test                    # Run all tests
-npm test -- --coverage      # With coverage report
-npm test -- --watch         # Watch mode
-```
-
----
-
-## Next Steps to Run Tests
-
-### 1️⃣ Install Dependencies
-```bash
-# Backend
-cd backend
-npm install --save-dev jest ts-jest @types/jest @nestjs/testing
-
-# Frontend
-cd frontend
-npm install --save-dev @testing-library/react @testing-library/jest-dom jest ts-jest
-```
-
-### 2️⃣ Run Test Suite
-```bash
-# Execute all tests
-npm test
-
-# Generate coverage report
-npm run test:cov
-```
-
-### 3️⃣ View Coverage Results
-```bash
-# Coverage will be generated in coverage/ directory
-# Open coverage/lcov-report/index.html to view in browser
-```
-
----
-
-## Expected Test Results
-
-Once tests are executed:
-
-```
-PASS  src/auth/auth.service.spec.ts
-  AuthService
-    signup
-      ✓ should create a new user and return token (23ms)
-      ✓ should throw error if user already exists (15ms)
-    login
-      ✓ should return token on successful login (18ms)
-      ✓ should throw error on incorrect password (12ms)
-      ✓ should throw error if user not found (10ms)
-
+```text
+PASS  src/admin/admin.service.spec.ts
 PASS  src/posts/posts.service.spec.ts
-  PostsService
-    ✓ should create a new post (16ms)
-    ✓ should return paginated posts (14ms)
-    ✓ should return null if post not found (8ms)
-    ✓ should delete a post (10ms)
-    ✓ should publish a post (12ms)
+PASS  src/auth/auth.service.spec.ts
+PASS  src/analytics/analytics.service.spec.ts
 
-Test Suites: 2 passed, 2 total
-Tests:       25 passed, 25 total
-Coverage: 78.5%
+Test Suites: 4 passed, 4 total
+Tests:       21 passed, 21 total
 ```
 
----
+### Frontend run
 
-## Coverage Targets
+```text
+PASS  src/services/auth.service.spec.ts
+PASS  src/app/auth/login/page.spec.tsx
+PASS  src/app/dashboard/page.spec.tsx
 
-| Metric | Backend | Frontend | Overall |
-|--------|---------|----------|---------|
-| Lines | 82% | 75% | 78.5% |
-| Branches | 78% | 70% | 74% |
-| Functions | 85% | 78% | 81.5% |
-| Statements | 82% | 74% | 78% |
-
----
-
-## CI/CD Integration Ready
-
-Add to `.github/workflows/test.yml`:
-```yaml
-name: Tests
-on: [push, pull_request]
-jobs:
-  backend-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: cd backend && npm ci && npm test -- --coverage
-      
-  frontend-tests:
-    runs-on: ubuntu-latest  
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: cd frontend && npm ci && npm test -- --coverage
+Test Suites: 3 passed, 3 total
+Tests:       9 passed, 9 total
 ```
 
+### Web App (apps/web) — Button & Link Tests
+
+```text
+PASS  src/components/__tests__/Navbar.spec.tsx
+PASS  src/components/__tests__/Footer.spec.tsx
+PASS  src/app/__tests__/landing.spec.tsx
+PASS  src/app/__tests__/login.spec.tsx
+PASS  src/app/__tests__/signup.spec.tsx
+PASS  src/app/__tests__/dashboard-layout.spec.tsx
+PASS  src/app/__tests__/dashboard-page.spec.tsx
+
+Test Suites: 7 passed, 7 total
+Tests:       114 passed, 114 total
+```
+
+### Coverage runs
+
+```text
+Backend: npm run test:coverage
+All files: Statements 100% | Branches 92.85% | Functions 100% | Lines 100%
+Status: PASSED
+
+Frontend: npm run test:coverage
+All files: Statements 94.44% | Branches 100% | Functions 84.61% | Lines 94.44%
+Status: PASSED
+```
+
+## Coverage Metrics
+
+| App | Statements | Branches | Functions | Lines | Threshold Status |
+|-----|------------|----------|-----------|-------|------------------|
+| Backend | 100% | 92.85% | 100% | 100% | Pass |
+| Frontend | 94.44% | 100% | 84.61% | 94.44% | Pass |
+
 ---
 
-## Status: 🟡 Ready for Execution
+## Correct Run Commands
 
-- ✅ Test files created (7 files)
-- ✅ Jest config files ready
-- ✅ Mocking setup complete
-- ⏳ Ready to run: `npm install && npm test`
-- 📈 Expected coverage: 75-80%
+### Backend
 
-Run `npm install --save-dev jest ts-jest` in backend/frontend, then `npm test` to execute!
+```powershell
+Set-Location backend
+npm test
+npm run test:coverage
+npm run test:watch
+```
+
+### Frontend
+
+```powershell
+Set-Location frontend
+npm test
+npm run test:coverage
+npm run test:watch
+```
+
+### Web App (apps/web)
+
+```powershell
+Set-Location apps/web
+npm test
+npm run test:watch
+```
+
+Note: `test:cov` script is not defined. Use `test:coverage`.
+
+---
+
+## Known Gaps
+
+1. No blocking test/coverage gaps currently identified.
+
+## Next Steps
+
+1. Trigger CI on next push/PR and verify both jobs pass on GitHub Actions.

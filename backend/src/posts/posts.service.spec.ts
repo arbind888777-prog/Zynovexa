@@ -116,5 +116,12 @@ describe('PostsService', () => {
 
       expect(result.status).toBe(PostStatus.PUBLISHED);
     });
+
+    it('should throw if post does not exist', async () => {
+      mockPostRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.publish('missing', 'user-1')).rejects.toThrow('Post not found');
+      expect(mockPostRepository.save).not.toHaveBeenCalled();
+    });
   });
 });

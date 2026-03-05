@@ -48,6 +48,33 @@ describe('AnalyticsService', () => {
       expect(result.recommendations).toBeDefined();
       expect(Array.isArray(result.recommendations)).toBe(true);
     });
+
+    it('should include both recommendations for low score and low volume', async () => {
+      mockPostRepository.count.mockResolvedValue(3);
+      mockPostRepository.find.mockResolvedValue([
+        { viralScore: 20 },
+        { viralScore: 40 },
+      ]);
+
+      const result = await service.getDashboardStats('user-1');
+
+      expect(result.avgViralScore).toBe(30);
+      expect(result.recommendations).toContain('Post more consistently to improve engagement');
+      expect(result.recommendations).toContain('Create more content to grow your audience');
+    });
+
+    it('should return no recommendations when performance is healthy', async () => {
+      mockPostRepository.count.mockResolvedValue(12);
+      mockPostRepository.find.mockResolvedValue([
+        { viralScore: 80 },
+        { viralScore: 70 },
+      ]);
+
+      const result = await service.getDashboardStats('user-1');
+
+      expect(result.avgViralScore).toBe(75);
+      expect(result.recommendations).toEqual([]);
+    });
   });
 
   describe('getTopPosts', () => {
