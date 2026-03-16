@@ -1,6 +1,23 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const DEMO_TOKEN = 'demo-token-zynovexa';
+
+type ApiEnvelope<T> = {
+  success?: boolean;
+  data: T;
+};
+
+export function unwrapApiData<T>(payload: T | ApiEnvelope<T>): T {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return (payload as ApiEnvelope<T>).data;
+  }
+  return payload as T;
+}
+
+export function unwrapApiResponse<T>(response: { data: T | ApiEnvelope<T> }): T {
+  return unwrapApiData<T>(response.data);
+}
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -21,15 +38,27 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+    const isUnauthorized = error.response?.status === 401;
+
+    // Keep demo sessions on dashboard even if backend rejects demo token.
+    if (isUnauthorized && typeof window !== 'undefined') {
+      const currentToken = localStorage.getItem('access_token');
+      if (currentToken === DEMO_TOKEN) {
+        return Promise.reject(error);
+      }
+    }
+
+    if (isUnauthorized && original && !original._retry) {
       original._retry = true;
       try {
         const refresh = localStorage.getItem('refresh_token');
         if (!refresh) throw new Error('No refresh token');
         const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken: refresh });
-        localStorage.setItem('access_token', data.accessToken);
-        localStorage.setItem('refresh_token', data.refreshToken);
-        original.headers.Authorization = `Bearer ${data.accessToken}`;
+        const tokens = unwrapApiData<{ accessToken: string; refreshToken: string }>(data);
+        localStorage.setItem('access_token', tokens.accessToken);
+        localStorage.setItem('refresh_token', tokens.refreshToken);
+        original.headers = original.headers || {};
+        original.headers.Authorization = `Bearer ${tokens.accessToken}`;
         return api(original);
       } catch {
         localStorage.removeItem('access_token');
@@ -71,12 +100,36 @@ export const postsApi = {
   getScheduled: () => api.get('/posts/scheduled'),
 };
 
+// ─── Uploads API ───────────────────────────────────────────────────────────
+export const uploadsApi = {
+  uploadSingle: (file: File, folder = 'posts', alt?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const headers: Record<string, string> = {};
+
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    }
+
+    return axios.post(`${API_URL}/uploads/single`, formData, {
+      params: { folder, alt },
+      headers,
+      withCredentials: true,
+    });
+  },
+};
+
 // ─── Accounts API ──────────────────────────────────────────────────────────
 export const accountsApi = {
   getAll: () => api.get('/accounts'),
   getStats: () => api.get('/accounts/stats'),
+  getYoutubeInsights: () => api.get('/accounts/youtube/insights'),
   connect: (data: any) => api.post('/accounts/connect', data),
   disconnect: (id: string) => api.delete(`/accounts/${id}`),
+  update: (id: string, data: any) => api.put(`/accounts/${id}`, data),
+  // YouTube OAuth connect flow
+  getYoutubeConnectUrl: () => api.get('/accounts/connect/youtube'),
 };
 
 // ─── Analytics API ─────────────────────────────────────────────────────────
@@ -96,6 +149,8 @@ export const aiApi = {
   chat: (data: any) => api.post('/ai/chat', data),
   getBestTimes: (data: any) => api.post('/ai/best-time', data),
   getUsage: () => api.get('/ai/usage'),
+  getChatMemory: () => api.get('/ai/chat-memory'),
+  resetChatMemory: () => api.post('/ai/chat-memory/reset'),
 };
 
 // ─── Subscriptions API ─────────────────────────────────────────────────────

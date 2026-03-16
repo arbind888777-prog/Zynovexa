@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { analyticsApi } from '@/lib/api';
+import { analyticsApi, unwrapApiResponse } from '@/lib/api';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const PERIODS = ['7d', '30d', '90d', '1y'] as const;
@@ -23,10 +23,12 @@ function MetricCard({ label, value, sub, icon }: any) {
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
 
-  const { data: overview } = useQuery({ queryKey: ['analytics-overview', period], queryFn: () => analyticsApi.getOverview({ period }).then(r => r.data) });
-  const { data: chart } = useQuery({ queryKey: ['analytics-chart', period], queryFn: () => analyticsApi.getChartData({ period }).then(r => r.data) });
-  const { data: platforms } = useQuery({ queryKey: ['analytics-platforms'], queryFn: () => analyticsApi.getPlatforms().then(r => r.data) });
-  const { data: topPosts } = useQuery({ queryKey: ['top-posts'], queryFn: () => analyticsApi.getTopPosts(10).then(r => r.data) });
+  const { data: overview, isLoading: overviewLoading, isError: overviewError } = useQuery({ queryKey: ['analytics-overview', period], queryFn: () => analyticsApi.getOverview({ period }).then(unwrapApiResponse) });
+  const { data: chart, isLoading: chartLoading } = useQuery({ queryKey: ['analytics-chart', period], queryFn: () => analyticsApi.getChartData({ period }).then(unwrapApiResponse) });
+  const { data: platforms, isLoading: platformsLoading } = useQuery({ queryKey: ['analytics-platforms'], queryFn: () => analyticsApi.getPlatforms().then(unwrapApiResponse) });
+  const { data: topPosts, isLoading: postsLoading } = useQuery({ queryKey: ['top-posts'], queryFn: () => analyticsApi.getTopPosts(10).then(unwrapApiResponse) });
+
+  const isLoading = overviewLoading || chartLoading;
 
   return (
     <div className="p-8 space-y-8 animate-fade-in">
@@ -43,7 +45,37 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Error State */}
+      {overviewError && (
+        <div className="card p-8 text-center">
+          <p className="text-4xl mb-3">⚠️</p>
+          <p className="text-red-400 mb-2">Failed to load analytics data</p>
+          <button onClick={() => window.location.reload()} className="btn btn-secondary btn-sm">Retry</button>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="card p-5">
+                <div className="shimmer w-8 h-8 rounded-lg mb-3" />
+                <div className="shimmer h-7 w-16 rounded mb-2" />
+                <div className="shimmer h-3 w-24 rounded" />
+              </div>
+            ))}
+          </div>
+          <div className="card p-6">
+            <div className="shimmer h-5 w-48 rounded mb-6" />
+            <div className="shimmer w-full h-64 rounded-lg" />
+          </div>
+        </div>
+      )}
+
       {/* Overview */}
+      {!isLoading && !overviewError && (
+      <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon="👁️" label="Total Impressions" value={overview?.totalImpressions} sub={`Last ${period}`} />
         <MetricCard icon="❤️" label="Engagements" value={overview?.totalEngagements} sub={`${overview?.avgEngagementRate}% rate`} />
@@ -111,6 +143,18 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && !overviewError && !overview?.totalImpressions && !overview?.totalEngagements && (
+        <div className="card p-12 text-center">
+          <p className="text-5xl mb-4">📊</p>
+          <h3 className="text-xl font-bold text-white mb-2">No analytics data yet</h3>
+          <p className="text-gray-400 text-sm mb-4">Connect accounts and publish posts to see your analytics here.</p>
+          <a href="/accounts" className="btn btn-primary">Connect Account</a>
+        </div>
+      )}
+      </>
       )}
     </div>
   );

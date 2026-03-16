@@ -58,6 +58,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     // Compare
     page('/compare', 0.8),
+    page('/compare/gudsho-alternative', 0.8),
+    page('/compare/buffer-alternative', 0.8),
+    page('/compare/hootsuite-alternative', 0.8),
+    page('/compare/later-alternative', 0.8),
+    page('/compare/sprout-social-alternative', 0.8),
+    page('/compare/socialbee-alternative', 0.7),
+    page('/compare/planable-alternative', 0.7),
+    page('/compare/all', 0.8),
+
+    // Sitemap page
+    page('/sitemap-page', 0.5),
 
     // Community & resources
     page('/community', 0.7, 'weekly'),
@@ -73,7 +84,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     page('/careers', 0.7, 'weekly'),
     page('/press', 0.6),
     page('/partner-program', 0.7),
-    page('/legal', 0.5),
+    page('/legal', 0.6, 'monthly'),
 
     // Resources
     page('/blog', 0.8, 'weekly'),
@@ -93,7 +104,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     // Company
     page('/about', 0.6),
-    page('/privacy', 0.3, 'yearly'),
-    page('/terms', 0.3, 'yearly'),
+    page('/privacy', 0.5, 'yearly'),
+    page('/terms', 0.5, 'yearly'),
+
+    // Legal subpages
+    page('/legal/cookies', 0.4, 'yearly'),
+    page('/legal/gdpr', 0.4, 'yearly'),
+    page('/legal/dpa', 0.4, 'yearly'),
+    page('/legal/copyright', 0.4, 'yearly'),
   ];
 }

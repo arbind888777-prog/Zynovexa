@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import MarketingLayout from '@/components/MarketingLayout';
+import UseTemplateButton from '@/components/UseTemplateButton';
 
 export const metadata: Metadata = {
   title: 'Social Media Templates — 500+ Free Templates | Zynovexa',
@@ -112,7 +113,7 @@ export default function TemplatesPage() {
                           <span key={tag} className="text-xs px-2 py-0.5 rounded bg-white/5 text-slate-400">{tag}</span>
                         ))}
                       </div>
-                      <button className="mt-3 text-xs text-purple-400 hover:text-purple-300 transition-colors">Use Template →</button>
+                      <UseTemplateButton title={t.title} />
                     </div>
                   </div>
                 ))}

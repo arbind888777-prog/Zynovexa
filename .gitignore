@@ -12,7 +12,19 @@ pids
 
 # Environment variables
 .env
+.env.local
+.env.*.local
 .dev.vars
+
+# Uploaded user files (videos, images, documents - stored on disk/S3 in prod)
+apps/api/uploads/videos/*
+apps/api/uploads/images/*
+apps/api/uploads/audio/*
+apps/api/uploads/documents/*
+!apps/api/uploads/videos/.gitkeep
+!apps/api/uploads/images/.gitkeep
+!apps/api/uploads/audio/.gitkeep
+!apps/api/uploads/documents/.gitkeep
 
 # PM2
 .pm2/

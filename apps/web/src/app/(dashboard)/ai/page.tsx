@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { aiApi } from '@/lib/api';
+import { aiApi, unwrapApiResponse } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -23,9 +23,22 @@ export default function AIStudioPage() {
   const [chatHistory, setChatHistory] = useState<{ role: string; content: string }[]>([]);
   const [chatMsg, setChatMsg] = useState('');
 
-  const { data: usage } = useQuery({ queryKey: ['ai-usage'], queryFn: () => aiApi.getUsage().then(r => r.data) });
+  const { data: usage } = useQuery({ queryKey: ['ai-usage'], queryFn: () => aiApi.getUsage().then(unwrapApiResponse) });
 
-  const [fields, setFields] = useState({ description: '', niche: '', tone: 'casual', platforms: '', topic: '', duration: '60', content: '', prompt: '', platform: '', timezone: 'UTC' });
+  const [fields, setFields] = useState({
+    description: '',
+    niche: '',
+    tone: 'casual',
+    platforms: '',
+    topic: '',
+    duration: '60',
+    content: '',
+    prompt: '',
+    platform: '',
+    timezone: 'UTC',
+    language: 'English',
+    brandVoice: '',
+  });
   const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setFields(p => ({ ...p, [k]: e.target.value }));
 
   const runTool = async () => {
@@ -33,12 +46,12 @@ export default function AIStudioPage() {
     try {
       let res: any;
       const plats = fields.platforms.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
-      if (activeTool === 'caption') res = await aiApi.generateCaption({ description: fields.description, niche: fields.niche, tone: fields.tone, platforms: plats, includeHashtags: true, includeEmojis: true });
-      else if (activeTool === 'hashtags') res = await aiApi.generateHashtags({ content: fields.content, niche: fields.niche });
-      else if (activeTool === 'script') res = await aiApi.generateScript({ topic: fields.topic, platform: fields.platform, durationSeconds: parseInt(fields.duration), niche: fields.niche });
+      if (activeTool === 'caption') res = await aiApi.generateCaption({ description: fields.description, niche: fields.niche, tone: fields.tone, platforms: plats, includeHashtags: true, includeEmojis: true, language: fields.language, brandVoice: fields.brandVoice });
+      else if (activeTool === 'hashtags') res = await aiApi.generateHashtags({ content: fields.content, niche: fields.niche, language: fields.language, platforms: plats });
+      else if (activeTool === 'script') res = await aiApi.generateScript({ topic: fields.topic, platform: fields.platform, durationSeconds: parseInt(fields.duration), niche: fields.niche, language: fields.language, brandVoice: fields.brandVoice });
       else if (activeTool === 'image') res = await aiApi.generateImage({ prompt: fields.prompt });
       else if (activeTool === 'besttime') res = await aiApi.getBestTimes({ platform: fields.platform, niche: fields.niche, timezone: fields.timezone });
-      setResult(res?.data);
+      setResult(unwrapApiResponse(res));
     } catch (e: any) { toast.error(e?.response?.data?.message || 'AI failed'); }
     finally { setLoading(false); }
   };
@@ -51,14 +64,66 @@ export default function AIStudioPage() {
     setChatHistory(newHistory);
     setLoading(true);
     try {
-      const res = await aiApi.chat({ message: msg, history: chatHistory });
-      setChatHistory([...newHistory, { role: 'assistant', content: res.data.reply }]);
+      const res = await aiApi.chat({ message: msg, history: chatHistory, language: fields.language, brandVoice: fields.brandVoice });
+      const payload = unwrapApiResponse<{ reply: string }>(res);
+      setChatHistory([...newHistory, { role: 'assistant', content: payload.reply }]);
     } catch (e: any) { toast.error('Chat failed'); }
     finally { setLoading(false); }
   };
 
+  const exportMemory = async () => {
+    try {
+      const server = await aiApi.getChatMemory();
+      const serverPayload = unwrapApiResponse<{ messages?: unknown[] }>(server);
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        localMessages: chatHistory,
+        serverMessages: serverPayload?.messages || [],
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `zynovexa-ai-memory-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('AI memory exported');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Memory export failed');
+    }
+  };
+
+  const resetMemory = async () => {
+    if (!confirm('Reset AI chat memory? This will clear local and server chat memory.')) return;
+    try {
+      await aiApi.resetChatMemory();
+      setChatHistory([]);
+      localStorage.removeItem('zynovexa-ai-chat-memory');
+      toast.success('AI memory reset complete');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Memory reset failed');
+    }
+  };
+
   const inputClass = "w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-purple-500";
   const inputStyle = { background: 'var(--surface)', border: '1px solid var(--border)' };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('zynovexa-ai-chat-memory');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setChatHistory(parsed.slice(-80));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('zynovexa-ai-chat-memory', JSON.stringify(chatHistory.slice(-80)));
+    } catch {}
+  }, [chatHistory]);
 
   return (
     <div className="p-8 animate-fade-in">
@@ -93,6 +158,19 @@ export default function AIStudioPage() {
           <h2 className="font-semibold text-white mb-4">{TOOLS.find(t => t.id === activeTool)?.name}</h2>
           <p className="text-xs text-gray-400 mb-5">{TOOLS.find(t => t.id === activeTool)?.desc}</p>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Language</label>
+              <select value={fields.language} onChange={f('language') as any} className={inputClass} style={inputStyle}>
+                {['English', 'Hindi', 'Hinglish'].map((l) => <option key={l}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Brand Voice</label>
+              <input value={fields.brandVoice} onChange={f('brandVoice')} placeholder="Bold, witty, motivational..." className={inputClass} style={inputStyle} />
+            </div>
+          </div>
+
           {activeTool === 'chat' ? (
             <div>
               <div className="h-64 overflow-y-auto space-y-3 mb-4 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
@@ -111,6 +189,14 @@ export default function AIStudioPage() {
                 <input value={chatMsg} onChange={e => setChatMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendChat()}
                   placeholder="Ask Zyx anything..." className={`flex-1 ${inputClass}`} style={inputStyle} />
                 <button onClick={sendChat} disabled={loading} className="px-4 py-2 rounded-lg text-white font-medium" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>Send</button>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button onClick={exportMemory} className="px-3 py-1.5 rounded-lg text-xs text-purple-300 border border-purple-500/40 hover:bg-purple-500/10 transition-all">
+                  Export Memory
+                </button>
+                <button onClick={resetMemory} className="px-3 py-1.5 rounded-lg text-xs text-red-300 border border-red-500/40 hover:bg-red-500/10 transition-all">
+                  Reset Memory
+                </button>
               </div>
             </div>
           ) : (
@@ -152,6 +238,24 @@ export default function AIStudioPage() {
           {loading && activeTool !== 'chat' && <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>}
           {result && activeTool !== 'chat' && (
             <div className="space-y-4">
+              {typeof result.qualityScore === 'number' && (
+                <div className="p-3 rounded-lg" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-400">AI Quality Score</p>
+                    <p className="text-sm font-semibold text-white">{result.qualityScore}/100</p>
+                  </div>
+                  <div className="w-full h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                    <div
+                      className="h-2 rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, result.qualityScore))}%`,
+                        background: 'linear-gradient(90deg, #22c55e, #84cc16, #eab308)',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {activeTool === 'caption' && result.captions?.map((c: string, i: number) => (
                 <div key={i} className="p-4 rounded-lg" style={{ background: 'var(--surface)' }}>
                   <p className="text-sm text-gray-200 mb-3">{c}</p>
@@ -181,7 +285,7 @@ export default function AIStudioPage() {
                 <div>
                   <img src={result.imageUrl} alt="Generated" className="w-full rounded-xl mb-3" />
                   {result.revisedPrompt && <p className="text-xs text-gray-500 mb-2">Revised: {result.revisedPrompt}</p>}
-                  <a href={result.imageUrl} download className="block text-center text-sm text-purple-400 hover:text-purple-300">↓ Download</a>
+                  <button onClick={() => { fetch(result.imageUrl).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'zynovexa-ai-image.png'; a.click(); URL.revokeObjectURL(a.href); }); }} className="block w-full text-center text-sm text-purple-400 hover:text-purple-300">↓ Download</button>
                 </div>
               )}
               {activeTool === 'besttime' && result.bestTimes && (

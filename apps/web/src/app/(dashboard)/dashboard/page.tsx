@@ -1,8 +1,62 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { usersApi, postsApi, analyticsApi, aiApi } from '@/lib/api';
+import { usersApi, analyticsApi, aiApi, unwrapApiResponse } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import Link from 'next/link';
+
+function getMediaBadge(post: any) {
+  const count = post.mediaUrls?.length || 0;
+
+  if (post.mediaType === 'TEXT' || count === 0) {
+    return { label: 'TEXT', color: '#34d399' };
+  }
+
+  if (post.mediaType === 'VIDEO') {
+    return { label: count > 1 ? `VIDEO x${count}` : 'VIDEO', color: '#38bdf8' };
+  }
+
+  if (post.mediaType === 'IMAGE') {
+    return { label: count > 1 ? `IMAGE x${count}` : 'IMAGE', color: '#f472b6' };
+  }
+
+  return { label: post.mediaType || 'MEDIA', color: '#c084fc' };
+}
+
+function getPostHint(post: any) {
+  const isYoutubeSelected = post.platforms?.includes('YOUTUBE');
+  const isYoutubeVideoPost = isYoutubeSelected && ['VIDEO', 'REEL', 'SHORT'].includes(post.mediaType);
+
+  if (isYoutubeSelected && !isYoutubeVideoPost) {
+    return { text: 'YouTube text/image scheduled, manual publish required', color: '#fbbf24' };
+  }
+
+  if (isYoutubeVideoPost && (!post.mediaUrls || post.mediaUrls.length === 0)) {
+    return { text: 'YouTube video missing', color: '#f87171' };
+  }
+
+  if (post.mediaType && post.mediaType !== 'TEXT' && (!post.mediaUrls || post.mediaUrls.length === 0)) {
+    return { text: 'Media missing', color: '#fbbf24' };
+  }
+
+  return null;
+}
+
+function getPublishModeBadge(post: any) {
+  if (!post?.publishResults || typeof post.publishResults !== 'object') {
+    return null;
+  }
+
+  const youtubeResult = post.publishResults.YOUTUBE;
+  if (youtubeResult?.success && youtubeResult.mode === 'youtube-live') {
+    return { label: 'YT VIDEO', color: '#ef4444' };
+  }
+
+  if (youtubeResult?.manualRequired && youtubeResult.mode === 'youtube-manual') {
+    return { label: 'YT MANUAL', color: '#f59e0b' };
+  }
+
+  return null;
+}
 
 function StatCard({ label, value, sub, icon, color }: any) {
   return (
@@ -22,10 +76,12 @@ function StatCard({ label, value, sub, icon, color }: any) {
 export default function DashboardPage() {
   const { user } = useAuthStore();
 
-  const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: () => usersApi.getDashboardStats().then(r => r.data) });
-  const { data: overview } = useQuery({ queryKey: ['analytics-overview'], queryFn: () => analyticsApi.getOverview().then(r => r.data) });
-  const { data: topPosts } = useQuery({ queryKey: ['top-posts'], queryFn: () => analyticsApi.getTopPosts(5).then(r => r.data) });
-  const { data: aiUsage } = useQuery({ queryKey: ['ai-usage'], queryFn: () => aiApi.getUsage().then(r => r.data) });
+  const { data: stats, isLoading: statsLoading, isError: statsError } = useQuery({ queryKey: ['dashboard-stats'], queryFn: () => usersApi.getDashboardStats().then(unwrapApiResponse) });
+  const { data: overview, isLoading: overviewLoading } = useQuery({ queryKey: ['analytics-overview'], queryFn: () => analyticsApi.getOverview().then(unwrapApiResponse) });
+  const { data: topPosts, isLoading: postsLoading } = useQuery({ queryKey: ['top-posts'], queryFn: () => analyticsApi.getTopPosts(5).then(unwrapApiResponse) });
+  const { data: aiUsage, isLoading: aiLoading } = useQuery({ queryKey: ['ai-usage'], queryFn: () => aiApi.getUsage().then(unwrapApiResponse) });
+
+  const isLoading = statsLoading || overviewLoading;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -44,13 +100,36 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* Error State */}
+      {statsError && (
+        <div className="card p-6 text-center">
+          <p className="text-red-400 mb-2">⚠️ Failed to load dashboard data</p>
+          <button onClick={() => window.location.reload()} className="btn btn-secondary btn-sm">Retry</button>
+        </div>
+      )}
+
+      {/* Loading Skeleton */}
+      {isLoading && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="card p-6">
+              <div className="shimmer w-10 h-10 rounded-lg mb-4" />
+              <div className="shimmer h-8 w-20 rounded mb-2" />
+              <div className="shimmer h-4 w-28 rounded" />
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Stats Grid */}
+      {!isLoading && (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon="📝" label="Total Posts" value={stats?.totalPosts} sub={`${stats?.scheduledPosts} scheduled`} color="#6366f1" />
         <StatCard icon="👁️" label="Impressions" value={overview?.totalImpressions?.toLocaleString()} sub="Last 30 days" color="#a855f7" />
         <StatCard icon="❤️" label="Engagements" value={overview?.totalEngagements?.toLocaleString()} sub={`${overview?.avgEngagementRate}% rate`} color="#ec4899" />
         <StatCard icon="👥" label="Total Followers" value={overview?.totalFollowers?.toLocaleString()} sub={`${stats?.connectedAccounts} platforms`} color="#10b981" />
       </div>
+      )}
 
       {/* AI Usage + Quick Actions */}
       <div className="grid lg:grid-cols-3 gap-6">
@@ -103,8 +182,39 @@ export default function DashboardPage() {
             {topPosts.map((post: any) => (
               <div key={post.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
                 <div className="flex-1 min-w-0">
+                  {(() => {
+                    const mediaBadge = getMediaBadge(post);
+                    const postHint = getPostHint(post);
+                    const publishModeBadge = getPublishModeBadge(post);
+
+                    return (
+                      <>
                   <p className="text-sm font-medium text-white truncate">{post.title || post.caption?.substring(0, 40) + '...'}</p>
                   <p className="text-xs text-gray-500">{post.platforms?.join(', ')}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span
+                      className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                      style={{ background: `${mediaBadge.color}20`, color: mediaBadge.color }}
+                    >
+                      {mediaBadge.label}
+                    </span>
+                    {publishModeBadge && (
+                      <span
+                        className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: `${publishModeBadge.color}20`, color: publishModeBadge.color }}
+                      >
+                        {publishModeBadge.label}
+                      </span>
+                    )}
+                    {postHint && (
+                      <span className="text-[10px]" style={{ color: postHint.color }}>
+                        {postHint.text}
+                      </span>
+                    )}
+                  </div>
+                      </>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   <div className="text-xs font-bold text-purple-400">{post.viralScore}%</div>

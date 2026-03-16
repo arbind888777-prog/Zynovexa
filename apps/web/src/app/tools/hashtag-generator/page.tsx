@@ -1,56 +1,113 @@
-'use client';
+import type { Metadata } from 'next';
+import Link from 'next/link';
 import MarketingLayout from '@/components/MarketingLayout';
-import { useState } from 'react';
+import HashtagGeneratorClient from './HashtagGeneratorClient';
 
-const NICHES = ['Fashion', 'Fitness', 'Food', 'Travel', 'Tech', 'Finance', 'Business', 'Beauty', 'Gaming', 'Education', 'Lifestyle', 'Photography'];
-const PLATFORMS = ['Instagram', 'TikTok', 'Twitter/X', 'LinkedIn', 'YouTube'];
+const APP_URL = 'https://zynovexa.com';
 
-const HASHTAG_SETS: Record<string, string[][]> = {
-  Fashion: [
-    ['#Fashion', '#OOTD', '#Style', '#Fashionista', '#OutfitOfTheDay', '#FashionBlogger', '#Streetwear', '#WhatIWore', '#FashionPhotography', '#Minimal', '#FashionWeek', '#Trendy', '#OOTDInspiration', '#FashionInspo', '#StyleGoals', '#DailyLook', '#FashionLovers', '#Styling', '#FashionAddict', '#GRWM'],
-    ['#FastFashion', '#SustainableFashion', '#VintageStyle', '#AestheticFashion', '#FashionBlog', '#FashionLife', '#FashionDesigner', '#FashionTrends', '#ModaFashion', '#FashionPhotoshoot'],
+export const metadata: Metadata = {
+  title: 'Free Hashtag Generator — Instagram, TikTok, YouTube & More | Zynovexa',
+  description:
+    'Find the perfect hashtags for your niche and platform. Curated hashtag sets for Instagram, TikTok, YouTube, LinkedIn and X. 100% free.',
+  keywords: [
+    'hashtag generator',
+    'free hashtag generator',
+    'instagram hashtag generator',
+    'tiktok hashtag generator',
+    'niche hashtag tool',
+    'social media hashtags',
+    'hashtag research',
   ],
-  Fitness: [
-    ['#Fitness', '#GymLife', '#Workout', '#FitFam', '#HealthyLifestyle', '#Training', '#FitnessMotivation', '#Gym', '#NoPainNoGain', '#FitnessJourney', '#BodyBuilding', '#GymMotivation', '#Gains', '#CardioKing', '#LiftHeavy', '#FitLife', '#CrossFit', '#WorkoutOfTheDay', '#HIIT', '#FitnessCommunity'],
-    ['#PersonalTrainer', '#WeightLoss', '#MuscleBuilding', '#HealthAndFitness', '#ActiveLifestyle', '#FitnessGoals', '#StrengthTraining', '#FitnessAddict', '#TransformationTuesday', '#FitnessFreak'],
-  ],
-  Food: [
-    ['#Food', '#Foodie', '#FoodPhotography', '#Yummy', '#Delicious', '#FoodBlogger', '#EatingOut', '#Foodstagram', '#FoodLover', '#Cooking', '#ChefLife', '#Recipe', '#HomeCooking', '#FoodPorn', '#InstFood', '#Tasty', '#FoodPic', '#FoodGram', '#NomNom', '#Baking'],
-    ['#VeganFood', '#HealthyFood', '#StreetFood', '#RestaurantReview', '#FoodReels', '#MealPrep', '#FoodTrends', '#GourmetFood', '#FoodBlog', '#ComfortFood'],
-  ],
-  Tech: [
-    ['#Tech', '#Technology', '#Software', '#AI', '#MachineLearning', '#Programming', '#Coding', '#Developer', '#Startup', '#Innovation', '#TechNews', '#WebDevelopment', '#AppDevelopment', '#TechLife', '#DigitalTransformation', '#DataScience', '#CyberSecurity', '#CloudComputing', '#DevOps', '#OpenSource'],
-    ['#TechTwitter', '#SoftwareEngineer', '#FullStack', '#JavaScript', '#Python', '#BuildInPublic', '#Indie', '#SaaS', '#ProductManagement', '#UXDesign'],
-  ],
+  alternates: { canonical: `${APP_URL}/tools/hashtag-generator` },
+  openGraph: {
+    title: 'Free Hashtag Generator | Zynovexa',
+    description:
+      'Find the perfect hashtags to boost your reach. Curated for your niche and platform. Free, no signup.',
+    url: `${APP_URL}/tools/hashtag-generator`,
+    type: 'website',
+    siteName: 'Zynovexa',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Free Hashtag Generator | Zynovexa',
+    description:
+      'Curated hashtag sets for Instagram, TikTok, YouTube, LinkedIn & more. Free hashtag research tool.',
+  },
 };
 
+const SEO_SECTIONS = [
+  {
+    title: 'Why hashtags still matter for discovery',
+    paragraphs: [
+      'Hashtags are no longer the only discovery lever, but they still help content platforms understand context, niche relevance, and audience signals. The best hashtag strategy is not about stuffing 30 random tags under every post. It is about combining broad category tags, niche tags, and intent-rich tags that match the actual topic of the post. That mix helps content reach more qualified viewers instead of only chasing empty impressions.',
+      'A good hashtag generator speeds up that process by removing guesswork. Instead of manually researching tags every time you publish, creators can start with a curated set that reflects their niche and platform. This page is now built to serve both users and search engines by pairing the interactive tool with educational content about discovery, reach, and smarter hashtag selection.',
+    ],
+  },
+  {
+    title: 'How to choose better hashtags for Instagram, TikTok, and YouTube',
+    paragraphs: [
+      'The strongest hashtag sets usually include three layers. First, a few broad tags describe the market, such as fitness, fashion, tech, or business. Second, niche tags narrow the audience, such as strength training, sustainable fashion, SaaS growth, or creator education. Third, contextual tags connect the post to a specific moment, campaign, offer, or format. This layered method creates better targeting than repeating the same viral tags on every post.',
+      'Platform context matters too. Instagram often rewards a well-balanced set of relevant tags. TikTok depends more heavily on content quality and watch behavior, but hashtags still support context and trend alignment. YouTube uses metadata differently, yet strategic tags can still support organization and discoverability. That is why a flexible hashtag tool is more useful than a one-size-fits-all tag list.',
+    ],
+  },
+  {
+    title: 'What makes this hashtag generator more SEO-friendly',
+    paragraphs: [
+      'Search-friendly tool pages need more than an input and output box. They need useful explanations, structured headings, internal linking, and content that answers adjacent questions. By adding long-form guidance, this page can now better support search intent around free hashtag generator, Instagram hashtag tool, TikTok hashtag ideas, and niche hashtag research for creators and brands.',
+      'The content also connects naturally to adjacent pages inside Zynovexa, including AI caption generation, content creation, scheduling, and analytics. That internal linking matters because it helps users discover the full workflow while helping search engines understand how the site covers the broader topic of social media growth. In practical terms, this page now works harder as both a tool and a landing page.',
+    ],
+  },
+];
+
+const FAQS = [
+  {
+    q: 'How many hashtags should I use?',
+    a: 'There is no universal number. The right count depends on platform and post quality, but relevance matters more than volume. A smaller, tighter set of targeted hashtags often performs better than a large list of unrelated ones.',
+  },
+  {
+    q: 'Do hashtags help on TikTok?',
+    a: 'Yes, but they are only one part of the system. TikTok still cares more about the strength of the hook, watch time, replays, shares, and engagement. Hashtags help by giving the algorithm clearer context about the post.',
+  },
+  {
+    q: 'Should I reuse the same hashtags every time?',
+    a: 'Not usually. It is better to keep a few stable niche tags and rotate the rest based on the exact topic, campaign angle, or content format. That gives each post a better contextual fit.',
+  },
+];
+
+function JsonLd() {
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQS.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  };
+  const softwareSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Zynovexa Hashtag Generator',
+    applicationCategory: 'UtilitiesApplication',
+    operatingSystem: 'Web',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    url: `${APP_URL}/tools/hashtag-generator`,
+    description: 'Free hashtag generator for Instagram, TikTok, YouTube, LinkedIn and X. Curated niche hashtag sets.',
+  };
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+    </>
+  );
+}
+
 export default function HashtagGeneratorPage() {
-  const [niche, setNiche] = useState('');
-  const [platform, setPlatform] = useState('Instagram');
-  const [count, setCount] = useState(20);
-  const [generated, setGenerated] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const getHashtags = () => {
-    const sets = HASHTAG_SETS[niche] || HASHTAG_SETS['Tech'];
-    return [...sets[0], ...sets[1]].slice(0, count);
-  };
-
-  const handleGenerate = () => {
-    if (!niche) return;
-    setGenerated(true);
-    setCopied(false);
-  };
-
-  const handleCopy = () => {
-    const tags = getHashtags().join(' ');
-    navigator.clipboard.writeText(tags);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <MarketingLayout>
+      <JsonLd />
+
+      {/* Hero */}
       <section className="pt-32 pb-12 px-4 sm:px-6 text-center relative overflow-hidden">
         <div className="orb orb-pink w-[500px] h-[500px] -top-40 left-1/2 -translate-x-1/2 pointer-events-none" />
         <div className="max-w-3xl mx-auto relative z-10">
@@ -62,70 +119,50 @@ export default function HashtagGeneratorPage() {
         </div>
       </section>
 
-      <section className="py-10 px-4 sm:px-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="card p-6 sm:p-8 space-y-6">
-            {/* Niche */}
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">Your Niche</label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {NICHES.map(n => (
-                  <button key={n} onClick={() => { setNiche(n); setGenerated(false); }}
-                    className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all ${niche === n ? 'text-white' : 'text-slate-400 hover:text-white'}`}
-                    style={{ background: niche === n ? 'linear-gradient(135deg, #6366f1, #a855f7)' : 'rgba(255,255,255,0.05)' }}>
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* Interactive tool (client component) */}
+      <HashtagGeneratorClient />
 
-            {/* Platform */}
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">Platform</label>
-              <div className="flex flex-wrap gap-2">
-                {PLATFORMS.map(p => (
-                  <button key={p} onClick={() => setPlatform(p)}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${platform === p ? 'text-white' : 'text-slate-400 hover:text-white'}`}
-                    style={{ background: platform === p ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.05)' }}>
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Count */}
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">Number of hashtags: <span className="text-purple-400">{count}</span></label>
-              <input type="range" min="5" max="30" value={count} onChange={e => setCount(Number(e.target.value))}
-                className="w-full accent-indigo-500" />
-              <div className="flex justify-between text-xs text-slate-600 mt-1"><span>5</span><span>30</span></div>
-            </div>
-
-            <button onClick={handleGenerate} disabled={!niche}
-              className="btn btn-primary w-full py-3 font-bold disabled:opacity-40">
-              # Generate Hashtags
-            </button>
+      <section className="py-20 px-4 sm:px-6" style={{ background: 'var(--bg2)' }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="badge badge-blue mb-4 inline-flex">SEO Content</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">Smarter hashtag research for modern social growth</h2>
+            <p className="text-slate-400 max-w-3xl mx-auto">Helpful content for visitors searching for a free hashtag generator, Instagram hashtag strategy, or niche discovery tags.</p>
           </div>
-
-          {/* Results */}
-          {generated && (
-            <div className="mt-6 card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-semibold text-white">{count} hashtags for <span className="text-purple-300">{niche}</span> on <span className="text-purple-300">{platform}</span></p>
-                <button onClick={handleCopy} className="btn btn-secondary btn-sm">
-                  {copied ? '✓ Copied!' : 'Copy All'}
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {getHashtags().map(tag => (
-                  <span key={tag} className="px-3 py-1 rounded-full text-sm font-medium cursor-pointer hover:scale-105 transition-transform"
-                    style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)' }}>
-                    {tag}
-                  </span>
+          <div className="space-y-6">
+            {SEO_SECTIONS.map(section => (
+              <article key={section.title} className="card p-6 sm:p-8">
+                <h3 className="text-2xl font-bold text-white mb-4">{section.title}</h3>
+                <div className="space-y-4 text-sm sm:text-base leading-8 text-slate-300">
+                  {section.paragraphs.map(paragraph => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="mt-8 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+            <div className="card p-6 sm:p-8">
+              <h2 className="text-2xl font-black text-white mb-6">FAQ: Hashtag strategy</h2>
+              <div className="space-y-5">
+                {FAQS.map(item => (
+                  <div key={item.q} className="border-b border-white/8 pb-5 last:border-b-0 last:pb-0">
+                    <h3 className="text-lg font-semibold text-white mb-2">{item.q}</h3>
+                    <p className="text-slate-400 leading-7 text-sm sm:text-base">{item.a}</p>
+                  </div>
                 ))}
               </div>
             </div>
-          )}
+            <aside className="card p-6 sm:p-8">
+              <h2 className="text-xl font-bold text-white mb-4">Related tools and pages</h2>
+              <div className="space-y-3 text-sm">
+                <Link href="/tools/ai-caption-generator" className="interactive-card-link flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-slate-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"><span className="interactive-card-label">AI Caption Generator</span><span className="interactive-card-arrow">→</span></Link>
+                <Link href="/features/create" className="interactive-card-link flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-slate-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"><span className="interactive-card-label">AI Creation Suite</span><span className="interactive-card-arrow">→</span></Link>
+                <Link href="/features/publish" className="interactive-card-link flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-slate-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"><span className="interactive-card-label">Publish & Schedule</span><span className="interactive-card-arrow">→</span></Link>
+                <Link href="/signup" className="interactive-card-link flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-slate-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"><span className="interactive-card-label">Start Free in Zynovexa</span><span className="interactive-card-arrow">→</span></Link>
+              </div>
+            </aside>
+          </div>
         </div>
       </section>
 
@@ -134,7 +171,7 @@ export default function HashtagGeneratorPage() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl font-black text-white mb-3">Want AI-optimised hashtags with every post?</h2>
           <p className="text-slate-400 mb-6 text-sm">Zynovexa automatically suggests the best hashtags when you write your posts. No more manual research.</p>
-          <a href="/signup" className="btn btn-primary">Try Zynovexa Free →</a>
+          <Link href="/signup" className="btn btn-primary">Try Zynovexa Free →</Link>
         </div>
       </section>
     </MarketingLayout>

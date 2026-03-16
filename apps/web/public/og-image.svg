@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06061a"/>
+      <stop offset="100%" stop-color="#0e0e28"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="80" y="200" width="90" height="90" rx="20" fill="url(#g)"/>
+  <text x="125" y="258" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Inter,system-ui,sans-serif" font-weight="800" font-size="52">Z</text>
+  <text x="190" y="255" fill="white" font-family="Inter,system-ui,sans-serif" font-weight="700" font-size="42">Zynovexa</text>
+  <text x="82" y="340" fill="#e2e8f0" font-family="Inter,system-ui,sans-serif" font-weight="600" font-size="30">AI Social Media Manager</text>
+  <text x="82" y="385" fill="#94a3b8" font-family="Inter,system-ui,sans-serif" font-weight="400" font-size="22">Schedule posts, generate viral content, grow across 7 platforms</text>
+  <rect x="82" y="430" width="200" height="50" rx="12" fill="url(#g)"/>
+  <text x="182" y="460" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Inter,system-ui,sans-serif" font-weight="600" font-size="16">Get Started Free</text>
+</svg>

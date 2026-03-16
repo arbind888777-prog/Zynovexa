@@ -1,15 +1,18 @@
-﻿'use client';
-import { useState } from 'react';
+'use client';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersApi, subscriptionsApi } from '@/lib/api';
+import { usersApi, subscriptionsApi, unwrapApiData, unwrapApiResponse } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type Tab = 'profile' | 'billing' | 'security';
 
 export default function SettingsPage() {
   const qc = useQueryClient();
   const { user, setUser } = useAuthStore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>('profile');
   const [profile, setProfile] = useState({ name: user?.name || '', bio: user?.bio || '', website: user?.website || '' });
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -17,13 +20,38 @@ export default function SettingsPage() {
   const [customPosts, setCustomPosts] = useState(50);
   const [customAi, setCustomAi] = useState(200);
 
-  const { data: plans } = useQuery({ queryKey: ['plans'], queryFn: () => subscriptionsApi.getPlans().then(r => r.data) });
-  const { data: subscription } = useQuery({ queryKey: ['subscription'], queryFn: () => subscriptionsApi.getMySubscription().then(r => r.data), retry: false });
-  const { data: invoices } = useQuery({ queryKey: ['invoices'], queryFn: () => subscriptionsApi.getInvoices().then(r => r.data), enabled: tab === 'billing' });
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab');
+    if (requestedTab === 'profile' || requestedTab === 'billing' || requestedTab === 'security') {
+      setTab(requestedTab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const canceled = searchParams.get('canceled');
+
+    if (success === 'true') {
+      toast.success('Payment completed successfully. Your billing details have been updated.');
+      qc.invalidateQueries({ queryKey: ['subscription'] });
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      router.replace('/settings?tab=billing');
+      return;
+    }
+
+    if (canceled === 'true') {
+      toast.error('Payment was canceled. No changes were made to your subscription.');
+      router.replace('/settings?tab=billing');
+    }
+  }, [qc, router, searchParams]);
+
+  const { data: plans } = useQuery({ queryKey: ['plans'], queryFn: () => subscriptionsApi.getPlans().then(unwrapApiResponse) });
+  const { data: subscription } = useQuery({ queryKey: ['subscription'], queryFn: () => subscriptionsApi.getMySubscription().then(unwrapApiResponse), retry: false });
+  const { data: invoices } = useQuery({ queryKey: ['invoices'], queryFn: () => subscriptionsApi.getInvoices().then(unwrapApiResponse), enabled: tab === 'billing' });
 
   const updateProfile = useMutation({
     mutationFn: () => usersApi.updateProfile(profile),
-    onSuccess: (res) => { setUser(res.data); toast.success('Profile updated!'); },
+    onSuccess: (res) => { setUser(unwrapApiResponse(res)); toast.success('Profile updated!'); },
     onError: () => toast.error('Update failed'),
   });
 
@@ -37,11 +65,14 @@ export default function SettingsPage() {
     mutationFn: (opts: { plan: string; customPosts?: number; customAiCredits?: number }) =>
       subscriptionsApi.createCheckout({ plan: opts.plan, billingCycle, customPosts: opts.customPosts, customAiCredits: opts.customAiCredits }),
     onSuccess: (res) => {
-      if (res.data.demoMode) {
-        toast.error('âš ï¸ Stripe not configured. .env mein STRIPE_SECRET_KEY add karo.', { duration: 5000 });
+      const payload = unwrapApiResponse<{ demoMode?: boolean; url?: string }>(res);
+      if (payload.demoMode) {
+        toast.error('⚠️ Stripe not configured. Add STRIPE_SECRET_KEY to .env file.', { duration: 5000 });
         return;
       }
-      window.location.href = res.data.url;
+      if (payload.url) {
+        window.location.href = payload.url;
+      }
     },
     onError: () => toast.error('Checkout failed'),
   });
@@ -49,8 +80,11 @@ export default function SettingsPage() {
   const portal = useMutation({
     mutationFn: () => subscriptionsApi.createPortal(),
     onSuccess: (res) => {
-      if (res.data.demoMode) { toast.error('âš ï¸ Stripe not configured.'); return; }
-      window.location.href = res.data.url;
+      const payload = unwrapApiResponse<{ demoMode?: boolean; url?: string }>(res);
+      if (payload.demoMode) { toast.error('⚠️ Stripe not configured.'); return; }
+      if (payload.url) {
+        window.location.href = payload.url;
+      }
     },
   });
 
@@ -63,15 +97,18 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto animate-fade-in">
-      <h1 className="text-2xl font-bold text-white mb-6">âš™ï¸ Settings</h1>
+      <h1 className="text-2xl font-bold text-white mb-6">⚙️ Settings</h1>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
         {(['profile', 'billing', 'security'] as Tab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)}
+          <button key={t} onClick={() => {
+            setTab(t);
+            router.replace(`/settings?tab=${t}`);
+          }}
             className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all ${tab === t ? 'text-white' : 'text-gray-400 hover:text-white'}`}
             style={{ background: tab === t ? 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(168,85,247,0.3))' : 'var(--card)', border: `1px solid ${tab === t ? '#6366f1' : 'var(--border)'}` }}>
-            {t === 'profile' ? 'ðŸ‘¤' : t === 'billing' ? 'ðŸ’³' : 'ðŸ”’'} {t}
+            {t === 'profile' ? '👤' : t === 'billing' ? '💳' : '🔒'} {t}
           </button>
         ))}
       </div>
@@ -92,12 +129,12 @@ export default function SettingsPage() {
           </div>
           {[
             { label: 'Full Name', key: 'name', placeholder: 'Your name' },
-            { label: 'Bio', key: 'bio', placeholder: 'Creator & digital marketer ðŸš€' },
+            { label: 'Bio', key: 'bio', placeholder: 'Creator & digital marketer 🚀' },
             { label: 'Website', key: 'website', placeholder: 'https://yoursite.com' },
           ].map(f => (
             <div key={f.key}>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">{f.label}</label>
-              <input value={(profile as any)[f.key]} onChange={e => setProfile(p => ({ ...p, [f.key]: e.target.value }))}
+              <label htmlFor={`settings-${f.key}`} className="block text-sm font-medium text-gray-300 mb-1.5">{f.label}</label>
+              <input id={`settings-${f.key}`} value={(profile as any)[f.key]} onChange={e => setProfile(p => ({ ...p, [f.key]: e.target.value }))}
                 placeholder={f.placeholder} className={inputClass} style={inputStyle} />
             </div>
           ))}
@@ -119,13 +156,13 @@ export default function SettingsPage() {
               <div>
                 <span className="text-lg font-bold text-white">{subscription?.plan || user?.plan}</span>
                 <p className="text-sm text-gray-400 mt-0.5">
-                  {subscription?.status === 'ACTIVE' ? 'âœ… Active' : ''}
-                  {subscription?.currentPeriodEnd ? ` Â· Renews ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}` : ''}
+                  {subscription?.status === 'ACTIVE' ? '✅ Active' : ''}
+                  {subscription?.currentPeriodEnd ? ` · Renews ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}` : ''}
                 </p>
               </div>
               {subscription?.stripeCustomerId && (
                 <button onClick={() => portal.mutate()} className="px-4 py-2 rounded-lg text-sm text-gray-300 card card-hover">
-                  Manage Billing â†’
+                  Manage Billing →
                 </button>
               )}
             </div>
@@ -181,7 +218,7 @@ export default function SettingsPage() {
                   <ul className="space-y-1 mb-4 flex-1">
                     {(plan.features || []).map((f: string) => (
                       <li key={f} className="text-xs text-gray-400 flex items-center gap-1.5">
-                        <span className="text-green-400 text-[10px]">âœ“</span>{f}
+                        <span className="text-green-400 text-[10px]">✔</span>{f}
                       </li>
                     ))}
                   </ul>
@@ -200,7 +237,7 @@ export default function SettingsPage() {
                       Get Custom Plan
                     </button>
                   )}
-                  {key === user?.plan && <p className="text-center text-xs text-purple-400 font-medium">Current Plan âœ“</p>}
+                  {key === user?.plan && <p className="text-center text-xs text-purple-400 font-medium">Current Plan ✔</p>}
                 </div>
               ))}
             </div>
@@ -208,8 +245,8 @@ export default function SettingsPage() {
 
           {/* Custom Plan Configurator */}
           <div className="card p-6" style={{ border: '1px solid rgba(236,72,153,0.3)' }}>
-            <h2 className="font-semibold text-white mb-1">ðŸŽ›ï¸ Custom Plan Builder</h2>
-            <p className="text-xs text-gray-400 mb-5">Sirf utna lo jitna chahiye â€” apna plan khud banao</p>
+            <h2 className="font-semibold text-white mb-1">🎛️ Custom Plan Builder</h2>
+            <p className="text-xs text-gray-400 mb-5">Only pay for what you need — build your own plan</p>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <div className="flex justify-between mb-2">
@@ -251,7 +288,7 @@ export default function SettingsPage() {
               disabled={checkout.isPending}
               className="mt-4 w-full py-3 rounded-lg text-sm font-semibold text-white transition-all hover:scale-[1.02]"
               style={{ background: 'linear-gradient(135deg, #ec4899, #a855f7)' }}>
-              {checkout.isPending ? 'Processing...' : `Subscribe â€” $${billingCycle === 'yearly' ? customYearlyPrice : customMonthlyPrice}/${billingCycle === 'yearly' ? 'yr' : 'mo'}`}
+              {checkout.isPending ? 'Processing...' : `Subscribe — $${billingCycle === 'yearly' ? customYearlyPrice : customMonthlyPrice}/${billingCycle === 'yearly' ? 'yr' : 'mo'}`}
             </button>
           </div>
 
@@ -268,7 +305,7 @@ export default function SettingsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-mono text-white">${(inv.amount / 100).toFixed(2)}</span>
-                      {inv.invoiceUrl && <a href={inv.invoiceUrl} target="_blank" className="text-xs text-purple-400">View â†’</a>}
+                      {inv.invoiceUrl && <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-400">View →</a>}
                     </div>
                   </div>
                 ))}
@@ -288,9 +325,9 @@ export default function SettingsPage() {
             { label: 'Confirm New Password', key: 'confirmPassword' },
           ].map(f => (
             <div key={f.key}>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">{f.label}</label>
-              <input type="password" value={(passwords as any)[f.key]} onChange={e => setPasswords(p => ({ ...p, [f.key]: e.target.value }))}
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" className={inputClass} style={inputStyle} />
+              <label htmlFor={`security-${f.key}`} className="block text-sm font-medium text-gray-300 mb-1.5">{f.label}</label>
+              <input id={`security-${f.key}`} type="password" value={(passwords as any)[f.key]} onChange={e => setPasswords(p => ({ ...p, [f.key]: e.target.value }))}
+                placeholder="••••••••" className={inputClass} style={inputStyle} />
             </div>
           ))}
           <button onClick={() => {

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import MarketingLayout from '@/components/MarketingLayout';
+import { BlogFilteredContent, SubscribeForm } from '@/components/BlogClient';
 
 export const metadata: Metadata = {
   title: 'Blog — Social Media Tips, Guides & Creator Insights | Zynovexa',
@@ -101,20 +101,7 @@ const POSTS = [
   },
 ];
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Instagram: 'badge-pink',
-  TikTok: 'badge-purple',
-  YouTube: 'badge-purple',
-  LinkedIn: 'badge-purple',
-  'AI Tools': 'badge-purple',
-  Analytics: 'badge-blue',
-  'Creator Economy': 'badge-green',
-};
-
 export default function BlogPage() {
-  const featured = POSTS.filter(p => p.featured);
-  const rest = POSTS.filter(p => !p.featured);
-
   return (
     <MarketingLayout>
       {/* Hero */}
@@ -128,76 +115,14 @@ export default function BlogPage() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="px-4 sm:px-6 pb-10">
-        <div className="max-w-6xl mx-auto flex flex-wrap gap-2 justify-center">
-          {CATEGORIES.map(cat => (
-            <button key={cat} className={`px-4 py-1.5 rounded-full text-sm transition-all ${cat === 'All' ? 'btn-primary text-white' : 'card text-slate-400 hover:text-white hover:border-purple-500/40'}`}>
-              {cat}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Featured posts */}
-      <section className="px-4 sm:px-6 pb-10">
-        <div className="max-w-6xl mx-auto grid sm:grid-cols-2 gap-6">
-          {featured.map(post => (
-            <Link key={post.slug} href={`/blog/${post.slug}`} className="card card-hover p-7 flex flex-col group">
-              <div className="flex items-center gap-2 mb-4">
-                <span className={`badge ${CATEGORY_COLORS[post.category] || 'badge-purple'} text-xs`}>{post.category}</span>
-                <span className="text-slate-600 text-xs">Featured</span>
-              </div>
-              <h2 className="text-xl font-bold text-white mb-3 group-hover:text-purple-300 transition-colors leading-snug">{post.title}</h2>
-              <p className="text-slate-400 text-sm leading-relaxed flex-1">{post.excerpt}</p>
-              <div className="flex items-center justify-between mt-5 pt-5 border-t" style={{ borderColor: 'var(--border)' }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>{post.avatar}</div>
-                  <span className="text-slate-400 text-xs">{post.author}</span>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500">
-                  <span>{post.date}</span>
-                  <span>·</span>
-                  <span>{post.readTime}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* All posts */}
-      <section className="px-4 sm:px-6 pb-16">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-xl font-bold text-white mb-6">Latest articles</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {rest.map(post => (
-              <Link key={post.slug} href={`/blog/${post.slug}`} className="card card-hover p-6 flex flex-col group">
-                <span className={`badge ${CATEGORY_COLORS[post.category] || 'badge-purple'} text-xs mb-3 self-start`}>{post.category}</span>
-                <h3 className="text-base font-bold text-white mb-2 group-hover:text-purple-300 transition-colors leading-snug">{post.title}</h3>
-                <p className="text-slate-400 text-xs leading-relaxed flex-1">{post.excerpt}</p>
-                <div className="flex items-center justify-between mt-4 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>{post.avatar}</div>
-                    <span className="text-slate-500 text-xs">{post.author}</span>
-                  </div>
-                  <span className="text-slate-500 text-xs">{post.readTime}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <BlogFilteredContent categories={CATEGORIES} posts={POSTS} />
 
       {/* Newsletter CTA */}
       <section className="py-16 px-4 sm:px-6">
         <div className="max-w-2xl mx-auto text-center card p-10" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))', border: '1px solid rgba(99,102,241,0.3)' }}>
           <h2 className="text-2xl font-extrabold text-white mb-2">Get weekly creator insights</h2>
           <p className="text-slate-400 text-sm mb-6">Join 15,000+ creators who read our weekly social media strategy newsletter.</p>
-          <div className="flex gap-2 max-w-sm mx-auto">
-            <input type="email" placeholder="your@email.com" className="flex-1 px-4 py-2.5 rounded-lg text-sm bg-white/5 border text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60" style={{ borderColor: 'var(--border2)' }} />
-            <button className="btn btn-primary px-4">Subscribe</button>
-          </div>
+          <SubscribeForm />
         </div>
       </section>
     </MarketingLayout>

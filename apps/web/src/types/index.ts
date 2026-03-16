@@ -2,7 +2,7 @@ export type Plan = 'FREE' | 'PRO' | 'BUSINESS';
 export type Role = 'USER' | 'ADMIN';
 export type Platform = 'INSTAGRAM' | 'YOUTUBE' | 'TIKTOK' | 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'SNAPCHAT';
 export type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'FAILED';
-export type MediaType = 'IMAGE' | 'VIDEO' | 'CAROUSEL' | 'STORY' | 'REEL';
+export type MediaType = 'IMAGE' | 'VIDEO' | 'CAROUSEL' | 'TEXT' | 'STORY' | 'REEL' | 'SHORT';
 
 export interface User {
   id: string;
@@ -31,9 +31,40 @@ export interface SocialAccount {
   platform: Platform;
   handle: string;
   displayName: string;
+  platformUserId?: string;
   avatarUrl?: string;
   followersCount: number;
   isActive: boolean;
+}
+
+export interface YoutubeVideoInsight {
+  videoId: string;
+  title: string;
+  thumbnail?: string;
+  publishedAt: string;
+  duration?: string;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+}
+
+export interface YoutubeInsights {
+  account: SocialAccount;
+  channel: {
+    channelId: string;
+    title: string;
+    handle?: string | null;
+    thumbnail?: string;
+    subscriberCount: number;
+    videoCount: number;
+    viewCount: number;
+  };
+  totals: {
+    totalLikes: number;
+    totalComments: number;
+    totalVideoViews: number;
+  };
+  recentVideos: YoutubeVideoInsight[];
 }
 
 export interface Post {

@@ -3,60 +3,127 @@ import Link from 'next/link';
 import MarketingLayout from '@/components/MarketingLayout';
 
 export const metadata: Metadata = {
-  title: 'About Zynovexa — Our Story, Mission & Team',
-  description: 'Learn about Zynovexa — why we built it, our mission to empower creators, our values, and the team behind the platform. We\'re creators building for creators.',
+  title: 'About Zynovexa | Creator Revenue OS',
+  description:
+    'Learn how Zynovexa helps creators plan, publish, analyze, and monetize content in one secure and scalable Creator Revenue OS.',
+  keywords: [
+    'about zynovexa',
+    'creator revenue os',
+    'social media automation platform',
+    'creator business platform',
+    'ai creator tools',
+    'creator analytics and monetization',
+  ],
   alternates: { canonical: 'https://zynovexa.com/about' },
+  openGraph: {
+    title: 'About Zynovexa | Creator Revenue OS',
+    description:
+      'Built for creators who want one platform for content operations, growth analytics, and monetization workflows.',
+    url: 'https://zynovexa.com/about',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About Zynovexa | Creator Revenue OS',
+    description:
+      'One platform for content creation, scheduling, analytics, and revenue operations for modern creators.',
+  },
 };
 
+const APP_URL = 'https://zynovexa.com';
+
 const VALUES = [
-  { icon: '🎨', title: 'Creators First', desc: 'Everything we build starts with the question: does this make a creator\'s life easier or better?' },
-  { icon: '🔍', title: 'Radical Transparency', desc: 'We share our metrics, pricing, and roadmap openly. No hidden fees, no dark patterns, no BS.' },
-  { icon: '⚡', title: 'Move Fast', desc: 'Ship weekly updates, ship bold features, listen constantly. Speed with quality is our competitive edge.' },
-  { icon: '🤝', title: 'Community Driven', desc: 'Our users vote on features, test betas, and shape the product. You\'re not just users — you\'re co-builders.' },
+  {
+    title: 'Creators First Product Decisions',
+    desc: 'We prioritize features that reduce creator workload and increase publishing consistency and revenue confidence.',
+  },
+  {
+    title: 'Transparent Product and Pricing',
+    desc: 'Our roadmap, pricing logic, and core platform capabilities are shared in plain language.',
+  },
+  {
+    title: 'Reliable By Default',
+    desc: 'Health checks, role-based controls, and production-grade architecture are part of the core product design.',
+  },
+  {
+    title: 'Data Respect and User Control',
+    desc: 'Users control account data, export options, and connected platform permissions through clear settings.',
+  },
 ];
 
 const TIMELINE = [
-  { year: '2024', event: 'Zynovexa founded by a team of ex-creators frustrated with existing tools' },
-  { year: 'Early 2025', event: 'Beta launched to 500 creators. First 1,000 users acquired organically' },
-  { year: 'Mid 2025', event: 'GPT-4o and DALL-E 3 integration launched. AI credits system introduced' },
-  { year: 'Late 2025', event: 'Reached 25,000 users. Pro and Business plans launched' },
-  { year: '2026', event: '50,000+ creators. 2M+ posts scheduled. Expanding to agencies & enterprises' },
+  {
+    year: '2024',
+    event: 'Zynovexa started with a simple thesis: creators need an operating system, not disconnected tools.',
+  },
+  {
+    year: '2025',
+    event: 'We launched early creator workflows for AI content generation, scheduling, and performance tracking.',
+  },
+  {
+    year: '2026',
+    event: 'The platform expanded into creator revenue operations with monetization, media-kit data, and rate intelligence.',
+  },
 ];
+
+const ABOUT_PAGE_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  name: 'About Zynovexa',
+  url: `${APP_URL}/about`,
+  description:
+    'Zynovexa is a Creator Revenue OS that unifies content operations, analytics, and monetization for creators and teams.',
+  mainEntity: {
+    '@type': 'Organization',
+    name: 'Zynovexa',
+    url: APP_URL,
+    sameAs: [
+      'https://twitter.com/zynovexa',
+      'https://instagram.com/zynovexa',
+      'https://linkedin.com/company/zynovexa',
+    ],
+  },
+};
 
 export default function AboutPage() {
   return (
     <MarketingLayout>
-      {/* Hero */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ABOUT_PAGE_SCHEMA) }} />
+
       <section className="pt-28 sm:pt-36 pb-16 px-4 sm:px-6 text-center relative">
         <div className="orb orb-purple w-96 h-96 -top-20 -left-20 opacity-15 hidden lg:block" />
         <div className="orb orb-pink w-72 h-72 top-10 -right-10 opacity-10 hidden lg:block" />
         <div className="max-w-3xl mx-auto relative">
-          <span className="badge badge-purple mb-6 inline-block">Our Story</span>
+          <span className="badge badge-purple mb-6 inline-block">About Zynovexa</span>
           <h1 className="text-4xl sm:text-6xl font-black mb-6 text-white leading-tight">
-            Built by creators,<br /><span className="gradient-text">for creators.</span>
+            The operating system for<br /><span className="gradient-text">creator-led businesses.</span>
           </h1>
           <p className="text-slate-400 text-lg sm:text-xl leading-relaxed">
-            We got frustrated watching talented creators spend hours on captions, struggling with inconsistent posting, and guessing at what worked. So we built the tool we always wanted.
+            Zynovexa helps creators and teams run content like a business: plan faster, publish consistently,
+            track performance, and improve revenue outcomes from one platform.
           </p>
         </div>
       </section>
 
-      {/* Mission */}
       <section className="py-12 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <div className="card p-8 sm:p-12 text-center" style={{ border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.04)' }}>
             <p className="text-2xl sm:text-3xl font-bold text-white leading-relaxed">
-              "Our mission is to give every creator — from bedroom YouTubers to global brands — the AI superpowers that were previously only available to large marketing teams."
+              "Our mission is to make advanced creator operations simple, measurable, and scalable for every serious creator."
             </p>
             <p className="text-slate-400 text-sm mt-4">— The Zynovexa Team</p>
           </div>
         </div>
       </section>
 
-      {/* Stats */}
       <section className="py-12 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-5">
-          {[['50K+','Active Creators'],['2M+','Posts Scheduled'],['7','Platforms Supported'],['4.9★','Average Rating']].map(([v,l]) => (
+          {[
+            ['50K+', 'Active Creators'],
+            ['2M+', 'Posts Scheduled'],
+            ['7', 'Platforms Supported'],
+            ['99.9%', 'Infrastructure Uptime Focus'],
+          ].map(([v, l]) => (
             <div key={l} className="card text-center p-6 card-hover">
               <div className="text-3xl font-black text-white mb-1">{v}</div>
               <div className="text-xs text-slate-400">{l}</div>
@@ -65,14 +132,12 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Values */}
       <section className="py-16 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-extrabold text-white text-center mb-10">What we believe in</h2>
+          <h2 className="text-3xl font-extrabold text-white text-center mb-10">What Makes Zynovexa Credible</h2>
           <div className="grid sm:grid-cols-2 gap-5">
             {VALUES.map(v => (
-              <div key={v.title} className="card card-hover p-6 flex gap-4">
-                <span className="text-3xl shrink-0">{v.icon}</span>
+              <div key={v.title} className="card card-hover p-6">
                 <div>
                   <h3 className="text-white font-semibold mb-1.5">{v.title}</h3>
                   <p className="text-slate-400 text-sm">{v.desc}</p>
@@ -83,10 +148,9 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Timeline */}
       <section className="py-16 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-extrabold text-white text-center mb-10">Our journey</h2>
+          <h2 className="text-3xl font-extrabold text-white text-center mb-10">Product Evolution</h2>
           <div className="relative">
             <div className="absolute left-4 top-0 bottom-0 w-px" style={{ background: 'var(--border2)' }} />
             <div className="space-y-6">
@@ -104,14 +168,37 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* CTA */}
+      <section className="py-16 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-4">
+          {[
+            {
+              title: 'For Solo Creators',
+              desc: 'Ship faster with AI drafting, scheduler workflows, and cross-platform visibility.',
+            },
+            {
+              title: 'For Agencies and Teams',
+              desc: 'Operate multiple brands from one workspace with analytics and governance controls.',
+            },
+            {
+              title: 'For Revenue Growth',
+              desc: 'Use monetization tracking, rate intelligence, and media-kit data for better brand outcomes.',
+            },
+          ].map(item => (
+            <div key={item.title} className="card p-5 card-hover">
+              <h3 className="text-white font-semibold mb-2">{item.title}</h3>
+              <p className="text-slate-400 text-sm">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="py-16 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto text-center card p-10" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))', border: '1px solid rgba(99,102,241,0.3)' }}>
-          <h2 className="text-3xl font-extrabold text-white mb-4">Join the movement</h2>
-          <p className="text-slate-400 mb-6">50,000+ creators are already building their audience with Zynovexa.</p>
+          <h2 className="text-3xl font-extrabold text-white mb-4">Build A Stronger Creator Business</h2>
+          <p className="text-slate-400 mb-6">Run content, analytics, and monetization in one trusted Creator Revenue OS.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/signup" className="btn btn-primary btn-xl">🚀 Get Started Free</Link>
-            <a href="mailto:hello@zynovexa.com" className="btn btn-secondary btn-xl">Say Hello</a>
+            <Link href="/signup" className="btn btn-primary btn-xl">Get Started Free</Link>
+            <a href="mailto:hello@zynovexa.com" className="btn btn-secondary btn-xl">Contact Team</a>
           </div>
         </div>
       </section>

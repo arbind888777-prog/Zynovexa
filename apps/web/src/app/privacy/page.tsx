@@ -1,132 +1,216 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import MarketingLayout from '@/components/MarketingLayout';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy',
+  title: 'Privacy Policy | Zynovexa Creator Revenue OS',
   description:
-    'Learn how Zynovexa collects, uses, and protects your personal data. We are committed to your privacy and data security.',
+    'Read the Zynovexa Privacy Policy. Learn what we collect, why we collect it, how we protect it, and which privacy rights you can exercise.',
+  keywords: [
+    'zynovexa privacy policy',
+    'creator platform data privacy',
+    'social media automation privacy',
+    'data processing creator tools',
+    'gdpr and privacy rights',
+  ],
   alternates: { canonical: 'https://zynovexa.com/privacy' },
+  openGraph: {
+    title: 'Privacy Policy | Zynovexa',
+    description:
+      'A clear breakdown of data collection, security controls, retention, and user rights at Zynovexa.',
+    url: 'https://zynovexa.com/privacy',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Privacy Policy | Zynovexa',
+    description:
+      'Understand how Zynovexa handles account data, AI usage logs, connected social accounts, and privacy requests.',
+  },
 };
 
-const LAST_UPDATED = 'March 1, 2026';
+const APP_URL = 'https://zynovexa.com';
+const LAST_UPDATED = 'March 7, 2026';
+
+const PRIVACY_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'PrivacyPolicy',
+  name: 'Zynovexa Privacy Policy',
+  url: `${APP_URL}/privacy`,
+  dateModified: '2026-03-07',
+  publisher: {
+    '@type': 'Organization',
+    name: 'Zynovexa',
+    url: APP_URL,
+  },
+};
+
+const PRIVACY_FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Do you sell personal data?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. Zynovexa does not sell personal data to data brokers or advertisers.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Can users delete account data?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Users can request deletion through account settings or by emailing privacy@zynovexa.com.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Where can users send privacy requests?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Privacy requests can be sent to privacy@zynovexa.com. We verify and respond within the legal response window.',
+      },
+    },
+  ],
+};
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen hero-bg">
-      {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 glass-dark">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-black"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>Z</div>
-            <span className="text-xl font-extrabold gradient-text">Zynovexa</span>
-          </Link>
-          <div className="flex gap-4 text-sm">
-            <Link href="/terms" className="text-slate-400 hover:text-white transition-colors">Terms</Link>
-            <Link href="/login" className="text-slate-400 hover:text-white transition-colors">Sign In</Link>
-          </div>
-        </div>
-      </nav>
+    <MarketingLayout>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(PRIVACY_SCHEMA) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(PRIVACY_FAQ_SCHEMA) }} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-28 pb-20">
-        {/* Header */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-32 pb-20">
         <div className="mb-12">
           <span className="badge badge-purple mb-4 inline-block">Legal</span>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4">Privacy Policy</h1>
           <p className="text-slate-400 text-base">
-            Last updated: <span className="text-white font-medium">{LAST_UPDATED}</span> &nbsp;·&nbsp; Effective immediately
+            Last updated: <span className="text-white font-medium">{LAST_UPDATED}</span> and effective immediately
           </p>
           <div className="mt-6 p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
             <p className="text-slate-300 text-sm leading-relaxed">
-              <strong className="text-white">Summary:</strong> Zynovexa collects only what's necessary to provide our service. We never sell your personal data to third parties. You have full control over your data and can delete it at any time. Read on for the full details.
+              <strong className="text-white">Quick summary:</strong> We collect only required data to operate the product,
+              protect accounts, process billing, and improve service quality. We do not sell personal data.
+              You can access, export, correct, or delete your data using account tools or direct request channels.
             </p>
           </div>
         </div>
 
+        <section className="card p-5 mb-10">
+          <h2 className="text-lg font-semibold text-white mb-3">Contents</h2>
+          <div className="grid sm:grid-cols-2 gap-2 text-sm text-slate-400">
+            <a href="#scope" className="hover:text-white transition-colors">1. Scope and Controller Information</a>
+            <a href="#collect" className="hover:text-white transition-colors">2. Data We Collect</a>
+            <a href="#use" className="hover:text-white transition-colors">3. How We Use Data</a>
+            <a href="#share" className="hover:text-white transition-colors">4. Data Sharing and Processors</a>
+            <a href="#cookies" className="hover:text-white transition-colors">5. Cookies and Tracking</a>
+            <a href="#security" className="hover:text-white transition-colors">6. Security Controls</a>
+            <a href="#rights" className="hover:text-white transition-colors">7. Your Privacy Rights</a>
+            <a href="#retention" className="hover:text-white transition-colors">8. Retention and Deletion</a>
+            <a href="#transfers" className="hover:text-white transition-colors">9. International Transfers</a>
+            <a href="#children" className="hover:text-white transition-colors">10. Children and Age Limits</a>
+            <a href="#changes" className="hover:text-white transition-colors">11. Policy Updates</a>
+            <a href="#contact" className="hover:text-white transition-colors">12. Contact and Requests</a>
+          </div>
+        </section>
+
         <div className="space-y-10 text-slate-300 leading-relaxed">
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2"><span>1.</span> Who We Are</h2>
-            <p>Zynovexa ("we," "us," "our") is an AI-powered social media management platform operated by Zynovexa Technologies. Our platform helps creators schedule content, generate AI-powered captions, and analyze performance across social media networks.</p>
+          <section id="scope">
+            <h2 className="text-2xl font-bold text-white mb-4">1. Scope and Controller Information</h2>
+            <p>
+              This Privacy Policy explains how Zynovexa Technologies ("Zynovexa", "we", "us") collects,
+              uses, stores, and protects personal data when you use our website, web app, APIs,
+              and related creator workflow services.
+            </p>
             <div className="mt-4 card p-4 text-sm">
-              <p><strong className="text-white">Company:</strong> Zynovexa Technologies</p>
-              <p className="mt-1"><strong className="text-white">Website:</strong> https://zynovexa.com</p>
-              <p className="mt-1"><strong className="text-white">Contact:</strong> privacy@zynovexa.com</p>
+              <p><strong className="text-white">Controller:</strong> Zynovexa Technologies</p>
+              <p className="mt-1"><strong className="text-white">Website:</strong> {APP_URL}</p>
+              <p className="mt-1"><strong className="text-white">Privacy Contact:</strong> privacy@zynovexa.com</p>
+              <p className="mt-1"><strong className="text-white">Security Contact:</strong> security@zynovexa.com</p>
             </div>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">2. Information We Collect</h2>
-            <p className="mb-4">We collect information you provide directly to us and information generated through your use of our service:</p>
+          <section id="collect">
+            <h2 className="text-2xl font-bold text-white mb-4">2. Data We Collect</h2>
+            <p className="mb-4">We collect the minimum data needed to provide and secure the service:</p>
             <div className="space-y-4">
               <div className="card p-5">
-                <h3 className="font-semibold text-white mb-2">📋 Account Information</h3>
+                <h3 className="font-semibold text-white mb-2">Account and Profile Data</h3>
                 <ul className="space-y-1 text-sm list-disc list-inside text-slate-400">
-                  <li>Name, email address, and password (hashed with bcrypt)</li>
-                  <li>Profile picture (optional)</li>
-                  <li>Account preferences and settings</li>
+                  <li>Name, email address, hashed password, profile settings, and timezone preferences.</li>
+                  <li>Security metadata such as login history and session information for account protection.</li>
                 </ul>
               </div>
               <div className="card p-5">
-                <h3 className="font-semibold text-white mb-2">📊 Usage Data</h3>
+                <h3 className="font-semibold text-white mb-2">Product Usage Data</h3>
                 <ul className="space-y-1 text-sm list-disc list-inside text-slate-400">
-                  <li>Pages visited, features used, and time spent on the platform</li>
-                  <li>Posts created, scheduled, and published</li>
-                  <li>AI generation requests and content created</li>
-                  <li>Device type, browser, and operating system</li>
-                  <li>IP address and approximate geographic location (country/city level)</li>
+                  <li>Feature usage events such as post creation, scheduling actions, and analytics views.</li>
+                  <li>AI request metadata for usage limits, quality monitoring, and abuse prevention.</li>
+                  <li>Technical telemetry including browser, device type, and coarse location inferred from IP.</li>
                 </ul>
               </div>
               <div className="card p-5">
-                <h3 className="font-semibold text-white mb-2">🔗 Connected Social Accounts</h3>
+                <h3 className="font-semibold text-white mb-2">Connected Platform Data</h3>
                 <ul className="space-y-1 text-sm list-disc list-inside text-slate-400">
-                  <li>OAuth tokens for connected social media platforms (Instagram, YouTube, TikTok, etc.)</li>
-                  <li>Public profile data from those platforms (username, follower count)</li>
-                  <li>We never store your social media passwords</li>
+                  <li>OAuth access credentials, account identifiers, and platform-level permissions.</li>
+                  <li>Public and business metrics needed for publishing and performance analysis.</li>
+                  <li>We do not request or store social network passwords.</li>
                 </ul>
               </div>
               <div className="card p-5">
-                <h3 className="font-semibold text-white mb-2">💳 Payment Information</h3>
+                <h3 className="font-semibold text-white mb-2">Billing and Transaction Data</h3>
                 <ul className="space-y-1 text-sm list-disc list-inside text-slate-400">
-                  <li>Payment processing is handled entirely by <strong className="text-white">Stripe</strong> — we never store your card numbers</li>
-                  <li>We store subscription status, plan type, and billing history only</li>
+                  <li>Payments are processed by Stripe. Card numbers are not stored by Zynovexa.</li>
+                  <li>We store plan status, invoice history, and payment outcomes for compliance and support.</li>
                 </ul>
               </div>
             </div>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">3. How We Use Your Information</h2>
-            <p className="mb-4">We use the information we collect to:</p>
+          <section id="use">
+            <h2 className="text-2xl font-bold text-white mb-4">3. How We Use Data</h2>
+            <p className="mb-4">We use personal data for service delivery, security, and product improvement:</p>
             <ul className="space-y-2 list-none">
               {[
-                ['✅', 'Provide, operate, and improve our platform and services'],
-                ['✅', 'Process transactions and send billing-related communications'],
-                ['✅', 'Personalize your content experience and AI recommendations'],
-                ['✅', 'Analyze usage trends to improve features and fix bugs'],
-                ['✅', 'Send product updates, newsletters, and marketing emails (you can opt out anytime)'],
-                ['✅', 'Detect and prevent fraud, abuse, and security incidents'],
-                ['✅', 'Comply with legal obligations and respond to lawful requests'],
-                ['❌', 'We do NOT sell, rent, or trade your personal data to third parties'],
-                ['❌', 'We do NOT use your content to train AI models without explicit consent'],
+                ['Yes', 'Provide scheduling, publishing, analytics, and creator monetization workflows.'],
+                ['Yes', 'Process billing events and send invoices, renewal reminders, and account notices.'],
+                ['Yes', 'Detect abuse, enforce limits, and prevent unauthorized access.'],
+                ['Yes', 'Improve reliability and product quality through aggregated usage insights.'],
+                ['No', 'We do not sell personal data for advertising brokerage.'],
+                ['No', 'We do not use your private content to train third-party foundation models without notice or legal basis.'],
               ].map(([icon, text]) => (
                 <li key={text as string} className="flex items-start gap-3 text-sm">
-                  <span className="mt-0.5 shrink-0">{icon}</span>
+                  <span className="mt-0.5 shrink-0 text-slate-500">{icon}</span>
                   <span>{text as string}</span>
                 </li>
               ))}
             </ul>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">4. Data Sharing & Third Parties</h2>
-            <p className="mb-4">We share your information only in these limited circumstances:</p>
+          <section id="share">
+            <h2 className="text-2xl font-bold text-white mb-4">4. Data Sharing and Processors</h2>
+            <p className="mb-4">We share data only with approved subprocessors and lawful authorities when required:</p>
             <div className="space-y-3">
               {[
-                { title: 'Service Providers', desc: 'We use trusted third-party services to operate our platform: AWS (hosting), Stripe (payments), SendGrid (email), OpenAI (AI generation). These providers are contractually bound to protect your data.' },
-                { title: 'Social Media Platforms', desc: 'When you connect your accounts, we share content you explicitly choose to publish on those platforms, subject to their respective privacy policies.' },
-                { title: 'Legal Requirements', desc: 'We may disclose information if required by law, court order, or government authority, or if we believe disclosure is necessary to protect our rights, your safety, or public safety.' },
-                { title: 'Business Transfers', desc: 'If Zynovexa is acquired or merges with another company, your data may be transferred as part of that transaction. We will notify you before your data becomes subject to a different privacy policy.' },
+                {
+                  title: 'Infrastructure and Core Processors',
+                  desc: 'Hosting, email, AI inference, and billing providers process data under contractual controls and security obligations.',
+                },
+                {
+                  title: 'Connected Social Platforms',
+                  desc: 'When you publish, selected content and metadata are sent to the social networks you connect and authorize.',
+                },
+                {
+                  title: 'Legal and Safety Requests',
+                  desc: 'We may disclose data where required by law or where necessary to prevent fraud, abuse, or imminent harm.',
+                },
+                {
+                  title: 'Corporate Transactions',
+                  desc: 'If ownership changes, data may transfer to a successor entity with continuity obligations and user notice.',
+                },
               ].map(item => (
                 <div key={item.title} className="card p-4">
                   <h3 className="font-semibold text-white text-sm mb-1">{item.title}</h3>
@@ -136,44 +220,42 @@ export default function PrivacyPolicyPage() {
             </div>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">5. Cookies & Tracking</h2>
-            <p className="mb-4">We use cookies and similar technologies to:</p>
+          <section id="cookies">
+            <h2 className="text-2xl font-bold text-white mb-4">5. Cookies and Tracking</h2>
+            <p className="mb-4">Cookies and similar technologies support secure sessions, preferences, and service analytics:</p>
             <ul className="space-y-2 text-sm list-disc list-inside text-slate-400">
-              <li><strong className="text-white">Essential cookies:</strong> Keep you logged in and remember your preferences</li>
-              <li><strong className="text-white">Analytics cookies:</strong> Understand how users interact with our platform (Google Analytics, anonymized)</li>
-              <li><strong className="text-white">Marketing cookies:</strong> Measure the effectiveness of our ads (you can opt out)</li>
+              <li><strong className="text-white">Essential:</strong> authentication, security checks, and core functionality.</li>
+              <li><strong className="text-white">Analytics:</strong> aggregated performance and feature usage analytics.</li>
+              <li><strong className="text-white">Preference:</strong> language and interface settings for usability.</li>
             </ul>
-            <p className="mt-3 text-sm">You can control cookie settings through your browser preferences. Disabling certain cookies may affect platform functionality.</p>
+            <p className="mt-3 text-sm">You can manage cookie behavior via browser settings. Blocking essential cookies may affect login and app stability.</p>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">6. Data Security</h2>
-            <p className="mb-3">We take data security seriously and implement industry-standard protections:</p>
+          <section id="security">
+            <h2 className="text-2xl font-bold text-white mb-4">6. Security Controls</h2>
+            <p className="mb-3">We apply layered security controls to protect user data:</p>
             <ul className="space-y-2 text-sm list-disc list-inside text-slate-400">
-              <li>All data is encrypted in transit using TLS 1.3</li>
-              <li>Passwords are hashed using bcrypt with salt rounds</li>
-              <li>Database access is restricted with role-based permissions</li>
-              <li>Regular security audits and vulnerability assessments</li>
-              <li>Two-factor authentication available for all accounts</li>
+              <li>Transport encryption for web and API traffic.</li>
+              <li>Hashed credentials, secure session handling, and access control enforcement.</li>
+              <li>Rate limiting, request validation, and monitoring for abuse patterns.</li>
+              <li>Security patching, dependency monitoring, and incident response procedures.</li>
             </ul>
-            <p className="mt-3 text-sm text-slate-500">No system is 100% secure. If you suspect a security issue, please contact us immediately at security@zynovexa.com.</p>
+            <p className="mt-3 text-sm text-slate-500">No internet system is fully risk free. Report suspected incidents to security@zynovexa.com.</p>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">7. Your Rights & Choices</h2>
-            <p className="mb-4">You have the following rights regarding your personal data:</p>
+          <section id="rights">
+            <h2 className="text-2xl font-bold text-white mb-4">7. Your Privacy Rights</h2>
+            <p className="mb-4">Depending on your jurisdiction, you may have the rights below:</p>
             <div className="grid sm:grid-cols-2 gap-3">
               {[
-                { icon: '👁️', title: 'Access', desc: 'Request a copy of all personal data we hold about you' },
-                { icon: '✏️', title: 'Correction', desc: 'Update or correct inaccurate personal information' },
-                { icon: '🗑️', title: 'Deletion', desc: 'Request deletion of your account and all associated data' },
-                { icon: '📤', title: 'Portability', desc: 'Export your data in a machine-readable format (JSON/CSV)' },
-                { icon: '🚫', title: 'Opt-Out', desc: 'Unsubscribe from marketing emails at any time' },
-                { icon: '⏸️', title: 'Restriction', desc: 'Request we limit how we process your data in certain cases' },
+                { title: 'Access', desc: 'Request confirmation and a copy of your personal data.' },
+                { title: 'Correction', desc: 'Correct incomplete or inaccurate account information.' },
+                { title: 'Deletion', desc: 'Request account and related personal data deletion.' },
+                { title: 'Portability', desc: 'Receive data export where applicable and technically feasible.' },
+                { title: 'Objection', desc: 'Object to certain processing activities where allowed.' },
+                { title: 'Marketing Opt-Out', desc: 'Unsubscribe from product marketing communications.' },
               ].map(r => (
-                <div key={r.title} className="card p-4 flex items-start gap-3">
-                  <span className="text-xl shrink-0 mt-0.5">{r.icon}</span>
+                <div key={r.title} className="card p-4">
                   <div>
                     <p className="font-semibold text-white text-sm">{r.title}</p>
                     <p className="text-xs text-slate-400 mt-0.5">{r.desc}</p>
@@ -181,54 +263,80 @@ export default function PrivacyPolicyPage() {
                 </div>
               ))}
             </div>
-            <p className="mt-4 text-sm">To exercise any of these rights, email us at <strong className="text-purple-400">privacy@zynovexa.com</strong> or use the data settings in your account dashboard. We respond within 30 days.</p>
+            <p className="mt-4 text-sm">
+              Submit requests at <strong className="text-purple-400">privacy@zynovexa.com</strong>. We may verify identity before fulfilling data requests.
+            </p>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">8. Data Retention</h2>
-            <p>We retain your personal data for as long as your account is active. If you delete your account:</p>
+          <section id="retention">
+            <h2 className="text-2xl font-bold text-white mb-4">8. Retention and Deletion</h2>
+            <p>Retention periods are based on product necessity, support requirements, and legal obligations:</p>
             <ul className="mt-3 space-y-2 text-sm list-disc list-inside text-slate-400">
-              <li>Your profile and posts are deleted immediately</li>
-              <li>Backups are purged within 30 days</li>
-              <li>Billing records are retained for 7 years as required by tax law</li>
-              <li>Anonymized usage statistics may be retained indefinitely</li>
+              <li>Active account data is retained for ongoing service delivery.</li>
+              <li>Deleted account records are removed from production systems and then rotated from backups.</li>
+              <li>Billing and tax records may be retained as required by law.</li>
+              <li>Aggregated, non-identifiable analytics may be retained for performance benchmarking.</li>
             </ul>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">9. Children's Privacy</h2>
-            <p>Zynovexa is not directed at children under the age of 13. We do not knowingly collect personal information from children. If we become aware that we have collected data from a child under 13, we will delete it immediately. If you believe we have inadvertently collected such information, please contact us at privacy@zynovexa.com.</p>
+          <section id="transfers">
+            <h2 className="text-2xl font-bold text-white mb-4">9. International Transfers</h2>
+            <p>
+              Depending on service configuration and processor location, data may be processed in multiple jurisdictions.
+              Where required, we apply contractual and technical safeguards for cross-border transfers.
+            </p>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">10. International Data Transfers</h2>
-            <p>Your data may be stored and processed in the United States or other countries where our service providers operate. By using Zynovexa, you consent to the transfer of your information to countries that may have different data protection laws than your country. We ensure appropriate safeguards are in place for such transfers.</p>
+          <section id="children">
+            <h2 className="text-2xl font-bold text-white mb-4">10. Children and Age Limits</h2>
+            <p>
+              Zynovexa is not intended for children under 13, or a higher minimum age where required by local law.
+              If you believe child data was submitted in error, contact privacy@zynovexa.com for immediate review.
+            </p>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">11. Changes to This Policy</h2>
-            <p>We may update this Privacy Policy periodically. When we make significant changes, we will:</p>
+          <section id="changes">
+            <h2 className="text-2xl font-bold text-white mb-4">11. Policy Updates</h2>
+            <p>We may update this policy as legal requirements and product practices evolve. For material changes, we will:</p>
             <ul className="mt-3 space-y-2 text-sm list-disc list-inside text-slate-400">
-              <li>Update the "Last Updated" date at the top of this page</li>
-              <li>Send an email notification to registered users</li>
-              <li>Display a prominent notice on our platform</li>
+              <li>Revise the update date at the top of this page.</li>
+              <li>Publish a notice in product or via email where appropriate.</li>
+              <li>Document meaningful policy changes in clear language.</li>
             </ul>
-            <p className="mt-3 text-sm">Continued use of Zynovexa after changes constitutes acceptance of the updated policy.</p>
+            <p className="mt-3 text-sm">Continued use of services after updates means you acknowledge the revised policy.</p>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">12. Contact Us</h2>
-            <p className="mb-4">If you have questions, concerns, or requests regarding this Privacy Policy or your personal data:</p>
+          <section id="contact">
+            <h2 className="text-2xl font-bold text-white mb-4">12. Contact and Requests</h2>
+            <p className="mb-4">For questions, complaints, or rights requests:</p>
             <div className="card p-5 space-y-2 text-sm">
-              <p>📧 <strong className="text-white">Email:</strong> privacy@zynovexa.com</p>
-              <p>🌐 <strong className="text-white">Website:</strong> https://zynovexa.com</p>
-              <p>⏱️ <strong className="text-white">Response time:</strong> Within 2 business days</p>
+              <p><strong className="text-white">Privacy:</strong> privacy@zynovexa.com</p>
+              <p><strong className="text-white">Security:</strong> security@zynovexa.com</p>
+              <p><strong className="text-white">Website:</strong> {APP_URL}</p>
+              <p><strong className="text-white">Standard response time:</strong> within 2 business days</p>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-white mb-4">Frequently Asked Questions</h2>
+            <div className="space-y-3">
+              <div className="card p-4">
+                <h3 className="text-sm font-semibold text-white">Do you sell user data?</h3>
+                <p className="text-sm text-slate-400 mt-1">No. We do not sell personal data.</p>
+              </div>
+              <div className="card p-4">
+                <h3 className="text-sm font-semibold text-white">Can I request deletion of my account data?</h3>
+                <p className="text-sm text-slate-400 mt-1">Yes. Use account settings or email privacy@zynovexa.com.</p>
+              </div>
+              <div className="card p-4">
+                <h3 className="text-sm font-semibold text-white">How do I report a privacy issue?</h3>
+                <p className="text-sm text-slate-400 mt-1">Email privacy@zynovexa.com with your account email and details of the issue.</p>
+              </div>
             </div>
           </section>
 
         </div>
 
-        {/* Footer nav */}
         <div className="mt-16 pt-8 border-t flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderColor: 'var(--border)' }}>
           <Link href="/" className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-black" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>Z</div>
@@ -241,6 +349,6 @@ export default function PrivacyPolicyPage() {
           </div>
         </div>
       </div>
-    </div>
+    </MarketingLayout>
   );
 }

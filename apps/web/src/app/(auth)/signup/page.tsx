@@ -34,8 +34,23 @@ export default function SignupPage() {
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(prev => ({ ...prev, [k]: e.target.value }));
 
+  const getStrength = (pw: string): { score: number; label: string; color: string } => {
+    let s = 0;
+    if (pw.length >= 6) s++;
+    if (pw.length >= 10) s++;
+    if (/[A-Z]/.test(pw)) s++;
+    if (/[0-9]/.test(pw)) s++;
+    if (/[^A-Za-z0-9]/.test(pw)) s++;
+    if (s <= 1) return { score: 1, label: 'Weak', color: '#ef4444' };
+    if (s <= 2) return { score: 2, label: 'Fair', color: '#f59e0b' };
+    if (s <= 3) return { score: 3, label: 'Good', color: '#6366f1' };
+    return { score: 4, label: 'Strong', color: '#22c55e' };
+  };
+
+  const strength = form.password ? getStrength(form.password) : null;
+
   const handleGoogleSignup = () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:4000';
     window.location.href = `${apiUrl}/api/auth/google`;
   };
 
@@ -126,26 +141,36 @@ export default function SignupPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Full Name</label>
-              <input type="text" value={form.name} onChange={set('name')} required
+              <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-1.5">Full Name</label>
+              <input id="name" type="text" value={form.name} onChange={set('name')} required
                 className="input w-full" placeholder="John Doe" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Email address</label>
-              <input type="email" value={form.email} onChange={set('email')} required
+              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1.5">Email address</label>
+              <input id="email" type="email" value={form.email} onChange={set('email')} required
                 className="input w-full" placeholder="you@example.com" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-slate-300">Password</label>
-                <button type="button" onClick={() => setShowPass(!showPass)} className="text-xs text-purple-400 hover:text-purple-300">{showPass ? 'Hide' : 'Show'}</button>
+                <label htmlFor="password" className="text-sm font-medium text-slate-300">Password</label>
+                <button type="button" onClick={() => setShowPass(!showPass)} className="text-xs text-purple-400 hover:text-purple-300" aria-label={showPass ? 'Hide password' : 'Show password'}>{showPass ? 'Hide' : 'Show'}</button>
               </div>
-              <input type={showPass ? 'text' : 'password'} value={form.password} onChange={set('password')} required
+              <input id="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={set('password')} required
                 className="input w-full" placeholder="Min 6 characters" />
+              {strength && (
+                <div className="mt-2">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map(i => (
+                      <div key={i} className="h-1 flex-1 rounded-full transition-colors" style={{ background: i <= strength.score ? strength.color : 'var(--border)' }} />
+                    ))}
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: strength.color }}>{strength.label}</p>
+                </div>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Confirm Password</label>
-              <input type={showPass ? 'text' : 'password'} value={form.confirmPassword} onChange={set('confirmPassword')} required
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-1.5">Confirm Password</label>
+              <input id="confirmPassword" type={showPass ? 'text' : 'password'} value={form.confirmPassword} onChange={set('confirmPassword')} required
                 className="input w-full" placeholder="Repeat password" />
             </div>
 
@@ -159,8 +184,8 @@ export default function SignupPage() {
 
           <p className="mt-4 text-center text-xs text-slate-500">
             By signing up, you agree to our{' '}
-            <a href="#" className="text-purple-400 hover:underline">Terms</a> &{' '}
-            <a href="#" className="text-purple-400 hover:underline">Privacy Policy</a>
+            <Link href="/terms" className="text-purple-400 hover:underline">Terms</Link> &{' '}
+            <Link href="/privacy" className="text-purple-400 hover:underline">Privacy Policy</Link>
           </p>
           <p className="mt-4 text-center text-sm text-slate-400">
             Already have an account?{' '}

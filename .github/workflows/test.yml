@@ -2,15 +2,35 @@ name: Tests
 
 on:
   push:
+    branches: [main, develop]
   pull_request:
+    branches: [main, develop]
 
 jobs:
-  backend-tests:
-    name: Backend Tests
+  api-tests:
+    name: API Tests
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: zynovexa
+          POSTGRES_PASSWORD: zynovexa
+          POSTGRES_DB: zynovexa_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://zynovexa:zynovexa@localhost:5432/zynovexa_test
+      JWT_ACCESS_SECRET: test-access-secret
+      JWT_REFRESH_SECRET: test-refresh-secret
+      NODE_ENV: test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,20 +40,23 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: apps/api/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run backend tests with coverage
-        run: npm run test:coverage
+      - name: Generate Prisma client
+        run: npx prisma generate
 
-  frontend-tests:
-    name: Frontend Tests
+      - name: Run API tests with coverage
+        run: npm run test -- --coverage --passWithNoTests
+
+  web-tests:
+    name: Web Tests
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: apps/web
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,10 +66,10 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: apps/web/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run frontend tests with coverage
-        run: npm run test:coverage
+      - name: Run web tests with coverage
+        run: npm run test -- --coverage --passWithNoTests

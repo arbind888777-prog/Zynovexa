@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "dev:api": "cd apps/api && npm run start:dev",
-    "dev:web": "cd apps/web && npm run dev",
+    "dev:web": "npm run dev --workspace=@zynovexa/web",
     "build:api": "cd apps/api && npm run build",
     "build:web": "cd apps/web && npm run build",
     "docker:up": "docker-compose up -d",

@@ -46,9 +46,9 @@ describe('Landing Page — buttons & links', () => {
     expect(el.closest('a')).toHaveAttribute('href', '/signup');
   });
 
-  it('"Build your own →" links to /settings', () => {
+  it('"Build your own →" links to /pricing', () => {
     const el = screen.getByText(/Build your own/);
-    expect(el.closest('a')).toHaveAttribute('href', '/settings');
+    expect(el.closest('a')).toHaveAttribute('href', '/pricing');
   });
 
   // ─── Bottom CTA banner ────────────────────────────────

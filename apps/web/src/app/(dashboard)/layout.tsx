@@ -4,6 +4,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
+import ThemeToggle from '@/components/theme-toggle';
+import FloatingSocialIcons from '@/components/FloatingSocialIcons';
 
 const NAV = [
   { href: '/dashboard',        icon: '📊', label: 'Dashboard' },
@@ -28,37 +30,102 @@ const PLAN_LABELS: Record<string, string> = {
   BUSINESS: '💼 Business',
 };
 
+function LoadingSplash() {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setProgress(p => Math.min(p + Math.random() * 25 + 10, 98)), 200);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center hero-bg overflow-hidden relative">
+      <div className="orb orb-purple w-[500px] h-[500px] -top-40 -left-40 animate-pulse" />
+      <div className="orb orb-pink w-[400px] h-[400px] -bottom-40 -right-40 animate-pulse" style={{ animationDelay: '1s' }} />
+      <FloatingSocialIcons />
+      <div className="text-center relative z-10 animate-fade-in">
+        <div className="relative mx-auto mb-6" style={{ width: 80, height: 80 }}>
+          <div className="absolute inset-0 rounded-3xl animate-ping opacity-20"
+            style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }} />
+          <div className="relative w-full h-full rounded-3xl flex items-center justify-center text-white font-black text-4xl"
+            style={{
+              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+              boxShadow: '0 20px 60px rgba(99,102,241,0.4), inset 0 -4px 12px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.2)',
+              transform: 'perspective(600px) rotateX(5deg)',
+              animation: 'logoPulse 2s ease-in-out infinite',
+            }}>
+            Z
+          </div>
+        </div>
+        <div className="text-2xl font-extrabold gradient-text mb-2">Zynovexa</div>
+        <p className="text-slate-400 text-sm mb-6">Loading your studio...</p>
+        <div className="w-48 h-1.5 rounded-full mx-auto overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+          <div className="h-full rounded-full transition-all duration-200 ease-out"
+            style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899)' }} />
+        </div>
+      </div>
+      <style>{`
+        @keyframes logoPulse {
+          0%, 100% { transform: perspective(600px) rotateX(5deg) scale(1); }
+          50% { transform: perspective(600px) rotateX(0deg) scale(1.05); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, user, logout, fetchMe, isLoading } = useAuthStore();
+  const { isAuthenticated, user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [ready, setReady] = useState(false);
 
+  // Wait for Zustand persist hydration, then check auth
   useEffect(() => {
-    if (!isAuthenticated) {
-      fetchMe().catch(() => router.push('/login'));
+    let cancelled = false;
+
+    const tryAuth = () => {
+      const s = useAuthStore.getState();
+      if (s.isAuthenticated) { if (!cancelled) setReady(true); return true; }
+      return false;
+    };
+
+    // Immediate check — works for client-side nav right after demoLogin()
+    if (tryAuth()) return;
+
+    // Poll every 50ms until hydration completes (never call fetchMe prematurely)
+    const interval = setInterval(() => {
+      if (tryAuth()) { clearInterval(interval); return; }
+      // Once hydrated, if still not authenticated → go to login
+      if (useAuthStore.getState()._hydrated) {
+        clearInterval(interval);
+        if (!cancelled) router.push('/login');
+      }
+    }, 50);
+
+    // Safety: max 3s wait then redirect
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      if (!cancelled && !useAuthStore.getState().isAuthenticated) router.push('/login');
+    }, 3000);
+
+    return () => { cancelled = true; clearInterval(interval); clearTimeout(timeout); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Watch for logout while on dashboard
+  useEffect(() => {
+    if (ready && !isAuthenticated) {
+      router.push('/login');
     }
-  }, []);
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center hero-bg">
-        <div className="text-center animate-fade-in">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-2xl mx-auto mb-4"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>Z</div>
-          <div className="text-xl font-extrabold gradient-text mb-3">Zynovexa</div>
-          <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated && !isLoading) {
-    router.push('/login');
-    return null;
+  // Show splash only while waiting for hydration or initial auth check
+  if (!ready) {
+    return <LoadingSplash />;
   }
 
   const handleLogout = async () => {
@@ -113,8 +180,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      {/* Logout */}
+      {/* Theme & Logout */}
       <div className="p-3 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between px-3 py-2 mb-1">
+          <span className="text-xs text-slate-500">Theme</span>
+          <ThemeToggle />
+        </div>
         <Link href="/settings/billing"
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:text-white hover:bg-white/5 transition-all mb-1">
           <span>⬆️</span><span>Upgrade Plan</span>
@@ -159,9 +230,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-black text-xs" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>Z</div>
             <span className="font-extrabold gradient-text">Zynovexa</span>
           </Link>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
-            {user?.name?.[0]?.toUpperCase() || 'U'}
+          <div className="flex items-center gap-2">
+            <ThemeToggle className="scale-[0.8]" />
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
+              {user?.name?.[0]?.toUpperCase() || 'U'}
+            </div>
           </div>
         </header>
 

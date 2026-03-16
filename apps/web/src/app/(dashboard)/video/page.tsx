@@ -64,7 +64,7 @@ export default function VideoStudioPage() {
   };
 
   const handleGenerateScript = async () => {
-    if (!scriptInputs.topic) return toast.error('Video topic likho');
+    if (!scriptInputs.topic) return toast.error('Please enter a video topic');
     setScriptLoading(true);
     setScript(null);
     try {
@@ -87,7 +87,7 @@ export default function VideoStudioPage() {
   };
 
   const handleGenerateCaptions = async () => {
-    if (!scriptInputs.topic && !form.description) return toast.error('Topic ya description likho pehle');
+    if (!scriptInputs.topic && !form.description) return toast.error('Please enter a topic or description first');
     setCaptionLoading(true);
     try {
       const platform = VIDEO_TYPES.find(t => t.id === selectedType)?.platform?.toLowerCase() || 'instagram';
@@ -107,7 +107,7 @@ export default function VideoStudioPage() {
   };
 
   const handleGenerateHashtags = async () => {
-    if (!scriptInputs.topic && !form.description) return toast.error('Topic likho pehle');
+    if (!scriptInputs.topic && !form.description) return toast.error('Please enter a topic first');
     setHashtagLoading(true);
     try {
       const res = await aiApi.generateHashtags({ content: scriptInputs.topic || form.description });
@@ -121,7 +121,7 @@ export default function VideoStudioPage() {
   };
 
   const handlePublish = (status: string) => {
-    if (!form.description && !form.title) return toast.error('Description ya title required hai');
+    if (!form.description && !form.title) return toast.error('Description or title is required');
     createPost.mutate({
       title: form.title || scriptInputs.topic,
       caption: form.description,
@@ -140,7 +140,7 @@ export default function VideoStudioPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white">🎬 Video Studio</h1>
-          <p className="text-gray-400 mt-1">Reels, Shorts, TikTok, YouTube — sab ek jagah</p>
+          <p className="text-gray-400 mt-1">Reels, Shorts, TikTok, YouTube — all in one place</p>
         </div>
         <div className="flex items-center gap-2">
           {['type', 'details', 'script', 'publish'].map((s, i) => (
@@ -165,7 +165,7 @@ export default function VideoStudioPage() {
       {/* STEP 1: Video Type Selection */}
       {step === 'type' && (
         <div>
-          <h2 className="text-xl font-semibold text-white mb-6">Video type chuno 📱</h2>
+          <h2 className="text-xl font-semibold text-white mb-6">Choose video type 📱</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {VIDEO_TYPES.map(type => (
               <button key={type.id} onClick={() => selectVideoType(type)}
@@ -205,7 +205,7 @@ export default function VideoStudioPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">Description / Caption</label>
                 <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={4}
-                  placeholder="Video ke baare mein describe karo..."
+                  placeholder="Describe your video content..."
                   className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                   style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
               </div>
@@ -378,7 +378,7 @@ export default function VideoStudioPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Key Points (ek per line)</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Key Points (one per line)</label>
               <textarea value={scriptInputs.keyPoints} onChange={e => setScriptInputs(p => ({ ...p, keyPoints: e.target.value }))} rows={4}
                 placeholder={"Point 1: Intro hook\nPoint 2: Main tip\nPoint 3: CTA"}
                 className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-purple-500 resize-none"
@@ -402,15 +402,15 @@ export default function VideoStudioPage() {
             {scriptLoading && (
               <div className="flex flex-col items-center justify-center h-64 gap-4">
                 <div className="w-12 h-12 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-gray-400 text-sm">AI script likh raha hai...</p>
+                <p className="text-gray-400 text-sm">AI is writing your script...</p>
               </div>
             )}
 
             {!script && !scriptLoading && (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <div className="text-5xl mb-4">🎬</div>
-                <p className="text-gray-400">Topic fill karo aur Generate dabao</p>
-                <p className="text-gray-500 text-xs mt-2">GPT-4o aapka script likhega</p>
+                <p className="text-gray-400">Enter a topic and hit Generate</p>
+                <p className="text-gray-500 text-xs mt-2">AI will write your script</p>
               </div>
             )}
 

@@ -1,4 +1,5 @@
 import MarketingLayout from '@/components/MarketingLayout';
+import EventRegisterButton from '@/components/EventRegisterButton';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
@@ -115,7 +116,7 @@ export default function CommunityPage() {
                     </div>
                   </div>
                 </div>
-                <button className="btn btn-secondary btn-sm shrink-0">Register →</button>
+                <EventRegisterButton title={ev.title} />
               </div>
             ))}
           </div>

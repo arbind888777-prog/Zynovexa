@@ -1,8 +1,8 @@
 import {
-  Controller, Post, Get, Body, UseGuards, Request, HttpCode, HttpStatus, Redirect, Res,
+  Controller, Post, Get, Body, UseGuards, Request, HttpCode, HttpStatus, Res,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiExcludeEndpoint } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -67,15 +67,44 @@ export class AuthController {
     try {
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
       const result = await this.authService.googleLogin(req.user);
-      // Redirect to frontend with tokens in query params
-      const params = new URLSearchParams({
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        userId: result.user.id,
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      // Set tokens as httpOnly cookies instead of URL query params
+      const cookieOptions = {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax' as const,
+        path: '/',
+        maxAge: 15 * 60 * 1000, // 15 min — frontend reads once then clears
+      };
+
+      res.cookie('zy_access_token', result.accessToken, cookieOptions);
+      res.cookie('zy_refresh_token', result.refreshToken, {
+        ...cookieOptions,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
-      return res.redirect(`${frontendUrl}/auth/google/callback?${params.toString()}`);
+
+      return res.redirect(`${frontendUrl}/auth/google/callback?success=true`);
     } catch {
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/login?error=google_failed`);
     }
+  }
+
+  @Get('google/exchange')
+  @ApiOperation({ summary: 'Exchange OAuth cookies for tokens (called by frontend after Google redirect)' })
+  @SkipThrottle()
+  async googleExchange(@Request() req: any, @Res() res: Response) {
+    const accessToken = req.cookies?.zy_access_token;
+    const refreshToken = req.cookies?.zy_refresh_token;
+
+    if (!accessToken || !refreshToken) {
+      return res.status(401).json({ message: 'No OAuth tokens found' });
+    }
+
+    // Clear the one-time cookies
+    res.clearCookie('zy_access_token', { path: '/' });
+    res.clearCookie('zy_refresh_token', { path: '/' });
+
+    return res.json({ accessToken, refreshToken });
   }
 }

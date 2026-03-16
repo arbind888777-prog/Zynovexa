@@ -59,7 +59,7 @@ export const metadata: Metadata = {
       'Schedule posts, generate viral AI content, and grow your audience across 7 platforms. Join 50,000+ creators using Zynovexa.',
     images: [
       {
-        url: `${APP_URL}/og-image.png`,
+        url: `${APP_URL}/og-image.svg`,
         width: 1200,
         height: 630,
         alt: 'Zynovexa — AI Social Media Manager',
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     title: 'Zynovexa — AI Social Media Manager for Creators',
     description:
       'Schedule posts, generate viral AI content, and grow your audience across 7 platforms. Join 50,000+ creators.',
-    images: [`${APP_URL}/og-image.png`],
+    images: [`${APP_URL}/og-image.svg`],
     creator: '@zynovexa',
     site: '@zynovexa',
   },
@@ -94,7 +94,7 @@ const structuredData = {
       url: APP_URL,
       logo: {
         '@type': 'ImageObject',
-        url: `${APP_URL}/logo.png`,
+        url: `${APP_URL}/logo.svg`,
       },
       sameAs: [
         'https://twitter.com/zynovexa',
@@ -137,18 +137,26 @@ const structuredData = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('zynovexa-theme');var c=document.documentElement.classList;if(t==='light'){c.add('light')}else{c.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:text-white focus:text-sm focus:font-semibold" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
+          Skip to content
+        </a>
+        <Providers><main id="main-content">{children}</main></Providers>
       </body>
     </html>
   );

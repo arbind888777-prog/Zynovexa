@@ -1,6 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
+import { useFocusTrap } from '@/lib/use-focus-trap';
+import ThemeToggle from '@/components/theme-toggle';
 
 const NAV: Array<{
   label: string;
@@ -58,6 +60,48 @@ const NAV: Array<{
 export default function Navbar() {
   const [open, setOpen] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const dropdownRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const mobileTrapRef = useFocusTrap<HTMLDivElement>(mobileOpen);
+
+  // Close dropdown on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setOpen(null); setMobileOpen(false); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  const handleDropdownKeyDown = useCallback((e: React.KeyboardEvent, label: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setOpen(prev => prev === label ? null : label);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setOpen(label);
+      // Focus first link in dropdown after state update
+      requestAnimationFrame(() => {
+        const container = dropdownRefs.current.get(label);
+        const first = container?.querySelector('a') as HTMLElement | null;
+        first?.focus();
+      });
+    }
+  }, []);
+
+  const handleItemKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const el = e.currentTarget as HTMLElement;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      (el.nextElementSibling as HTMLElement)?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      (el.previousElementSibling as HTMLElement)?.focus();
+    } else if (e.key === 'Escape') {
+      setOpen(null);
+      // Return focus to the trigger button
+      (el.closest('[data-dropdown]')?.querySelector('button') as HTMLElement)?.focus();
+    }
+  }, []);
 
   return (
     <nav className="fixed top-0 w-full z-50 glass-dark">
@@ -72,15 +116,19 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-1 text-sm font-medium">
           {NAV.map(item =>
             item.children ? (
-              <div key={item.label} className="relative" onMouseEnter={() => setOpen(item.label)} onMouseLeave={() => setOpen(null)}>
-                <button className="flex items-center gap-1 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+              <div key={item.label} className="relative" data-dropdown={item.label} onMouseEnter={() => setOpen(item.label)} onMouseLeave={() => setOpen(null)}>
+                <button
+                  aria-expanded={open === item.label}
+                  aria-haspopup="true"
+                  onKeyDown={(e) => handleDropdownKeyDown(e, item.label)}
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all">
                   {item.label}
                   <svg className={`w-3 h-3 transition-transform ${open === item.label ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </button>
                 {open === item.label && (
-                  <div className="absolute top-full left-0 mt-1 w-64 glass rounded-xl p-2 shadow-xl border" style={{ borderColor: 'var(--border2)' }}>
+                  <div ref={el => { if (el) dropdownRefs.current.set(item.label, el); }} role="menu" className="absolute top-full left-0 mt-1 w-64 glass rounded-xl p-2 shadow-xl border" style={{ borderColor: 'var(--border2)' }}>
                     {item.children.map(c => (
-                      <Link key={c.href} href={c.href} className="flex flex-col px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
+                      <Link key={c.href} href={c.href} role="menuitem" onKeyDown={handleItemKeyDown} className="flex flex-col px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group">
                         <span className="text-white text-sm font-medium group-hover:text-purple-300 transition-colors">{c.label}</span>
                         {c.desc && <span className="text-xs text-slate-500 mt-0.5">{c.desc}</span>}
                       </Link>
@@ -95,13 +143,14 @@ export default function Navbar() {
         </div>
 
         {/* CTA */}
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-3">
+          <ThemeToggle />
           <Link href="/login" className="btn btn-ghost btn-sm">Sign in</Link>
           <Link href="/signup" className="btn btn-primary btn-sm">Get Started Free</Link>
         </div>
 
         {/* Mobile hamburger */}
-        <button className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white" onClick={() => setMobileOpen(v => !v)}>
+        <button aria-label={mobileOpen ? 'Close menu' : 'Open menu'} className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white" onClick={() => setMobileOpen(v => !v)}>
           {mobileOpen
             ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -111,7 +160,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden glass-dark border-t px-4 py-4 space-y-1 max-h-[80vh] overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
+        <div ref={mobileTrapRef} className="md:hidden glass-dark border-t px-4 py-4 space-y-1 max-h-[80vh] overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
           {NAV.map(item =>
             item.children ? (
               <div key={item.label}>
@@ -124,7 +173,11 @@ export default function Navbar() {
               <Link key={item.label} href={item.href!} onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 text-sm transition-colors">{item.label}</Link>
             )
           )}
-          <div className="pt-4 flex flex-col gap-2 border-t" style={{ borderColor: 'var(--border)' }}>
+          <div className="pt-4 flex flex-col gap-3 border-t" style={{ borderColor: 'var(--border)' }}>
+            <div className="flex items-center justify-between px-3 py-1">
+              <span className="text-xs text-slate-500">Theme</span>
+              <ThemeToggle />
+            </div>
             <Link href="/login" onClick={() => setMobileOpen(false)} className="btn btn-ghost w-full justify-center">Sign in</Link>
             <Link href="/signup" onClick={() => setMobileOpen(false)} className="btn btn-primary w-full justify-center">Get Started Free</Link>
           </div>

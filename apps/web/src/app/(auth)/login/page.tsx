@@ -14,17 +14,23 @@ const LEFT_FEATURES = [
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading } = useAuthStore();
+  const { login, demoLogin, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Demo credentials — bypass API
+    if (email === 'demo@zynovexa.com' && password === 'demo123') {
+      demoLogin();
+      toast.success('Welcome to demo mode! 🚀');
+      router.push('/dashboard');
+      return;
+    }
     try {
       await login(email, password);
       toast.success('Welcome back! 🚀');
-      // Check if the user has completed onboarding
       const currentUser = useAuthStore.getState().user;
       if (currentUser && !currentUser.onboardingCompleted) {
         router.push('/onboarding');
@@ -39,7 +45,7 @@ export default function LoginPage() {
   const fillDemo = () => { setEmail('demo@zynovexa.com'); setPassword('demo123'); };
 
   const handleGoogleLogin = () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:4000';
     window.location.href = `${apiUrl}/api/auth/google`;
   };
 
@@ -126,17 +132,17 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Email address</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus
+              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1.5">Email address</label>
+              <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus
                 className="input w-full" placeholder="you@example.com" />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-slate-300">Password</label>
-                <button type="button" onClick={() => setShowPass(!showPass)} className="text-xs text-purple-400 hover:text-purple-300">{showPass ? 'Hide' : 'Show'}</button>
+                <label htmlFor="password" className="text-sm font-medium text-slate-300">Password</label>
+                <button type="button" onClick={() => setShowPass(!showPass)} className="text-xs text-purple-400 hover:text-purple-300" aria-label={showPass ? 'Hide password' : 'Show password'}>{showPass ? 'Hide' : 'Show'}</button>
               </div>
-              <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required
+              <input id="password" type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required
                 className="input w-full" placeholder="••••••••" />
             </div>
 

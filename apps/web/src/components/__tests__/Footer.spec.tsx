@@ -98,8 +98,21 @@ describe('Footer — all links', () => {
     ['Press', '/press'],
     ['Partner Program', '/partner-program'],
     ['Legal', '/legal'],
-    ['Sitemap', '/sitemap.xml'],
+    ['Sitemap', '/sitemap-page'],
   ])('Company: "%s" links to %s', (label, href) => {
+    const el = screen.getByText(label);
+    expect(el.closest('a')).toHaveAttribute('href', href);
+  });
+
+  // ─── Legal column ─────────────────────────────────────
+  it.each([
+    ['Privacy Policy', '/privacy'],
+    ['Terms of Service', '/terms'],
+    ['Cookie Policy', '/legal/cookies'],
+    ['GDPR Notice', '/legal/gdpr'],
+    ['Data Processing Agreement', '/legal/dpa'],
+    ['Copyright Policy', '/legal/copyright'],
+  ])('Legal: "%s" links to %s', (label, href) => {
     const el = screen.getByText(label);
     expect(el.closest('a')).toHaveAttribute('href', href);
   });

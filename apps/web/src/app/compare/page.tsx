@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: 'See how Zynovexa compares to Buffer, Hootsuite, Sprout Social, Later, and SocialBee. The best AI social media management tool for creators.',
 };
 
-const COMPETITORS = ['Buffer', 'Hootsuite', 'Sprout Social', 'Later', 'SocialBee', 'Planable'];
+const COMPETITORS = ['Gudsho', 'Buffer', 'Hootsuite', 'Sprout Social', 'Later', 'SocialBee', 'Planable'];
 
 const FEATURES_COMPARE = [
   { feature: 'AI Content Generation', zynovexa: true, others: false, note: 'GPT-4o powered' },
@@ -25,6 +25,7 @@ const FEATURES_COMPARE = [
 ];
 
 const ALTS = [
+  { competitor: 'Gudsho', href: '/compare/gudsho-alternative', tagline: 'More AI power, deeper analytics & scheduling' },
   { competitor: 'Buffer', href: '/compare/buffer-alternative', tagline: 'Better AI + more features at half the price' },
   { competitor: 'Hootsuite', href: '/compare/hootsuite-alternative', tagline: 'Modern interface, smarter automation' },
   { competitor: 'Sprout Social', href: '/compare/sprout-social-alternative', tagline: 'Enterprise power at creator prices' },
@@ -46,6 +47,15 @@ export default function ComparePage() {
           <p className="text-slate-400 text-xl mb-8 max-w-2xl mx-auto">
             We did the research so you don't have to. See exactly why 50,000+ creators switched to Zynovexa.
           </p>
+        </div>
+      </section>
+
+      {/* Compare All CTA */}
+      <section className="py-8 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <Link href="/compare/all" className="btn btn-primary btn-lg inline-flex items-center gap-2">
+            <span>⚡</span> Compare All Competitors at Once
+          </Link>
         </div>
       </section>
 

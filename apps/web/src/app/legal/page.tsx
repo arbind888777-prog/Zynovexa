@@ -2,53 +2,212 @@ import MarketingLayout from '@/components/MarketingLayout';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
+const APP_URL = 'https://zynovexa.com';
+
 export const metadata: Metadata = {
-  title: 'Legal | Zynovexa',
-  description: 'Zynovexa legal documents — Terms of Service, Privacy Policy, Cookie Policy, GDPR, and more.',
+  title: 'Legal Center | Zynovexa',
+  description:
+    'Explore Zynovexa legal documents including Terms, Privacy, Cookie Policy, GDPR rights, DPA, and copyright reporting guidance.',
+  keywords: [
+    'zynovexa legal',
+    'terms and privacy',
+    'cookie policy',
+    'gdpr compliance',
+    'data processing agreement',
+    'copyright policy',
+  ],
+  alternates: { canonical: 'https://zynovexa.com/legal' },
+  openGraph: {
+    title: 'Legal Center | Zynovexa',
+    description:
+      'A structured legal center with all compliance, privacy, and policy documents for users and enterprise teams.',
+    url: 'https://zynovexa.com/legal',
+    type: 'website',
+  },
 };
 
 const DOCS = [
-  { icon: '📋', title: 'Terms of Service', desc: 'The agreement between you and Zynovexa governing use of our platform.', href: '/terms', updated: 'January 1, 2026' },
-  { icon: '🔒', title: 'Privacy Policy', desc: 'How we collect, use, and protect your personal information.', href: '/privacy', updated: 'January 1, 2026' },
-  { icon: '🍪', title: 'Cookie Policy', desc: 'What cookies we use, why we use them, and how to manage them.', href: '/legal/cookies', updated: 'January 1, 2026' },
-  { icon: '🇪🇺', title: 'GDPR Compliance', desc: 'Your rights under the General Data Protection Regulation.', href: '/legal/gdpr', updated: 'January 1, 2026' },
-  { icon: '©️', title: 'Copyright Policy', desc: 'Our DMCA policy and how to report copyright infringement.', href: '/legal/copyright', updated: 'January 1, 2026' },
-  { icon: '📑', title: 'Acceptable Use Policy', desc: 'What you can and cannot do with Zynovexa services.', href: '/legal/acceptable-use', updated: 'January 1, 2026' },
-  { icon: '🤝', title: 'Data Processing Agreement', desc: 'DPA for enterprise customers and business users.', href: '/legal/dpa', updated: 'January 1, 2026' },
-  { icon: '♿', title: 'Accessibility Statement', desc: 'Our commitment to making Zynovexa accessible for everyone.', href: '/legal/accessibility', updated: 'January 1, 2026' },
+  {
+    title: 'Terms of Service',
+    desc: 'The legal agreement governing access, subscriptions, and acceptable use of Zynovexa services.',
+    href: '/terms',
+    updated: 'March 7, 2026',
+    label: 'Core Policy',
+  },
+  {
+    title: 'Privacy Policy',
+    desc: 'Detailed disclosure on data collection, processing, security controls, retention, and user rights.',
+    href: '/privacy',
+    updated: 'March 7, 2026',
+    label: 'Core Policy',
+  },
+  {
+    title: 'Cookie Policy',
+    desc: 'Cookie categories, operational purpose, legal basis, and user preference controls.',
+    href: '/legal/cookies',
+    updated: 'March 7, 2026',
+    label: 'Privacy',
+  },
+  {
+    title: 'GDPR Notice',
+    desc: 'EU/EEA data subject rights and request channels for access, correction, deletion, and portability.',
+    href: '/legal/gdpr',
+    updated: 'March 7, 2026',
+    label: 'Compliance',
+  },
+  {
+    title: 'Data Processing Agreement',
+    desc: 'Processor obligations, security commitments, subprocessor controls, and cross-border safeguards.',
+    href: '/legal/dpa',
+    updated: 'March 7, 2026',
+    label: 'Enterprise',
+  },
+  {
+    title: 'Copyright Policy',
+    desc: 'Copyright reporting process, repeat infringement policy, and counter-notice workflow.',
+    href: '/legal/copyright',
+    updated: 'March 7, 2026',
+    label: 'IP',
+  },
 ];
+
+const FAQ = [
+  {
+    q: 'Where should users submit legal requests?',
+    a: 'General legal requests can be sent to legal@zynovexa.com. Privacy requests should be sent to privacy@zynovexa.com.',
+  },
+  {
+    q: 'How fast does Zynovexa respond to compliance requests?',
+    a: 'Initial acknowledgment is typically within 2 business days, with full handling based on request complexity and legal timelines.',
+  },
+  {
+    q: 'Do enterprise customers get a DPA?',
+    a: 'Yes. Enterprise customers can review the DPA page and request a signed version through legal channels.',
+  },
+];
+
+const legalWebPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Legal Center | Zynovexa',
+  url: `${APP_URL}/legal`,
+  description:
+    'Structured legal center with Terms, Privacy, Cookie Policy, GDPR notice, DPA, and Copyright Policy.',
+  isPartOf: {
+    '@type': 'WebSite',
+    name: 'Zynovexa',
+    url: APP_URL,
+  },
+};
+
+const legalBreadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: APP_URL,
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Legal',
+      item: `${APP_URL}/legal`,
+    },
+  ],
+};
+
+const legalFaqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map((item) => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.a,
+    },
+  })),
+};
 
 export default function LegalPage() {
   return (
     <MarketingLayout>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(legalWebPageSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(legalBreadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(legalFaqSchema) }}
+      />
+
       <section className="pt-32 pb-16 px-4 sm:px-6 text-center relative overflow-hidden">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-5xl sm:text-6xl font-black text-white mb-4">Legal</h1>
-          <p className="text-slate-400 text-xl">All our legal documents in one place. We believe in transparency and keeping things simple.</p>
+          <span className="badge badge-purple mb-4 inline-block">Legal Center</span>
+          <h1 className="text-5xl sm:text-6xl font-black text-white mb-4">Trust, Compliance, and Transparency</h1>
+          <p className="text-slate-400 text-xl">
+            All legal documents in one structured hub so users, teams, and partners can understand rights,
+            responsibilities, and compliance commitments quickly.
+          </p>
+        </div>
+      </section>
+
+      <section className="py-4 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto card p-5">
+          <h2 className="text-lg font-semibold text-white mb-3">Quick Access</h2>
+          <div className="grid sm:grid-cols-2 gap-2 text-sm text-slate-400">
+            {DOCS.map(doc => (
+              <Link key={doc.title} href={doc.href} className="hover:text-white transition-colors">
+                {doc.title}
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="py-10 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
           {DOCS.map(doc => (
-            <Link key={doc.title} href={doc.href} className="card card-hover p-6 flex items-start gap-4 group">
-              <span className="text-3xl shrink-0">{doc.icon}</span>
+            <Link key={doc.title} href={doc.href} className="card card-hover p-6 group">
               <div className="flex-1">
+                <span className="badge badge-purple mb-3 inline-block">{doc.label}</span>
                 <h3 className="font-bold text-white group-hover:text-purple-300 transition-colors">{doc.title}</h3>
                 <p className="text-sm text-slate-400 mt-1">{doc.desc}</p>
                 <p className="text-xs text-slate-600 mt-2">Last updated: {doc.updated}</p>
               </div>
-              <span className="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1">→</span>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Legal inquiries */}
+      <section className="py-4 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-black text-white mb-5">Frequently Asked Questions</h2>
+          <div className="space-y-3">
+            {FAQ.map(item => (
+              <div key={item.q} className="card p-5">
+                <h3 className="text-white font-semibold">{item.q}</h3>
+                <p className="text-slate-400 text-sm mt-2">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="py-16 px-4 sm:px-6" style={{ background: 'var(--bg2)' }}>
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl font-black text-white mb-3">Legal inquiries</h2>
-          <p className="text-slate-400 mb-6 text-sm">For legal requests, data subject requests, or compliance questions, contact our legal team directly.</p>
+          <h2 className="text-2xl font-black text-white mb-3">Legal and Compliance Contact</h2>
+          <p className="text-slate-400 mb-6 text-sm">
+            For legal requests, data subject rights, enterprise compliance documentation, or copyright notices,
+            contact our policy team directly.
+          </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a href="mailto:legal@zynovexa.com" className="btn btn-primary">legal@zynovexa.com</a>
             <a href="mailto:privacy@zynovexa.com" className="btn btn-secondary">privacy@zynovexa.com</a>

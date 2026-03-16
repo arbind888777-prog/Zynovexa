@@ -2,7 +2,16 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
+import { unwrapApiData } from '@/lib/api';
 import { toast } from 'sonner';
+
+function setAuthCookie(loggedIn: boolean) {
+  if (loggedIn) {
+    document.cookie = 'zy_logged_in=1; path=/; max-age=604800; SameSite=Lax';
+  } else {
+    document.cookie = 'zy_logged_in=; path=/; max-age=0';
+  }
+}
 
 function GoogleCallbackContent() {
   const router = useRouter();
@@ -11,27 +20,35 @@ function GoogleCallbackContent() {
   const [status, setStatus] = useState<'loading' | 'error'>('loading');
 
   useEffect(() => {
-    const accessToken = params.get('accessToken');
-    const refreshToken = params.get('refreshToken');
     const error = params.get('error');
+    const success = params.get('success');
 
-    if (error || !accessToken || !refreshToken) {
+    if (error || !success) {
       setStatus('error');
       toast.error('Google login failed. Please try again.');
       setTimeout(() => router.push('/login'), 2000);
       return;
     }
 
-    // Save tokens to localStorage so the API interceptor can use them
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
-
-    // Also update Zustand persisted state
-    useAuthStore.setState({ accessToken, refreshToken, isAuthenticated: true });
-
-    // Fetch user data
+    // Exchange httpOnly cookies for tokens via secure API call
     (async () => {
       try {
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '');
+        const res = await fetch(`${apiUrl}/api/auth/google/exchange`, {
+          credentials: 'include', // sends cookies
+        });
+
+        if (!res.ok) throw new Error('Token exchange failed');
+
+        const payload = unwrapApiData<{ accessToken: string; refreshToken: string }>(await res.json());
+        const { accessToken, refreshToken } = payload;
+
+        // Save tokens
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+        setAuthCookie(true);
+        useAuthStore.setState({ accessToken, refreshToken, isAuthenticated: true });
+
         await fetchMe();
         toast.success('Welcome! Signed in with Google 🎉');
         router.push('/dashboard');

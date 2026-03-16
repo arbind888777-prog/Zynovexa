@@ -55,4 +55,16 @@ export class AiController {
   getUsage(@Request() req) {
     return this.aiService.getUsageStats(req.user.id);
   }
+
+  @Get('chat-memory')
+  @ApiOperation({ summary: 'Export recent chat memory' })
+  getChatMemory(@Request() req) {
+    return this.aiService.getChatMemory(req.user.id);
+  }
+
+  @Post('chat-memory/reset')
+  @ApiOperation({ summary: 'Reset chat memory' })
+  resetChatMemory(@Request() req) {
+    return this.aiService.clearChatMemory(req.user.id);
+  }
 }

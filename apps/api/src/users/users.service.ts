@@ -67,8 +67,13 @@ export class UsersService {
     return {
       posts: postCounts,
       totalPosts: Object.values(postCounts).reduce((a, b) => a + b, 0),
+      scheduledPosts: postCounts.scheduled || 0,
+      publishedPosts: postCounts.published || 0,
+      draftPosts: postCounts.draft || 0,
       connectedAccounts: accounts,
       aiRequestsUsed: aiRequests,
+      aiRequestsThisMonth: aiRequests,
+      aiRequestLimit: subscription?.plan === 'FREE' ? 20 : subscription?.plan === 'PRO' ? 500 : null,
       plan: subscription?.plan || 'FREE',
     };
   }

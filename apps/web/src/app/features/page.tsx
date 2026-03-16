@@ -85,6 +85,21 @@ export default function FeaturesPage() {
             From AI content creation to advanced analytics — Zynovexa gives you every tool to dominate social media.
           </p>
           <Link href="/signup" className="btn btn-primary btn-xl inline-flex">🚀 Start Free Today</Link>
+          <div className="hero-panel mt-10 grid gap-3 p-4 sm:grid-cols-3 sm:p-5 text-left">
+            {[
+              ['⚡', 'One connected stack', 'Creation, scheduling, analytics, collaboration, and distribution in one place.'],
+              ['🧠', 'AI where it matters', 'Speed up ideation, writing, optimization, and decision making.'],
+              ['📈', 'Built for growth', 'Every feature points back to reach, engagement, and monetization.'],
+            ].map(([icon, title, desc]) => (
+              <div key={title} className="hero-stat-chip">
+                <span className="text-xl shrink-0">{icon}</span>
+                <div>
+                  <strong>{title}</strong>
+                  <span>{desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

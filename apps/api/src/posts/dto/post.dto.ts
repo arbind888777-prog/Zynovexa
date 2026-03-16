@@ -33,6 +33,9 @@ export class CreatePostDto {
 }
 
 export class UpdatePostDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200)
+  title?: string;
+
   @ApiPropertyOptional() @IsOptional() @IsString()
   caption?: string;
 
@@ -51,6 +54,12 @@ export class UpdatePostDto {
 
   @ApiPropertyOptional() @IsOptional() @IsArray()
   hashtags?: string[];
+
+  @ApiPropertyOptional() @IsOptional() @IsString()
+  location?: string;
+
+  @ApiPropertyOptional() @IsOptional()
+  clearSchedule?: boolean;
 }
 
 export class PostQueryDto {

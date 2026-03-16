@@ -21,6 +21,16 @@ export class GenerateCaptionDto {
   @IsString()
   tone?: string;
 
+  @ApiPropertyOptional({ example: 'Bold, witty, creator-first voice with short punchy lines' })
+  @IsOptional()
+  @IsString()
+  brandVoice?: string;
+
+  @ApiPropertyOptional({ example: 'English' })
+  @IsOptional()
+  @IsString()
+  language?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   includeHashtags?: boolean;
@@ -62,6 +72,16 @@ export class GenerateScriptDto {
   @IsOptional()
   @IsArray()
   keyPoints?: string[];
+
+  @ApiPropertyOptional({ example: 'Bold, witty, creator-first voice with short punchy lines' })
+  @IsOptional()
+  @IsString()
+  brandVoice?: string;
+
+  @ApiPropertyOptional({ example: 'English' })
+  @IsOptional()
+  @IsString()
+  language?: string;
 }
 
 export class GenerateHashtagsDto {
@@ -77,6 +97,16 @@ export class GenerateHashtagsDto {
   @ApiPropertyOptional()
   @IsOptional()
   count?: number;
+
+  @ApiPropertyOptional({ example: ['instagram', 'tiktok'] })
+  @IsOptional()
+  @IsArray()
+  platforms?: string[];
+
+  @ApiPropertyOptional({ example: 'English' })
+  @IsOptional()
+  @IsString()
+  language?: string;
 }
 
 export class GenerateImageDto {
@@ -104,6 +134,16 @@ export class ChatMessageDto {
   @IsOptional()
   @IsArray()
   history?: { role: string; content: string }[];
+
+  @ApiPropertyOptional({ example: 'English' })
+  @IsOptional()
+  @IsString()
+  language?: string;
+
+  @ApiPropertyOptional({ example: 'Friendly mentor tone with clear action steps' })
+  @IsOptional()
+  @IsString()
+  brandVoice?: string;
 }
 
 export class BestTimeDto {
