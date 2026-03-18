@@ -55,3 +55,25 @@ apps/api/dist/
 # Python venv
 .venv/
 
+# SSL certificates (managed by certbot on server)
+nginx/ssl/*.pem
+nginx/ssl/*.key
+
+# Coverage reports
+coverage/
+*.lcov
+
+# Docker volumes data
+postgres_data/
+redis_data/
+
+# IDE
+.vscode/
+.idea/
+
+# Temp build logs
+*.log
+fresh-web-build.log
+web-build.log
+web-build-webpack.log
+

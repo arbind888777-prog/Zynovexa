@@ -1,0 +1,170 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Zynovexa — PRODUCTION Docker Compose (Hostinger VPS)
+#
+# Usage:
+#   docker-compose -f docker-compose.prod.yml up -d --build
+#
+# Required: set DOMAIN variable in .env file at project root
+#   DOMAIN=yourdomain.com
+#   POSTGRES_PASSWORD=your_secure_password
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ─── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: zynovexa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zynovexa
+      POSTGRES_USER: zynovexa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zynovexa_secure_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    expose:
+      - '5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U zynovexa']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zynovexa-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ─── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: zynovexa-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    expose:
+      - '6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zynovexa-net
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
+  # ─── API (NestJS) ───────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: zynovexa-api
+    restart: unless-stopped
+    expose:
+      - '3000'
+    env_file:
+      - ./apps/api/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://zynovexa:${POSTGRES_PASSWORD:-zynovexa_secure_2026}@postgres:5432/zynovexa
+      REDIS_URL: redis://redis:6379
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - api_uploads:/app/uploads
+    networks:
+      - zynovexa-net
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/api/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ─── Web (Next.js) ──────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${DOMAIN:-localhost}
+    container_name: zynovexa-web
+    restart: unless-stopped
+    expose:
+      - '3001'
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      HOSTNAME: '0.0.0.0'
+      NEXT_PUBLIC_API_URL: https://${DOMAIN:-localhost}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - zynovexa-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/ || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ─── Nginx (Reverse Proxy) ──────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: zynovexa-nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot:ro
+      - api_uploads:/app/uploads:ro
+    depends_on:
+      - web
+      - api
+    networks:
+      - zynovexa-net
+
+  # ─── Certbot (SSL auto-renewal) ─────────────────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: zynovexa-certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
+    networks:
+      - zynovexa-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  api_uploads:
+  certbot_webroot:
+
+networks:
+  zynovexa-net:
+    driver: bridge
