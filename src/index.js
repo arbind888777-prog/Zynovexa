@@ -18,10 +18,14 @@ import videoAnalyticsRoutes from './routes/video-analytics';
 import seoRoutes from './routes/seo';
 // Page renderers
 import { landingPage } from './pages/landing';
+import { aboutPage } from './pages/about';
 import { authPage } from './pages/auth';
 import { onboardingPage } from './pages/onboarding';
 import { dashboardPage } from './pages/dashboard';
 import { adminPanelPage } from './pages/admin';
+import { privacyPage } from './pages/privacy';
+import { dataDeletionPage } from './pages/data-deletion';
+import { termsPage } from './pages/terms';
 const app = new Hono();
 // ---- Auto-initialize database on first request ----
 let dbInitialized = false;
@@ -91,6 +95,11 @@ app.route('/api/seo', seoRoutes);
 // ---- Page Routes ----
 // Landing page (public)
 app.get('/', (c) => c.html(landingPage()));
+app.get('/about', (c) => c.html(aboutPage()));
+app.get('/privacy', (c) => c.html(privacyPage()));
+app.get('/data-deletion', (c) => c.html(dataDeletionPage()));
+app.get('/delete-account', (c) => c.redirect('/data-deletion', 301));
+app.get('/terms', (c) => c.html(termsPage()));
 // Auth pages
 app.get('/login', (c) => c.html(authPage('login')));
 app.get('/signup', (c) => c.html(authPage('signup')));

@@ -343,6 +343,21 @@ export function landingPage() {
 <!-- ============ FOOTER ============ -->
 <footer class="bg-gray-900 text-gray-400 py-16 px-6">
   <div class="max-w-7xl mx-auto">
+    <div class="mb-10 rounded-2xl border border-blue-500/20 bg-gradient-to-r from-brand-600/15 to-cyan-400/10 p-6">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div class="max-w-2xl">
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200">Public Legal Pages</p>
+          <h3 class="mt-2 text-2xl font-bold text-white">Privacy Policy and Terms are published for users, partners, and social platform API review.</h3>
+          <p class="mt-2 text-sm leading-6 text-gray-300">Use these links when a platform asks for public policy documents during app verification, OAuth review, or business onboarding.</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <a href="/privacy" class="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-brand-700 hover:bg-gray-100 transition">Open Privacy Policy</a>
+          <a href="/terms" class="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">Open Terms of Service</a>
+          <a href="/data-deletion" class="inline-flex items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-5 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-400/15 transition">Open Data Deletion</a>
+        </div>
+      </div>
+    </div>
+
     <div class="grid md:grid-cols-4 gap-8 mb-12">
       <div>
         <div class="flex items-center gap-2 mb-4">
@@ -376,7 +391,9 @@ export function landingPage() {
         <ul class="space-y-2 text-sm">
           <li><a href="/privacy" class="hover:text-white transition">Privacy Policy</a></li>
           <li><a href="/terms" class="hover:text-white transition">Terms of Service</a></li>
+          <li><a href="/data-deletion" class="hover:text-white transition">Data Deletion</a></li>
           <li><a href="/about" class="hover:text-white transition">About Zynovexa</a></li>
+          <li><a href="mailto:privacy@zynovexa.com" class="hover:text-white transition">privacy@zynovexa.com</a></li>
         </ul>
       </div>
     </div>
