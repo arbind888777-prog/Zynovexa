@@ -29,17 +29,38 @@ export const metadata: Metadata = {
 const DOCS = [
   {
     title: 'Terms of Service',
-    desc: 'The legal agreement governing access, subscriptions, and acceptable use of Zynovexa services.',
+    desc: 'The legal agreement governing access, subscriptions, acceptable use, and account responsibilities.',
     href: '/terms',
-    updated: 'March 7, 2026',
+    updated: 'March 20, 2026',
     label: 'Core Policy',
   },
   {
     title: 'Privacy Policy',
-    desc: 'Detailed disclosure on data collection, processing, security controls, retention, and user rights.',
+    desc: 'Clear disclosure on data collection, Razorpay billing data, analytics tools, security, and user rights.',
     href: '/privacy',
-    updated: 'March 7, 2026',
+    updated: 'March 20, 2026',
     label: 'Core Policy',
+  },
+  {
+    title: 'Refund Policy',
+    desc: 'Explains when subscription refunds may be approved, including duplicate charges and technical billing errors.',
+    href: '/refund-policy',
+    updated: 'March 20, 2026',
+    label: 'Billing',
+  },
+  {
+    title: 'Return Policy',
+    desc: 'States that no returns apply because Zynovexa is a digital SaaS product with no physical delivery.',
+    href: '/return-policy',
+    updated: 'March 20, 2026',
+    label: 'Billing',
+  },
+  {
+    title: 'Disclaimer',
+    desc: 'Clarifies that Zynovexa is provided as is and does not guarantee growth, engagement, or uninterrupted platform availability.',
+    href: '/disclaimer',
+    updated: 'March 20, 2026',
+    label: 'Legal Notice',
   },
   {
     title: 'Cookie Policy',
@@ -74,15 +95,15 @@ const DOCS = [
 const FAQ = [
   {
     q: 'Where should users submit legal requests?',
-    a: 'General legal requests can be sent to legal@zynovexa.com. Privacy requests should be sent to privacy@zynovexa.com.',
+    a: 'General legal requests can be sent to legal@zynovexa.com. Privacy requests should be sent to privacy@zynovexa.com and billing issues can be sent to support@zynovexa.com.',
   },
   {
-    q: 'How fast does Zynovexa respond to compliance requests?',
-    a: 'Initial acknowledgment is typically within 2 business days, with full handling based on request complexity and legal timelines.',
+    q: 'How fast does Zynovexa respond to support and compliance requests?',
+    a: 'Most standard support emails are answered within 24 to 48 hours. Compliance and legal requests are acknowledged as quickly as possible based on request type.',
   },
   {
-    q: 'Do enterprise customers get a DPA?',
-    a: 'Yes. Enterprise customers can review the DPA page and request a signed version through legal channels.',
+    q: 'Where can I review refund and return rules?',
+    a: 'You can review them on the Refund Policy and Return Policy pages in the Legal Center.',
   },
 ];
 
@@ -92,7 +113,7 @@ const legalWebPageSchema = {
   name: 'Legal Center | Zynovexa',
   url: `${APP_URL}/legal`,
   description:
-    'Structured legal center with Terms, Privacy, Cookie Policy, GDPR notice, DPA, and Copyright Policy.',
+    'Structured legal center with Terms, Privacy, Refund, Return, Disclaimer, Cookie Policy, GDPR notice, DPA, and Copyright Policy.',
   isPartOf: {
     '@type': 'WebSite',
     name: 'Zynovexa',

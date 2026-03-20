@@ -23,8 +23,12 @@ export default function robots(): MetadataRoute.Robots {
           '/help',
           '/changelog',
           '/about',
+          '/contact',
           '/privacy',
           '/terms',
+          '/refund-policy',
+          '/return-policy',
+          '/disclaimer',
         ],
         disallow: [
           '/dashboard',

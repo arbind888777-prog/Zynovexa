@@ -34,7 +34,6 @@ export class SubscriptionsController {
       req.user.id,
       (dto.plan || 'PRO') as any,
       dto.billingCycle || 'monthly',
-      { customPosts: dto.customPosts, customAiCredits: dto.customAiCredits },
     );
   }
 

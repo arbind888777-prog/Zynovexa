@@ -4,25 +4,23 @@ import { PrismaService } from '../prisma/prisma.service';
 import Stripe from 'stripe';
 
 const PLAN_PRICES = {
+  STARTER: {
+    usd: { monthly: 500, yearly: 4800 },       // $5/mo, $48/yr (20% off)
+    inr: { monthly: 29900, yearly: 28680 },     // ₹299/mo, ₹239/mo yearly
+    priceIdMonthly: 'price_starter_monthly',
+    priceIdYearly: 'price_starter_yearly',
+  },
   PRO: {
-    monthly: 2900,          // $29/mo
-    yearly: 23200,          // $232/yr (save $116 - 33% off)
+    usd: { monthly: 900, yearly: 8400 },        // $9/mo, $84/yr (20% off)
+    inr: { monthly: 69900, yearly: 67080 },      // ₹699/mo, ₹559/mo yearly
     priceIdMonthly: 'price_pro_monthly',
     priceIdYearly: 'price_pro_yearly',
   },
-  BUSINESS: {
-    monthly: 7900,          // $79/mo
-    yearly: 63200,          // $632/yr (save $316 - 33% off)
-    priceIdMonthly: 'price_business_monthly',
-    priceIdYearly: 'price_business_yearly',
-  },
-  CUSTOM: {
-    // Custom pricing — calculated dynamically: $10/mo per 10 posts + $5/mo per 100 AI credits
-    baseMonthly: 1500,      // $15/mo base custom
-    perPostBlock: 500,      // $5/mo per 10 posts block
-    perAiBlock: 300,        // $3/mo per 100 AI credits block
-    priceIdMonthly: 'price_custom_monthly',
-    priceIdYearly: 'price_custom_yearly',
+  GROWTH: {
+    usd: { monthly: 1900, yearly: 18000 },      // $19/mo, $180/yr (20% off)
+    inr: { monthly: 129900, yearly: 124680 },    // ₹1299/mo, ₹1039/mo yearly
+    priceIdMonthly: 'price_growth_monthly',
+    priceIdYearly: 'price_growth_yearly',
   },
 };
 
@@ -48,30 +46,19 @@ export class SubscriptionsService {
     return sub;
   }
 
-  async createCheckoutSession(userId: string, plan: 'PRO' | 'BUSINESS' | 'CUSTOM', billingCycle: 'monthly' | 'yearly' = 'monthly', customOpts?: { customPosts?: number; customAiCredits?: number }) {
+  async createCheckoutSession(userId: string, plan: 'STARTER' | 'PRO' | 'GROWTH', billingCycle: 'monthly' | 'yearly' = 'monthly', customOpts?: { customPosts?: number; customAiCredits?: number }) {
     if (this.isDemoMode) {
-      return { url: null, sessionId: 'demo', demoMode: true, message: 'Stripe not configured. Add STRIPE_SECRET_KEY to .env to enable payments.' };
+      return { url: null, sessionId: 'demo', demoMode: true, message: 'Payment gateway not configured. Add STRIPE_SECRET_KEY or RAZORPAY_KEY to .env to enable payments.' };
     }
     const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { subscription: true } });
     if (!user) throw new NotFoundException('User not found');
 
     const frontendUrl = this.config.get('FRONTEND_URL') || 'http://localhost:3001';
 
-    // Determine price ID
-    let priceId: string;
-    let unitAmount: number | undefined;
-
-    if (plan === 'CUSTOM') {
-      priceId = billingCycle === 'yearly' ? PLAN_PRICES.CUSTOM.priceIdYearly : PLAN_PRICES.CUSTOM.priceIdMonthly;
-      // Calculate custom price
-      const postBlocks = Math.ceil((customOpts?.customPosts || 50) / 10);
-      const aiBlocks = Math.ceil((customOpts?.customAiCredits || 200) / 100);
-      unitAmount = PLAN_PRICES.CUSTOM.baseMonthly + (postBlocks * PLAN_PRICES.CUSTOM.perPostBlock) + (aiBlocks * PLAN_PRICES.CUSTOM.perAiBlock);
-      if (billingCycle === 'yearly') unitAmount = Math.round(unitAmount * 10); // 2 months free
-    } else {
-      const priceInfo = PLAN_PRICES[plan];
-      priceId = billingCycle === 'yearly' ? priceInfo.priceIdYearly : priceInfo.priceIdMonthly;
-    }
+    // Determine price ID and currency
+    const priceInfo = PLAN_PRICES[plan];
+    if (!priceInfo) throw new BadRequestException('Invalid plan');
+    const priceId = billingCycle === 'yearly' ? priceInfo.priceIdYearly : priceInfo.priceIdMonthly;
 
     // Create or retrieve Stripe customer
     let customerId = user.subscription?.stripeCustomerId;
@@ -81,17 +68,7 @@ export class SubscriptionsService {
       await this.prisma.subscription.update({ where: { userId }, data: { stripeCustomerId: customerId } });
     }
 
-    const lineItem: any = unitAmount
-      ? {
-          price_data: {
-            currency: 'usd',
-            unit_amount: unitAmount,
-            recurring: { interval: billingCycle === 'yearly' ? 'year' : 'month' },
-            product_data: { name: `Zynovexa Custom Plan (${billingCycle})` },
-          },
-          quantity: 1,
-        }
-      : { price: priceId, quantity: 1 };
+    const lineItem: any = { price: priceId, quantity: 1 };
 
     const session = await this.stripe.checkout.sessions.create({
       customer: customerId,
@@ -177,27 +154,31 @@ export class SubscriptionsService {
   async getPlanFeatures() {
     return {
       FREE: {
-        name: 'Free', price: { monthly: 0, yearly: 0 },
+        name: 'Free',
+        price: { usd: { monthly: 0, yearly: 0 }, inr: { monthly: 0, yearly: 0 } },
         posts: 5, ai: 20, platforms: 2, analytics: '7 days', support: 'Community',
         features: ['5 posts/month', '20 AI credits', '2 platforms', 'Basic analytics'],
       },
+      STARTER: {
+        name: 'Starter',
+        price: { usd: { monthly: 5, yearly: 48 }, inr: { monthly: 299, yearly: 2868 } },
+        savings: '20%',
+        posts: 30, ai: 100, platforms: 3, analytics: '30 days', support: 'Email',
+        features: ['30 posts/month', '100 AI credits', '3 platforms', '30-day analytics', 'AI captions & hashtags', 'Video script generator', 'Email support'],
+      },
       PRO: {
-        name: 'Pro', price: { monthly: 29, yearly: 232 }, badge: 'Most Popular', savings: '33%',
-        posts: 100, ai: 500, platforms: 5, analytics: '90 days', support: 'Email',
-        features: ['100 posts/month', '500 AI credits', '5 platforms', '90-day analytics', 'Email support', 'AI hashtags', 'Video Studio'],
+        name: 'Pro',
+        price: { usd: { monthly: 9, yearly: 84 }, inr: { monthly: 699, yearly: 6708 } },
+        badge: 'Most Popular', savings: '20%',
+        posts: 100, ai: 500, platforms: 5, analytics: '90 days', support: 'Priority Email',
+        features: ['100 posts/month', '500 AI credits', '5 platforms', '90-day analytics', 'All AI tools', 'AI Image Generator', 'Video Studio', 'Start Page', 'Priority email support'],
       },
-      BUSINESS: {
-        name: 'Business', price: { monthly: 79, yearly: 632 }, badge: 'Best Value', savings: '33%',
+      GROWTH: {
+        name: 'Growth',
+        price: { usd: { monthly: 19, yearly: 180 }, inr: { monthly: 1299, yearly: 12468 } },
+        badge: 'Best Value', savings: '20%',
         posts: -1, ai: -1, platforms: -1, analytics: '1 year', support: '24/7 Priority',
-        features: ['Unlimited posts', 'Unlimited AI', 'All platforms', '1-year analytics', '24/7 priority support', 'Custom branding', 'Team collaboration', 'API access'],
-      },
-      CUSTOM: {
-        name: 'Custom', price: { monthly: 'from $15', yearly: 'from $150' }, badge: 'Tailored',
-        posts: 'choose', ai: 'choose', platforms: -1, analytics: '1 year', support: 'Dedicated',
-        features: ['Choose your post quota', 'Choose AI credits', 'All platforms', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee'],
-        baseMonthly: 15,
-        pricePerPostBlock: 5,   // per 10 posts
-        pricePerAiBlock: 3,     // per 100 AI credits
+        features: ['Unlimited posts', 'Unlimited AI', 'All 7 platforms', '1-year analytics', 'Team collaboration', 'Approval workflows', 'Client workspaces', 'White-label reports', 'API access', '24/7 priority support'],
       },
     };
   }

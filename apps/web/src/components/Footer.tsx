@@ -75,6 +75,7 @@ const FOOTER_COLS = [
     heading: 'Company',
     links: [
       { label: 'About', href: '/about' },
+      { label: 'Contact', href: '/contact' },
       { label: 'Careers', href: '/careers' },
       { label: 'Press', href: '/press' },
       { label: 'Partner Program', href: '/partner-program' },
@@ -88,10 +89,11 @@ const FOOTER_COLS = [
     links: [
       { label: 'Privacy Policy', href: '/privacy' },
       { label: 'Terms of Service', href: '/terms' },
+      { label: 'Refund Policy', href: '/refund-policy' },
+      { label: 'Return Policy', href: '/return-policy' },
+      { label: 'Disclaimer', href: '/disclaimer' },
       { label: 'Cookie Policy', href: '/legal/cookies' },
-      { label: 'GDPR Notice', href: '/legal/gdpr' },
-      { label: 'Data Processing Agreement', href: '/legal/dpa' },
-      { label: 'Copyright Policy', href: '/legal/copyright' },
+      { label: 'Contact Us', href: '/contact' },
     ],
   },
 ];
@@ -100,6 +102,20 @@ export default function Footer() {
   return (
     <footer className="border-t" style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+        <div className="mb-12 rounded-3xl border p-6 sm:p-8" style={{ borderColor: 'var(--border)', background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.06))' }}>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Built for disciplined growth</p>
+              <h2 className="mt-3 text-2xl sm:text-3xl font-black text-white">Run your content operation from one premium workflow.</h2>
+              <p className="mt-3 max-w-2xl text-sm text-slate-400">Plan, publish, measure, and refine without stitching together multiple tools.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/signup" className="btn btn-primary">Start free</Link>
+              <Link href="/pricing" className="btn btn-secondary">View pricing</Link>
+            </div>
+          </div>
+        </div>
+
         {/* Logo + tagline */}
         <div className="mb-12">
           <Link href="/" className="inline-flex items-center gap-2 mb-3">
@@ -107,6 +123,11 @@ export default function Footer() {
             <span className="text-xl font-extrabold gradient-text">Zynovexa</span>
           </Link>
           <p className="text-slate-500 text-sm max-w-sm">The all-in-one AI social media platform for creators and businesses. Schedule, create, and grow — all in one place.</p>
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
+            <span className="dashboard-inline-stat px-3 py-1.5">50K+ creators</span>
+            <span className="dashboard-inline-stat px-3 py-1.5">7 social platforms</span>
+            <span className="dashboard-inline-stat px-3 py-1.5">AI + analytics + publishing</span>
+          </div>
         </div>
 
         {/* Columns */}
@@ -114,8 +135,8 @@ export default function Footer() {
           {FOOTER_COLS.map(col => (
             <div
               key={col.heading}
-              className={col.heading === 'Legal' ? 'rounded-xl p-3 border' : undefined}
-              style={col.heading === 'Legal' ? { borderColor: 'var(--border)', background: 'rgba(99,102,241,0.06)' } : undefined}
+              className={col.heading === 'Legal' ? 'rounded-xl p-3 border dashboard-surface-muted' : undefined}
+              style={col.heading === 'Legal' ? { borderColor: 'var(--border)' } : undefined}
             >
               <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--accent)' }}>
                 {col.heading}

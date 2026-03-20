@@ -39,7 +39,7 @@ export default function ComparePage() {
     <MarketingLayout>
       <section className="pt-32 pb-16 px-4 sm:px-6 text-center relative overflow-hidden">
         <div className="orb orb-purple w-[600px] h-[600px] -top-60 left-1/2 -translate-x-1/2 pointer-events-none" />
-        <div className="max-w-4xl mx-auto relative z-10">
+        <div className="max-w-4xl mx-auto relative z-10 marketing-hero-panel">
           <span className="badge badge-purple mb-4 inline-block">🏆 How We Compare</span>
           <h1 className="text-5xl sm:text-7xl font-black text-white leading-none mb-6">
             Zynovexa vs<br /><span className="gradient-text">The Competition</span>
@@ -47,24 +47,33 @@ export default function ComparePage() {
           <p className="text-slate-400 text-xl mb-8 max-w-2xl mx-auto">
             We did the research so you don't have to. See exactly why 50,000+ creators switched to Zynovexa.
           </p>
+          <div className="flex flex-wrap justify-center gap-3 text-xs sm:text-sm">
+            <span className="marketing-logo-pill">AI-first workflows</span>
+            <span className="marketing-logo-pill">Modern analytics and approvals</span>
+            <span className="marketing-logo-pill">Lower-cost path from free to team scale</span>
+          </div>
         </div>
       </section>
 
       {/* Compare All CTA */}
       <section className="py-8 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <Link href="/compare/all" className="btn btn-primary btn-lg inline-flex items-center gap-2">
-            <span>⚡</span> Compare All Competitors at Once
-          </Link>
+          <div className="marketing-callout p-8">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-400 mb-3">Fast route</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">See the full matrix before you read the deep dives</h2>
+            <Link href="/compare/all" className="btn btn-primary btn-lg inline-flex items-center gap-2">
+              <span>⚡</span> Compare All Competitors at Once
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Competitor links */}
       <section className="py-12 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="max-w-4xl mx-auto marketing-grid-shell grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {ALTS.map(a => (
             <Link key={a.competitor} href={a.href}
-              className="card card-hover p-5 group">
+              className="card card-hover marketing-metric-card premium-tilt-card interactive-card-link p-5 group">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-white">Zynovexa vs {a.competitor}</h3>
                 <span className="text-purple-400 text-lg group-hover:translate-x-1 transition-transform">→</span>
@@ -79,7 +88,7 @@ export default function ComparePage() {
       <section className="py-16 px-4 sm:px-6" style={{ background: 'var(--bg2)' }}>
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-black text-white text-center mb-10">Feature-by-feature comparison</h2>
-          <div className="card overflow-hidden">
+          <div className="marketing-table-shell overflow-hidden">
             <div className="grid grid-cols-3 gap-0 text-sm font-bold border-b p-4" style={{ borderColor: 'var(--border)' }}>
               <div className="text-slate-400">Feature</div>
               <div className="text-center gradient-text">Zynovexa</div>
@@ -102,11 +111,13 @@ export default function ComparePage() {
       {/* CTA */}
       <section className="py-24 px-4 sm:px-6 text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-4xl font-black text-white mb-4">Make the switch today</h2>
-          <p className="text-slate-400 mb-8">Join the thousands who switched from {COMPETITORS.slice(0, 3).join(', ')} to Zynovexa. Free migration help included.</p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/signup" className="btn btn-primary btn-xl">Start Free — No Credit Card</Link>
-            <Link href="/pricing" className="btn btn-secondary btn-xl">Compare Pricing</Link>
+          <div className="marketing-callout p-10 sm:p-14">
+            <h2 className="text-4xl font-black text-white mb-4">Make the switch today</h2>
+            <p className="text-slate-400 mb-8">Join the thousands who switched from {COMPETITORS.slice(0, 3).join(', ')} to Zynovexa. Free migration help included.</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link href="/signup" className="btn btn-primary btn-xl">Start Free — No Credit Card</Link>
+              <Link href="/pricing" className="btn btn-secondary btn-xl">Compare Pricing</Link>
+            </div>
           </div>
         </div>
       </section>

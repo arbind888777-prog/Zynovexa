@@ -4,8 +4,10 @@ import { useMutation } from '@tanstack/react-query';
 import { aiApi, unwrapApiResponse } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 type Tool = 'caption' | 'hashtags' | 'script' | 'image' | 'chat' | 'besttime';
+const AI_STUDIO_TRANSFER_KEY = 'zynovexa.aiStudioDraft';
 
 const TOOLS = [
   { id: 'caption', icon: '✍️', name: 'Caption Writer', desc: 'Generate viral captions for any platform' },
@@ -16,7 +18,48 @@ const TOOLS = [
   { id: 'besttime', icon: '⏰', name: 'Best Time to Post', desc: 'AI-powered posting schedule optimizer' },
 ] as const;
 
+const PLATFORM_MAP: Record<string, string> = {
+  instagram: 'INSTAGRAM',
+  youtube: 'YOUTUBE',
+  tiktok: 'TIKTOK',
+  twitter: 'TWITTER',
+  x: 'TWITTER',
+  linkedin: 'LINKEDIN',
+  facebook: 'FACEBOOK',
+  snapchat: 'SNAPCHAT',
+  shorts: 'YOUTUBE',
+};
+
+function normalizePlatforms(values: string[]) {
+  return values
+    .map((value) => PLATFORM_MAP[value.trim().toLowerCase()])
+    .filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
+}
+
+function toHashtagTokens(values: string[]) {
+  return values.map((value) => value.startsWith('#') ? value : `#${value.replace(/\s+/g, '')}`);
+}
+
+function nextDateForDayTime(day: string, time: string) {
+  const targetDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const targetIndex = targetDays.findIndex((item) => item.toLowerCase() === day.toLowerCase());
+  if (targetIndex === -1) return '';
+
+  const [hours = '9', minutes = '0'] = time.split(':');
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(Number(hours), Number(minutes), 0, 0);
+
+  let diff = targetIndex - now.getDay();
+  if (diff < 0 || (diff === 0 && target <= now)) diff += 7;
+  target.setDate(now.getDate() + diff);
+
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`;
+}
+
 export default function AIStudioPage() {
+  const router = useRouter();
   const [activeTool, setActiveTool] = useState<Tool>('caption');
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -40,6 +83,13 @@ export default function AIStudioPage() {
     brandVoice: '',
   });
   const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setFields(p => ({ ...p, [k]: e.target.value }));
+
+  const sendToCreatePost = (draft: Record<string, unknown>, successMessage: string) => {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem(AI_STUDIO_TRANSFER_KEY, JSON.stringify(draft));
+    toast.success(successMessage);
+    router.push('/create?source=ai');
+  };
 
   const runTool = async () => {
     setLoading(true); setResult(null);
@@ -126,14 +176,15 @@ export default function AIStudioPage() {
   }, [chatHistory]);
 
   return (
-    <div className="p-8 animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
+    <div className="dashboard-content-shell animate-fade-in">
+      <div className="dashboard-headerband mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">🤖 AI Studio</h1>
-          <p className="text-sm text-gray-400 mt-1">Powered by GPT-4o & DALL-E 3</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Creator Intelligence</p>
+          <h1 className="mt-2 text-2xl font-bold text-white">🤖 AI Studio</h1>
+          <p className="mt-2 text-sm text-gray-400">Powered by GPT-4o & DALL-E 3 for captions, scripts, scheduling signals aur creator support.</p>
         </div>
         {usage && (
-          <div className="text-right">
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
             <p className="text-sm text-gray-400">AI Usage: <span className="text-white font-mono">{usage.used} / {usage.limit ?? '∞'}</span></p>
             <p className="text-xs text-purple-400">{usage.plan}</p>
           </div>
@@ -144,8 +195,7 @@ export default function AIStudioPage() {
       <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         {TOOLS.map(t => (
           <button key={t.id} onClick={() => { setActiveTool(t.id as Tool); setResult(null); }}
-            className={`p-4 rounded-xl text-center transition-all hover:scale-[1.02] ${activeTool === t.id ? 'glow' : ''}`}
-            style={{ background: activeTool === t.id ? 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(168,85,247,0.3))' : 'var(--card)', border: `1px solid ${activeTool === t.id ? '#6366f1' : 'var(--border)'}` }}>
+            className={`dashboard-tab p-4 text-center transition-all hover:scale-[1.02] ${activeTool === t.id ? 'dashboard-tab-active glow text-white' : 'text-gray-400 hover:text-white'}`}>
             <div className="text-2xl mb-2">{t.icon}</div>
             <p className="text-xs font-medium text-white">{t.name}</p>
           </button>
@@ -154,7 +204,7 @@ export default function AIStudioPage() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Input Panel */}
-        <div className="card p-6">
+        <div className="dashboard-surface p-6">
           <h2 className="font-semibold text-white mb-4">{TOOLS.find(t => t.id === activeTool)?.name}</h2>
           <p className="text-xs text-gray-400 mb-5">{TOOLS.find(t => t.id === activeTool)?.desc}</p>
 
@@ -173,7 +223,7 @@ export default function AIStudioPage() {
 
           {activeTool === 'chat' ? (
             <div>
-              <div className="h-64 overflow-y-auto space-y-3 mb-4 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+              <div className="dashboard-surface-muted h-64 overflow-y-auto space-y-3 mb-4 p-3">
                 {chatHistory.length === 0 && <p className="text-xs text-gray-500 text-center py-4">Ask Zyx anything about growing as a creator...</p>}
                 {chatHistory.map((m, i) => (
                   <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -232,14 +282,14 @@ export default function AIStudioPage() {
         </div>
 
         {/* Result Panel */}
-        <div className="card p-6">
+        <div className="dashboard-surface p-6">
           <h2 className="font-semibold text-white mb-4">Results</h2>
           {!result && !loading && <p className="text-sm text-gray-500 text-center py-12">Your AI-generated content will appear here.</p>}
           {loading && activeTool !== 'chat' && <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>}
           {result && activeTool !== 'chat' && (
             <div className="space-y-4">
               {typeof result.qualityScore === 'number' && (
-                <div className="p-3 rounded-lg" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="dashboard-surface-muted p-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs text-gray-400">AI Quality Score</p>
                     <p className="text-sm font-semibold text-white">{result.qualityScore}/100</p>
@@ -257,44 +307,105 @@ export default function AIStudioPage() {
               )}
 
               {activeTool === 'caption' && result.captions?.map((c: string, i: number) => (
-                <div key={i} className="p-4 rounded-lg" style={{ background: 'var(--surface)' }}>
+                <div key={i} className="dashboard-surface-muted p-4">
                   <p className="text-sm text-gray-200 mb-3">{c}</p>
-                  <button onClick={() => navigator.clipboard.writeText(c).then(() => toast.success('Copied!'))} className="text-xs text-purple-400 hover:text-purple-300">📋 Copy</button>
+                  <div className="flex items-center gap-3 text-xs">
+                    <button onClick={() => navigator.clipboard.writeText(c).then(() => toast.success('Copied!'))} className="text-purple-400 hover:text-purple-300">📋 Copy</button>
+                    <button
+                      onClick={() => sendToCreatePost({
+                        caption: c,
+                        hashtags: result.hashtags ? toHashtagTokens(result.hashtags) : [],
+                        platforms: normalizePlatforms(fields.platforms.split(',')),
+                        mediaType: 'TEXT',
+                      }, 'Caption draft Create Post me bhej diya gaya.')}
+                      className="text-emerald-400 hover:text-emerald-300"
+                    >
+                      Use this result
+                    </button>
+                  </div>
                 </div>
               ))}
               {activeTool === 'hashtags' && result.hashtags && (
-                <div className="p-4 rounded-lg" style={{ background: 'var(--surface)' }}>
+                <div className="dashboard-surface-muted p-4">
                   <p className="text-sm text-gray-200 mb-3 leading-relaxed">{result.hashtags.join(' ')}</p>
-                  <button onClick={() => navigator.clipboard.writeText(result.hashtags.join(' ')).then(() => toast.success('Copied!'))} className="text-xs text-purple-400">📋 Copy all</button>
+                  <div className="flex items-center gap-3 text-xs">
+                    <button onClick={() => navigator.clipboard.writeText(result.hashtags.join(' ')).then(() => toast.success('Copied!'))} className="text-purple-400">📋 Copy all</button>
+                    <button
+                      onClick={() => sendToCreatePost({
+                        caption: fields.content || fields.description,
+                        hashtags: toHashtagTokens(result.hashtags),
+                        platforms: normalizePlatforms(fields.platforms.split(',')),
+                        mediaType: 'TEXT',
+                      }, 'Hashtags Create Post me bhej diye gaye.')}
+                      className="text-emerald-400 hover:text-emerald-300"
+                    >
+                      Use this result
+                    </button>
+                  </div>
                 </div>
               )}
               {activeTool === 'script' && (
                 <div className="space-y-3">
-                  {result.hook && <div className="p-3 rounded-lg" style={{ background: 'var(--surface)' }}><p className="text-xs text-purple-400 font-medium mb-1">🎣 Hook</p><p className="text-sm text-gray-200">{result.hook}</p></div>}
+                  {result.hook && <div className="dashboard-surface-muted p-3"><p className="text-xs text-purple-400 font-medium mb-1">🎣 Hook</p><p className="text-sm text-gray-200">{result.hook}</p></div>}
                   {result.sections?.map((s: any, i: number) => (
-                    <div key={i} className="p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                    <div key={i} className="dashboard-surface-muted p-3">
                       <p className="text-xs text-purple-400 font-medium mb-1">{s.title} ({s.duration}s)</p>
                       <p className="text-sm text-gray-200">{s.script}</p>
                     </div>
                   ))}
-                  {result.cta && <div className="p-3 rounded-lg" style={{ background: 'var(--surface)' }}><p className="text-xs text-purple-400 font-medium mb-1">📢 CTA</p><p className="text-sm text-gray-200">{result.cta}</p></div>}
-                  {result.bRoll && <div className="p-3 rounded-lg" style={{ background: 'var(--surface)' }}><p className="text-xs text-gray-400 font-medium mb-2">🎬 B-Roll Ideas</p>{result.bRoll.map((b: string, i: number) => <p key={i} className="text-xs text-gray-300">• {b}</p>)}</div>}
+                  {result.cta && <div className="dashboard-surface-muted p-3"><p className="text-xs text-purple-400 font-medium mb-1">📢 CTA</p><p className="text-sm text-gray-200">{result.cta}</p></div>}
+                  {result.bRoll && <div className="dashboard-surface-muted p-3"><p className="text-xs text-gray-400 font-medium mb-2">🎬 B-Roll Ideas</p>{result.bRoll.map((b: string, i: number) => <p key={i} className="text-xs text-gray-300">• {b}</p>)}</div>}
+                  <button
+                    onClick={() => sendToCreatePost({
+                      title: fields.topic,
+                      caption: [result.hook, ...(result.sections?.map((section: any) => section.script) || []), result.cta].filter(Boolean).join('\n\n'),
+                      platforms: normalizePlatforms([fields.platform]),
+                      mediaType: 'TEXT',
+                    }, 'Script draft Create Post me bhej diya gaya.')}
+                    className="text-sm text-emerald-400 hover:text-emerald-300 font-medium"
+                  >
+                    Use this result in Create Post →
+                  </button>
                 </div>
               )}
               {activeTool === 'image' && result.imageUrl && (
                 <div>
                   <img src={result.imageUrl} alt="Generated" className="w-full rounded-xl mb-3" />
                   {result.revisedPrompt && <p className="text-xs text-gray-500 mb-2">Revised: {result.revisedPrompt}</p>}
-                  <button onClick={() => { fetch(result.imageUrl).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'zynovexa-ai-image.png'; a.click(); URL.revokeObjectURL(a.href); }); }} className="block w-full text-center text-sm text-purple-400 hover:text-purple-300">↓ Download</button>
+                  <div className="flex items-center justify-between gap-3">
+                    <button onClick={() => { fetch(result.imageUrl).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'zynovexa-ai-image.png'; a.click(); URL.revokeObjectURL(a.href); }); }} className="text-sm text-purple-400 hover:text-purple-300">↓ Download</button>
+                    <button
+                      onClick={() => sendToCreatePost({
+                        caption: fields.description || fields.prompt,
+                        mediaUrl: result.imageUrl,
+                        mediaType: 'IMAGE',
+                        platforms: normalizePlatforms(fields.platforms.split(',')),
+                      }, 'AI image Create Post me bhej di gayi.')}
+                      className="text-sm text-emerald-400 hover:text-emerald-300 font-medium"
+                    >
+                      Use this result
+                    </button>
+                  </div>
                 </div>
               )}
               {activeTool === 'besttime' && result.bestTimes && (
                 <div className="space-y-3">
-                  {result.insights && <p className="text-sm text-gray-300 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>{result.insights}</p>}
+                  {result.insights && <p className="dashboard-surface-muted p-3 text-sm text-gray-300">{result.insights}</p>}
                   {result.bestTimes.map((bt: any, i: number) => (
-                    <div key={i} className="p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                    <div key={i} className="dashboard-surface-muted p-3">
                       <p className="text-sm font-medium text-white mb-1">{bt.day}</p>
-                      <p className="text-xs text-gray-400">{bt.times?.join(', ')} · <span className="text-green-400">{bt.expectedReach} reach</span></p>
+                      <p className="text-xs text-gray-400 mb-2">{bt.times?.join(', ')} · <span className="text-green-400">{bt.expectedReach} reach</span></p>
+                      <button
+                        onClick={() => sendToCreatePost({
+                          caption: fields.description || fields.content || fields.topic,
+                          platforms: normalizePlatforms(fields.platform ? [fields.platform] : fields.platforms.split(',')),
+                          scheduledAt: bt.times?.[0] ? nextDateForDayTime(bt.day, bt.times[0]) : '',
+                          mediaType: 'TEXT',
+                        }, 'Best time suggestion Create Post me bhej diya gaya.')}
+                        className="text-xs text-emerald-400 hover:text-emerald-300 font-medium"
+                      >
+                        Use this result
+                      </button>
                     </div>
                   ))}
                 </div>

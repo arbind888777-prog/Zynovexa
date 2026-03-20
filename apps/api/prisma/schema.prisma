@@ -17,7 +17,9 @@ enum Role {
 
 enum Plan {
   FREE
+  STARTER
   PRO
+  GROWTH
   BUSINESS
 }
 

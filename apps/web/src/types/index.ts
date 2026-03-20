@@ -1,4 +1,4 @@
-export type Plan = 'FREE' | 'PRO' | 'BUSINESS';
+export type Plan = 'FREE' | 'STARTER' | 'PRO' | 'GROWTH' | 'BUSINESS';
 export type Role = 'USER' | 'ADMIN';
 export type Platform = 'INSTAGRAM' | 'YOUTUBE' | 'TIKTOK' | 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'SNAPCHAT';
 export type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'FAILED';

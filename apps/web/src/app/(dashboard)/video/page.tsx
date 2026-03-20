@@ -1,11 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { postsApi, aiApi } from '@/lib/api';
+import TagsInput, { formatTagsAsInput, parseTagValue } from '@/components/TagsInput';
+import VideoSelector, { type VideoSelectorOption } from '@/components/VideoSelector';
+import { aiApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
-const VIDEO_TYPES = [
+const VIDEO_TYPES: VideoSelectorOption[] = [
   { id: 'REEL', label: 'Instagram Reel', icon: '📱', duration: '15–90 sec', platform: 'INSTAGRAM', color: '#E1306C' },
   { id: 'SHORT', label: 'YouTube Short', icon: '▶️', duration: '< 60 sec', platform: 'YOUTUBE', color: '#FF0000' },
   { id: 'TIKTOK', label: 'TikTok Video', icon: '🎵', duration: '15 sec – 3 min', platform: 'TIKTOK', color: '#010101' },
@@ -15,6 +16,7 @@ const VIDEO_TYPES = [
 ];
 
 const SCRIPT_STYLES = ['Energetic & Hype', 'Educational & Calm', 'Funny & Entertaining', 'Inspirational', 'Tutorial Step-by-step', 'Storytelling'];
+const VIDEO_STUDIO_TRANSFER_KEY = 'zynovexa.videoStudioDraft';
 
 export default function VideoStudioPage() {
   const router = useRouter();
@@ -46,12 +48,6 @@ export default function VideoStudioPage() {
   const [captionLoading, setCaptionLoading] = useState(false);
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [hashtagLoading, setHashtagLoading] = useState(false);
-
-  const createPost = useMutation({
-    mutationFn: (data: any) => postsApi.create(data),
-    onSuccess: () => { toast.success('Video post created! 🎬'); router.push('/posts'); },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to create video post'),
-  });
 
   const selectVideoType = (type: typeof VIDEO_TYPES[0]) => {
     setSelectedType(type.id);
@@ -120,29 +116,39 @@ export default function VideoStudioPage() {
     }
   };
 
-  const handlePublish = (status: string) => {
-    if (!form.description && !form.title) return toast.error('Description or title is required');
-    createPost.mutate({
+  const handleSendToCreatePost = () => {
+    if (!form.videoUrl.trim()) {
+      toast.error('Create Post me bhejne se pehle video URL ya final rendered video add karo.');
+      return;
+    }
+
+    const selectedTags = hashtags.length > 0 ? parseTagValue(hashtags) : parseTagValue(form.hashtags);
+
+    const payload = {
       title: form.title || scriptInputs.topic,
-      caption: form.description,
+      caption: form.description || script?.hook || '',
+      videoUrl: form.videoUrl.trim(),
+      hashtags: selectedTags.map((tag) => `#${tag.replace(/\s+/g, '')}`),
+      scheduledAt: form.scheduledAt || '',
       platforms: form.platforms,
-      mediaType: form.mediaType,
-      hashtags: hashtags.length ? hashtags : form.hashtags.split(' ').filter(Boolean),
-      scheduledAt: form.scheduledAt || null,
-      status,
-      aiGenerated: script !== null,
-    });
+      mediaType: 'VIDEO',
+    };
+
+    window.sessionStorage.setItem(VIDEO_STUDIO_TRANSFER_KEY, JSON.stringify(payload));
+    toast.success('Video draft Create Post ke liye ready hai.');
+    router.push('/create?source=studio');
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="dashboard-content-shell max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="dashboard-headerband mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">🎬 Video Studio</h1>
-          <p className="text-gray-400 mt-1">Reels, Shorts, TikTok, YouTube — all in one place</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Short-Form Production</p>
+          <h1 className="mt-2 text-3xl font-bold text-white">🎬 Video Studio</h1>
+          <p className="mt-2 text-gray-400">Advanced video formats, AI script workflow, aur Create Post ke liye clean production handoff.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {['type', 'details', 'script', 'publish'].map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <button
@@ -164,29 +170,20 @@ export default function VideoStudioPage() {
 
       {/* STEP 1: Video Type Selection */}
       {step === 'type' && (
-        <div>
-          <h2 className="text-xl font-semibold text-white mb-6">Choose video type 📱</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {VIDEO_TYPES.map(type => (
-              <button key={type.id} onClick={() => selectVideoType(type)}
-                className="card p-6 text-left hover:scale-105 transition-all duration-200 card-hover">
-                <div className="text-4xl mb-3">{type.icon}</div>
-                <h3 className="text-white font-semibold text-lg">{type.label}</h3>
-                <p className="text-gray-400 text-sm mt-1">{type.duration}</p>
-                <div className="mt-3 text-xs font-medium px-2 py-1 rounded inline-block" style={{ background: `${type.color}20`, color: type.color, border: `1px solid ${type.color}40` }}>
-                  {type.platform}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+        <VideoSelector
+          title="Choose advanced video format 📱"
+          description="Yahan Reels, Shorts, TikTok aur long-form video prep hoga. Final scheduling Create Post page par hoga."
+          options={VIDEO_TYPES}
+          selectedId={selectedType}
+          onSelect={selectVideoType}
+        />
       )}
 
       {/* STEP 2: Video Details */}
       {step === 'details' && (
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="space-y-5">
-            <div className="card p-6 space-y-5">
+            <div className="dashboard-surface p-6 space-y-5">
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-2xl">{VIDEO_TYPES.find(t => t.id === selectedType)?.icon}</span>
                 <div>
@@ -194,6 +191,21 @@ export default function VideoStudioPage() {
                   <p className="text-gray-400 text-xs">{VIDEO_TYPES.find(t => t.id === selectedType)?.duration}</p>
                 </div>
                 <button onClick={() => setStep('type')} className="ml-auto text-gray-400 hover:text-white text-sm">← Change</button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="dashboard-inline-stat px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Format</p>
+                  <p className="mt-1 text-sm font-semibold text-white">{VIDEO_TYPES.find(t => t.id === selectedType)?.label}</p>
+                </div>
+                <div className="dashboard-inline-stat px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Length</p>
+                  <p className="mt-1 text-sm font-semibold text-white">{VIDEO_TYPES.find(t => t.id === selectedType)?.duration}</p>
+                </div>
+                <div className="dashboard-inline-stat px-3 py-3 col-span-2 sm:col-span-1">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Target Platform</p>
+                  <p className="mt-1 text-sm font-semibold text-white">{VIDEO_TYPES.find(t => t.id === selectedType)?.platform}</p>
+                </div>
               </div>
 
               <div>
@@ -223,11 +235,13 @@ export default function VideoStudioPage() {
                 {form.thumbnailUrl && <img src={form.thumbnailUrl} alt="Thumbnail" className="mt-2 rounded-lg w-full object-cover max-h-40" onError={e => (e.currentTarget.style.display='none')} />}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">🏷️ Hashtags</label>
-                <input value={form.hashtags} onChange={e => setForm(p => ({ ...p, hashtags: e.target.value }))}
-                  placeholder="#viral #reels #shorts" className="input-field" />
-              </div>
+              <TagsInput
+                label="🏷️ Tags"
+                tags={parseTagValue(form.hashtags)}
+                onChange={(tags) => setForm((prev) => ({ ...prev, hashtags: formatTagsAsInput(tags) }))}
+                placeholder="Add a tag and press Enter"
+                helperText="YouTube-style tags, hashtags copy, aur chip editing"
+              />
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">📅 Schedule (optional)</label>
@@ -246,7 +260,7 @@ export default function VideoStudioPage() {
 
           {/* Quick AI panel */}
           <div className="space-y-4">
-            <div className="card p-5">
+            <div className="dashboard-surface p-5">
               <h3 className="text-white font-semibold mb-4">⚡ Quick AI Tools</h3>
 
               <div className="space-y-3">
@@ -265,7 +279,7 @@ export default function VideoStudioPage() {
                 {captions.length > 0 && (
                   <div className="space-y-2">
                     {captions.map((c, i) => (
-                      <div key={i} className="p-3 rounded-lg" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                      <div key={i} className="dashboard-surface-muted p-3">
                         <p className="text-xs text-gray-300">{c}</p>
                         <button onClick={() => setForm(p => ({ ...p, description: c }))} className="text-purple-400 text-xs mt-1 hover:text-purple-300">← Use this</button>
                       </div>
@@ -280,20 +294,20 @@ export default function VideoStudioPage() {
                 </button>
 
                 {hashtags.length > 0 && (
-                  <div className="p-3 rounded-lg" style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>
+                  <div className="dashboard-surface-muted p-3">
                     <div className="flex flex-wrap gap-1 mb-2">
                       {hashtags.slice(0, 15).map((h, i) => (
                         <span key={i} className="text-xs text-purple-400 bg-purple-900/30 px-2 py-0.5 rounded">{h}</span>
                       ))}
                     </div>
-                    <button onClick={() => setForm(p => ({ ...p, hashtags: hashtags.join(' ') }))} className="text-purple-400 text-xs hover:text-purple-300">← Apply all</button>
+                    <button onClick={() => setForm(p => ({ ...p, hashtags: formatTagsAsInput(parseTagValue(hashtags)) }))} className="text-purple-400 text-xs hover:text-purple-300">← Apply all</button>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Video Tips */}
-            <div className="card p-5">
+            <div className="dashboard-surface p-5">
               <h3 className="text-white font-semibold mb-3">💡 Tips for {VIDEO_TYPES.find(t => t.id === selectedType)?.label}</h3>
               <ul className="space-y-2 text-xs text-gray-400">
                 {selectedType === 'REEL' && <>
@@ -334,7 +348,7 @@ export default function VideoStudioPage() {
       {/* STEP 3: AI Script Generator */}
       {step === 'script' && (
         <div className="grid lg:grid-cols-2 gap-6">
-          <div className="card p-6 space-y-5">
+          <div className="dashboard-surface p-6 space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">🤖 AI Script Generator</h2>
               <button onClick={() => setStep('details')} className="text-gray-400 hover:text-white text-sm">← Back</button>
@@ -393,7 +407,7 @@ export default function VideoStudioPage() {
           </div>
 
           {/* Script Output */}
-          <div className="card p-6">
+          <div className="dashboard-surface p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white font-semibold">📄 Generated Script</h3>
               {script && <button onClick={() => setStep('publish')} className="text-sm text-purple-400 hover:text-purple-300 font-medium">Continue to Publish →</button>}
@@ -417,14 +431,14 @@ export default function VideoStudioPage() {
             {script && !scriptLoading && (
               <div className="space-y-4 overflow-y-auto max-h-[500px] pr-1">
                 {script.hook && (
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                  <div className="dashboard-surface-muted p-4" style={{ borderColor: 'rgba(239,68,68,0.26)' }}>
                     <p className="text-xs font-bold text-red-400 mb-2 uppercase tracking-wider">🪝 Hook (First 3 sec)</p>
                     <p className="text-sm text-white">{script.hook}</p>
                   </div>
                 )}
 
                 {script.sections?.map((section: any, i: number) => (
-                  <div key={i} className="p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  <div key={i} className="dashboard-surface-muted p-4">
                     <p className="text-xs font-bold text-purple-400 mb-2 uppercase tracking-wider">
                       {section.timeCode && <span className="text-gray-500 mr-2">[{section.timeCode}]</span>}
                       {section.title}
@@ -435,14 +449,14 @@ export default function VideoStudioPage() {
                 ))}
 
                 {script.cta && (
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
+                  <div className="dashboard-surface-muted p-4" style={{ borderColor: 'rgba(34,197,94,0.24)' }}>
                     <p className="text-xs font-bold text-green-400 mb-2 uppercase tracking-wider">📣 Call to Action</p>
                     <p className="text-sm text-white">{script.cta}</p>
                   </div>
                 )}
 
                 {script.estimatedDuration && (
-                  <div className="p-3 rounded-lg text-center" style={{ background: 'var(--surface)' }}>
+                  <div className="dashboard-surface-muted p-3 text-center">
                     <p className="text-xs text-gray-400">⏱️ Estimated Duration: <span className="text-white font-medium">{script.estimatedDuration}</span></p>
                   </div>
                 )}
@@ -461,7 +475,7 @@ export default function VideoStudioPage() {
                   setStep('publish');
                 }} className="w-full py-3 rounded-xl text-white font-semibold"
                   style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
-                  Use This Script & Publish →
+                  Use This Script →
                 </button>
               </div>
             )}
@@ -469,17 +483,22 @@ export default function VideoStudioPage() {
         </div>
       )}
 
-      {/* STEP 4: Publish */}
+      {/* STEP 4: Send to Create Post */}
       {step === 'publish' && (
         <div className="max-w-2xl mx-auto space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">🚀 Publish Video</h2>
+            <h2 className="text-xl font-semibold text-white">🚀 Send To Create Post</h2>
             <button onClick={() => setStep('script')} className="text-gray-400 hover:text-white text-sm">← Back</button>
           </div>
 
-          <div className="card p-6 space-y-4">
+          <div className="dashboard-surface p-6 space-y-4">
+            <div className="rounded-2xl p-4" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)' }}>
+              <p className="text-sm font-semibold text-white">Next step: quick scheduling in Create Post</p>
+              <p className="text-xs text-slate-400 mt-1">Yahan se video draft transfer hoga. Final post copy, platform selection, media review aur publish action Create Post page par complete hoga.</p>
+            </div>
+
             {/* Preview */}
-            <div className="p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
+            <div className="dashboard-surface-muted p-4">
               <div className="flex items-center gap-3 mb-3">
                 <span className="text-2xl">{VIDEO_TYPES.find(t => t.id === selectedType)?.icon}</span>
                 <div>
@@ -488,6 +507,24 @@ export default function VideoStudioPage() {
                 </div>
               </div>
               {form.description && <p className="text-sm text-gray-300 line-clamp-3">{form.description}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="dashboard-inline-stat px-3 py-3">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Draft Type</p>
+                <p className="mt-1 text-sm font-semibold text-white">{VIDEO_TYPES.find(t => t.id === selectedType)?.label}</p>
+              </div>
+              <div className="dashboard-inline-stat px-3 py-3">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Hashtags</p>
+                <p className="mt-1 text-sm font-semibold text-white">{hashtags.length || parseTagValue(form.hashtags).length}</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-400 mb-2">Final video source</p>
+              <div className="dashboard-surface-muted px-3 py-3 text-sm">
+                {form.videoUrl ? form.videoUrl : 'No video URL added yet'}
+              </div>
             </div>
 
             {/* Final hashtags */}
@@ -511,22 +548,15 @@ export default function VideoStudioPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <button onClick={() => handlePublish('DRAFT')} disabled={createPost.isPending}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button onClick={() => setStep('details')}
               className="py-3 rounded-xl text-sm font-semibold text-gray-300 card transition-all card-hover">
-              💾 Save Draft
+              ← Back To Details
             </button>
-            {form.scheduledAt && (
-              <button onClick={() => handlePublish('SCHEDULED')} disabled={createPost.isPending}
-                className="py-3 rounded-xl text-sm font-semibold text-white"
-                style={{ background: 'rgba(99,102,241,0.3)', border: '1px solid #6366f1' }}>
-                📅 Schedule
-              </button>
-            )}
-            <button onClick={() => handlePublish('PUBLISHED')} disabled={createPost.isPending}
-              className="py-3 rounded-xl text-sm font-semibold text-white col-span-2"
+            <button onClick={handleSendToCreatePost}
+              className="py-3 rounded-xl text-sm font-semibold text-white"
               style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
-              {createPost.isPending ? '⏳ Publishing...' : '🚀 Publish Now'}
+              Send to Create Post →
             </button>
           </div>
         </div>

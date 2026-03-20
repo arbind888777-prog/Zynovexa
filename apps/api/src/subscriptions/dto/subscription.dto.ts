@@ -2,10 +2,10 @@ import { IsOptional, IsString, IsNumber } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCheckoutDto {
-  @ApiPropertyOptional({ enum: ['PRO', 'BUSINESS', 'CUSTOM'], default: 'PRO' })
+  @ApiPropertyOptional({ enum: ['STARTER', 'PRO', 'GROWTH'], default: 'PRO' })
   @IsOptional()
   @IsString()
-  plan?: 'PRO' | 'BUSINESS' | 'CUSTOM';
+  plan?: 'STARTER' | 'PRO' | 'GROWTH';
 
   @ApiPropertyOptional({ enum: ['monthly', 'yearly'], default: 'monthly' })
   @IsOptional()

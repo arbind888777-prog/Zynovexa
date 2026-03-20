@@ -104,8 +104,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     // Company
     page('/about', 0.6),
+    page('/contact', 0.6, 'monthly'),
     page('/privacy', 0.5, 'yearly'),
     page('/terms', 0.5, 'yearly'),
+    page('/refund-policy', 0.5, 'yearly'),
+    page('/return-policy', 0.5, 'yearly'),
+    page('/disclaimer', 0.5, 'yearly'),
 
     // Legal subpages
     page('/legal/cookies', 0.4, 'yearly'),

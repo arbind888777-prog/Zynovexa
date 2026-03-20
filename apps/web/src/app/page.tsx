@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import MarketingLayout from '@/components/MarketingLayout';
 import FloatingSocialIcons from '@/components/FloatingSocialIcons';
@@ -123,7 +124,47 @@ const TESTIMONIALS = [
   { name: 'Amit Verma', role: 'TikTok & Reels Creator', text: 'The video studio feature is a game-changer. Script, caption, hashtags — all in one place.', avatar: 'A', plan: 'Pro' },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const host = (await headers()).get('host') ?? '';
+  const currency = host.endsWith('.in') ? 'inr' : 'usd';
+  const symbol = currency === 'inr' ? '₹' : '$';
+  const landingPlans = [
+    {
+      plan: 'Free',
+      price: 0,
+      desc: 'Perfect to get started',
+      features: ['5 posts/month', '20 AI credits', '2 platforms', '7-day analytics', 'Community support'],
+      cta: 'Start Free',
+      featured: false,
+    },
+    {
+      plan: 'Starter',
+      price: currency === 'inr' ? 299 : 5,
+      desc: 'For individual creators',
+      features: ['30 posts/month', '100 AI credits', '3 platforms', '30-day analytics', 'AI captions', 'Email support'],
+      cta: 'Start Starter',
+      featured: false,
+    },
+    {
+      plan: 'Pro',
+      price: currency === 'inr' ? 699 : 9,
+      desc: 'For serious creators',
+      features: ['100 posts/month', '500 AI credits', '5 platforms', '90-day analytics', 'Video Studio', 'Priority email'],
+      cta: 'Start Pro',
+      featured: true,
+      badge: 'Most Popular',
+    },
+    {
+      plan: 'Growth',
+      price: currency === 'inr' ? 1299 : 19,
+      desc: 'For agencies & teams',
+      features: ['Unlimited posts', 'Unlimited AI', 'All 7 platforms', '1-year analytics', 'Team collaboration', 'API access'],
+      cta: 'Choose Growth',
+      featured: false,
+      badge: 'Best Value',
+    },
+  ];
+
   return (
     <MarketingLayout>
 
@@ -305,9 +346,14 @@ export default function LandingPage() {
             <h2 className="section-title">Used by creators who care about repeatable growth</h2>
             <p className="section-copy">Results matter more when the workflow behind them is sustainable.</p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="marketing-summary-strip mb-8 text-xs sm:text-sm">
+            <span className="marketing-logo-pill">Teams with 3 to 30 seats</span>
+            <span className="marketing-logo-pill">Creator workflows without tool sprawl</span>
+            <span className="marketing-logo-pill">Measured growth, not vanity dashboards</span>
+          </div>
+          <div className="marketing-grid-shell grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {TESTIMONIALS.map((t, i) => (
-              <div key={t.name} className={`card card-hover p-6 sm:p-7 relative animate-fade-in delay-${(i+1)*100}`}>
+              <div key={t.name} className={`card card-hover marketing-metric-card premium-tilt-card p-6 sm:p-7 relative animate-fade-in delay-${(i+1)*100}`}>
                 <div className="flex items-start gap-1 mb-4">
                   {[...Array(5)].map((_,j) => <span key={j} className="text-yellow-400 text-sm">★</span>)}
                 </div>
@@ -337,28 +383,15 @@ export default function LandingPage() {
             <p className="section-copy">Start lean, add capability as your operation grows, and keep the workflow in one system.</p>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-5 sm:gap-6">
-            {[
-              {
-                plan: 'Free', price: 0, period: '/mo',
-                desc: 'Perfect to get started',
-                features: ['5 posts/month', '20 AI credits', '2 platforms', '7-day analytics', 'Community support'],
-                cta: 'Start Free', featured: false,
-              },
-              {
-                plan: 'Pro', price: 29, period: '/mo', badge: 'Most Popular',
-                desc: 'For serious creators',
-                features: ['100 posts/month', '500 AI credits', '5 platforms', '90-day analytics', 'Email support', 'Video Studio', 'AI hashtags'],
-                cta: 'Start Pro', featured: true,
-              },
-              {
-                plan: 'Business', price: 79, period: '/mo', badge: 'Best Value',
-                desc: 'For agencies & teams',
-                features: ['Unlimited posts', 'Unlimited AI', 'All 7 platforms', '1-year analytics', '24/7 priority support', 'Team collaboration', 'API access'],
-                cta: 'Go Business', featured: false,
-              },
-            ].map(tier => (
-              <div key={tier.plan} className={`relative p-6 sm:p-8 rounded-2xl flex flex-col ${tier.featured ? 'pricing-popular' : 'card'}`}>
+          <div className="marketing-summary-strip mb-8 text-xs sm:text-sm">
+            <span className="marketing-logo-pill">{currency === 'inr' ? 'INR pricing for .in visitors' : 'USD pricing for global visitors'}</span>
+            <span className="marketing-logo-pill">20% savings on yearly billing</span>
+            <span className="marketing-logo-pill">Free to Growth without migration pain</span>
+          </div>
+
+          <div className="marketing-grid-shell grid sm:grid-cols-2 xl:grid-cols-4 gap-5 sm:gap-6">
+            {landingPlans.map(tier => (
+              <div key={tier.plan} className={`relative p-6 sm:p-8 rounded-2xl flex flex-col premium-tilt-card ${tier.featured ? 'pricing-popular' : 'card marketing-metric-card'}`}>
                 {tier.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 badge text-white px-4 py-1" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', border: 'none' }}>
                     {tier.badge}
@@ -369,8 +402,8 @@ export default function LandingPage() {
                   <p className="text-xs text-slate-500 mt-0.5">{tier.desc}</p>
                 </div>
                 <div className="mb-6">
-                  <span className="text-4xl sm:text-5xl font-black text-white">${tier.price}</span>
-                  <span className="text-slate-400 text-sm">{tier.period}</span>
+                  <span className="text-4xl sm:text-5xl font-black text-white">{symbol}{tier.price}</span>
+                  <span className="text-slate-400 text-sm">/mo</span>
                 </div>
                 <ul className="space-y-2.5 mb-8 flex-1">
                   {tier.features.map(f => (
@@ -389,8 +422,8 @@ export default function LandingPage() {
           </div>
 
           <p className="text-center text-slate-500 text-sm mt-8">
-            Need a custom plan?{' '}
-            <Link href="/pricing" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Build your own →</Link>
+            Need full plan comparison or yearly billing?{' '}
+            <Link href="/pricing" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">See all plans →</Link>
           </p>
         </div>
       </section>
@@ -398,9 +431,15 @@ export default function LandingPage() {
       {/* ─── CTA Banner ────────────────────────────────────────── */}
       <section className="section-shell-tight">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="card p-10 sm:p-16 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))', border: '1px solid rgba(99,102,241,0.3)' }}>
+          <div className="marketing-callout p-10 sm:p-16 relative overflow-hidden">
             <div className="orb orb-purple w-64 h-64 -top-10 -right-10 opacity-20" />
             <div className="relative z-10">
+              <div className="flex flex-wrap justify-center gap-3 mb-6 text-xs sm:text-sm">
+                <span className="marketing-logo-pill">Planning</span>
+                <span className="marketing-logo-pill">Publishing</span>
+                <span className="marketing-logo-pill">Analytics</span>
+                <span className="marketing-logo-pill">AI assistance</span>
+              </div>
               <h2 className="text-3xl sm:text-5xl font-extrabold text-white mb-4">Build a cleaner creator workflow</h2>
               <p className="text-slate-400 mb-8 text-base sm:text-lg">Start with scheduling, AI support, and analytics in one place. Expand when the team is ready.</p>
               <Link href="/signup" className="btn btn-primary btn-xl inline-flex">

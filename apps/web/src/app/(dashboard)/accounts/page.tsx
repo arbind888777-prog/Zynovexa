@@ -140,12 +140,19 @@ export default function AccountsPage() {
   const reconnectCount = (stats?.platforms ?? []).filter((p: any) => p.reconnectRequired).length;
 
   return (
-    <div className="p-6 sm:p-8 animate-fade-in">
+    <div className="dashboard-content-shell animate-fade-in">
 
       {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">🔗 Connected Accounts</h1>
-        <p className="text-sm text-slate-400 mt-1">Connect your social accounts to schedule posts, track analytics, and grow your audience.</p>
+      <div className="dashboard-headerband mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Channel Connections</p>
+          <h1 className="mt-2 text-2xl font-bold text-white">🔗 Connected Accounts</h1>
+          <p className="mt-2 text-sm text-slate-400">Schedule, analytics aur audience sync ke liye apne social channels ko ek jagah se manage karo.</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+          <p className="font-semibold text-white">{stats?.connected ?? 0} live connections</p>
+          <p className="mt-1 text-xs text-slate-400">YouTube live sync available, baaki platform rollouts staged hain.</p>
+        </div>
       </div>
 
       {/* Reconnect required banner */}
@@ -182,23 +189,23 @@ export default function AccountsPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <div className="rounded-xl px-4 py-3 bg-white/5">
+                <div className="dashboard-inline-stat px-4 py-3">
                   <p className="text-xs text-slate-400">Subscribers</p>
                   <p className="text-lg font-bold text-white">{youtubeInsights.channel.subscriberCount.toLocaleString()}</p>
                 </div>
-                <div className="rounded-xl px-4 py-3 bg-white/5">
+                <div className="dashboard-inline-stat px-4 py-3">
                   <p className="text-xs text-slate-400">Videos</p>
                   <p className="text-lg font-bold text-white">{youtubeInsights.channel.videoCount.toLocaleString()}</p>
                 </div>
-                <div className="rounded-xl px-4 py-3 bg-white/5">
+                <div className="dashboard-inline-stat px-4 py-3">
                   <p className="text-xs text-slate-400">Channel Views</p>
                   <p className="text-lg font-bold text-white">{youtubeInsights.channel.viewCount.toLocaleString()}</p>
                 </div>
-                <div className="rounded-xl px-4 py-3 bg-white/5">
+                <div className="dashboard-inline-stat px-4 py-3">
                   <p className="text-xs text-slate-400">Recent Likes</p>
                   <p className="text-lg font-bold text-white">{youtubeInsights.totals.totalLikes.toLocaleString()}</p>
                 </div>
-                <div className="rounded-xl px-4 py-3 bg-white/5">
+                <div className="dashboard-inline-stat px-4 py-3">
                   <p className="text-xs text-slate-400">Recent Comments</p>
                   <p className="text-lg font-bold text-white">{youtubeInsights.totals.totalComments.toLocaleString()}</p>
                 </div>
@@ -248,19 +255,19 @@ export default function AccountsPage() {
       {/* Stats row */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <div className="card p-4">
+          <div className="dashboard-metric-card p-4">
             <p className="text-2xl font-bold text-white">{stats.connected}</p>
             <p className="text-xs text-slate-400 mt-0.5">Connected Accounts</p>
           </div>
-          <div className="card p-4">
+          <div className="dashboard-metric-card p-4">
             <p className="text-2xl font-bold text-white">{totalFollowers.toLocaleString()}</p>
             <p className="text-xs text-slate-400 mt-0.5">Total Followers</p>
           </div>
-          <div className="card p-4">
+          <div className="dashboard-metric-card p-4">
             <p className="text-2xl font-bold text-white">{ALL_PLATFORMS.length - stats.connected}</p>
             <p className="text-xs text-slate-400 mt-0.5">Available to Connect</p>
           </div>
-          <div className="card p-4">
+          <div className="dashboard-metric-card p-4">
             <p className={`text-2xl font-bold ${reconnectCount > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
               {reconnectCount > 0 ? reconnectCount : '✓'}
             </p>
@@ -292,7 +299,7 @@ export default function AccountsPage() {
               : (account?.followersCount || 0);
 
             return (
-              <div key={p} className={`card p-5 flex flex-col transition-all duration-200 ${connected && !needsReconnect ? 'card-hover' : ''} ${needsReconnect ? 'ring-1 ring-yellow-500/40' : ''}`}>
+              <div key={p} className={`dashboard-surface p-5 flex flex-col transition-all duration-200 ${connected && !needsReconnect ? 'card-hover' : ''} ${needsReconnect ? 'ring-1 ring-yellow-500/40' : ''}`}>
 
                 {/* Card header */}
                 <div className="flex items-start justify-between mb-4">

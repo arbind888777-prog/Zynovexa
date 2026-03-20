@@ -17,8 +17,14 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState({ name: user?.name || '', bio: user?.bio || '', website: user?.website || '' });
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [customPosts, setCustomPosts] = useState(50);
-  const [customAi, setCustomAi] = useState(200);
+  const [currency, setCurrency] = useState<'inr' | 'usd'>('usd');
+
+  useEffect(() => {
+    const host = window.location.hostname;
+    setCurrency(host.endsWith('.in') ? 'inr' : 'usd');
+  }, []);
+
+  const sym = currency === 'inr' ? '₹' : '$';
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
@@ -62,12 +68,12 @@ export default function SettingsPage() {
   });
 
   const checkout = useMutation({
-    mutationFn: (opts: { plan: string; customPosts?: number; customAiCredits?: number }) =>
-      subscriptionsApi.createCheckout({ plan: opts.plan, billingCycle, customPosts: opts.customPosts, customAiCredits: opts.customAiCredits }),
+    mutationFn: (opts: { plan: string }) =>
+      subscriptionsApi.createCheckout({ plan: opts.plan, billingCycle }),
     onSuccess: (res) => {
       const payload = unwrapApiResponse<{ demoMode?: boolean; url?: string }>(res);
       if (payload.demoMode) {
-        toast.error('⚠️ Stripe not configured. Add STRIPE_SECRET_KEY to .env file.', { duration: 5000 });
+        toast.error('⚠️ Payment gateway not configured. Add STRIPE_SECRET_KEY to .env file.', { duration: 5000 });
         return;
       }
       if (payload.url) {
@@ -81,23 +87,24 @@ export default function SettingsPage() {
     mutationFn: () => subscriptionsApi.createPortal(),
     onSuccess: (res) => {
       const payload = unwrapApiResponse<{ demoMode?: boolean; url?: string }>(res);
-      if (payload.demoMode) { toast.error('⚠️ Stripe not configured.'); return; }
+      if (payload.demoMode) { toast.error('⚠️ Payment gateway not configured.'); return; }
       if (payload.url) {
         window.location.href = payload.url;
       }
     },
   });
 
-  // Calculate custom plan price
-  const customMonthlyPrice = 15 + Math.ceil(customPosts / 10) * 5 + Math.ceil(customAi / 100) * 3;
-  const customYearlyPrice = customMonthlyPrice * 10;
-
   const inputClass = "w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-purple-500";
   const inputStyle = { background: 'var(--surface)', border: '1px solid var(--border)' };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto animate-fade-in">
-      <h1 className="text-2xl font-bold text-white mb-6">⚙️ Settings</h1>
+    <div className="dashboard-content-shell max-w-5xl animate-fade-in">
+      <div className="dashboard-headerband mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">⚙️ Settings</h1>
+          <p className="text-sm text-gray-400 mt-2">Manage your profile, subscription, and security from one place.</p>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
@@ -106,8 +113,7 @@ export default function SettingsPage() {
             setTab(t);
             router.replace(`/settings?tab=${t}`);
           }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all ${tab === t ? 'text-white' : 'text-gray-400 hover:text-white'}`}
-            style={{ background: tab === t ? 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(168,85,247,0.3))' : 'var(--card)', border: `1px solid ${tab === t ? '#6366f1' : 'var(--border)'}` }}>
+            className={`dashboard-tab px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all ${tab === t ? 'dashboard-tab-active text-white' : 'text-gray-400 hover:text-white'}`}>
             {t === 'profile' ? '👤' : t === 'billing' ? '💳' : '🔒'} {t}
           </button>
         ))}
@@ -115,7 +121,7 @@ export default function SettingsPage() {
 
       {/* Profile Tab */}
       {tab === 'profile' && (
-        <div className="card p-6 space-y-5">
+        <div className="dashboard-surface p-6 space-y-5">
           <h2 className="font-semibold text-white">Profile Information</h2>
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
@@ -150,8 +156,16 @@ export default function SettingsPage() {
       {tab === 'billing' && (
         <div className="space-y-6">
           {/* Current plan */}
-          <div className="card p-6">
-            <h2 className="font-semibold text-white mb-3">Current Plan</h2>
+          <div className="dashboard-surface p-6">
+            <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="font-semibold text-white">Current Plan</h2>
+                <p className="mt-1 text-xs text-slate-400">Subscription state, renewal timing aur billing controls ek view me.</p>
+              </div>
+              <div className="dashboard-inline-stat px-3 py-2 text-xs text-slate-300">
+                {currency === 'inr' ? 'INR billing view' : 'USD billing view'}
+              </div>
+            </div>
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-lg font-bold text-white">{subscription?.plan || user?.plan}</span>
@@ -161,7 +175,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               {subscription?.stripeCustomerId && (
-                <button onClick={() => portal.mutate()} className="px-4 py-2 rounded-lg text-sm text-gray-300 card card-hover">
+                <button onClick={() => portal.mutate()} className="dashboard-surface-muted px-4 py-2 text-sm text-gray-300 card-hover">
                   Manage Billing →
                 </button>
               )}
@@ -169,7 +183,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Billing Cycle Toggle */}
-          <div className="flex items-center justify-center gap-4">
+          <div className="dashboard-surface-muted flex items-center justify-center gap-4 p-4">
             <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-gray-500'}`}>Monthly</span>
             <button
               onClick={() => setBillingCycle(c => c === 'monthly' ? 'yearly' : 'monthly')}
@@ -179,132 +193,111 @@ export default function SettingsPage() {
               <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${billingCycle === 'yearly' ? 'left-8' : 'left-1'}`}></span>
             </button>
             <span className={`text-sm font-medium ${billingCycle === 'yearly' ? 'text-white' : 'text-gray-500'}`}>
-              Yearly <span className="text-xs text-green-400 font-bold ml-1">Save 33%</span>
+              Yearly <span className="text-xs text-green-400 font-bold ml-1">Save 20%</span>
             </span>
+          </div>
+
+          {/* Currency switcher */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-2 text-xs text-gray-500">
+              <span>Prices in {currency === 'inr' ? 'INR (₹)' : 'USD ($)'}</span>
+              <button
+                type="button"
+                onClick={() => setCurrency(currency === 'inr' ? 'usd' : 'inr')}
+                className="text-purple-400 hover:text-purple-300 underline transition-colors"
+              >
+                Switch to {currency === 'inr' ? 'USD ($)' : 'INR (₹)'}
+              </button>
+            </div>
           </div>
 
           {/* Plan cards */}
           {plans && (
             <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-              {Object.entries(plans).map(([key, plan]: any) => (
-                <div key={key} className={`card p-5 relative flex flex-col ${key === user?.plan ? 'glow' : ''}`}
-                  style={{ border: `1px solid ${key === user?.plan ? '#6366f1' : 'var(--border)'}` }}>
-                  {plan.badge && (
-                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs px-3 py-0.5 rounded-full text-white font-bold"
-                      style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>{plan.badge}</span>
-                  )}
-                  <h3 className="font-bold text-white mb-1">{plan.name}</h3>
+              {Object.entries(plans).map(([key, plan]: any) => {
+                const priceData = plan.price?.[currency] || plan.price;
+                const monthlyPrice = priceData?.monthly ?? 0;
+                const yearlyPrice = priceData?.yearly ?? 0;
+                const displayPrice = billingCycle === 'yearly' && key !== 'FREE'
+                  ? Math.round(yearlyPrice / 12)
+                  : monthlyPrice;
 
-                  {/* Price display */}
-                  {key === 'CUSTOM' ? (
-                    <p className="text-xl font-extrabold text-white mb-1">
-                      ${billingCycle === 'yearly' ? plan.price.yearly : plan.price.monthly}
-                    </p>
-                  ) : (
+                return (
+                  <div key={key} className={`dashboard-metric-card p-5 relative flex flex-col ${key === user?.plan ? 'glow' : ''}`}
+                    style={{ border: `1px solid ${key === user?.plan ? '#6366f1' : 'var(--border)'}` }}>
+                    {plan.badge && (
+                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs px-3 py-0.5 rounded-full text-white font-bold"
+                        style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>{plan.badge}</span>
+                    )}
+                    <h3 className="font-bold text-white mb-1">{plan.name}</h3>
                     <div className="mb-1">
                       <span className="text-2xl font-extrabold text-white">
-                        ${billingCycle === 'yearly' ? (plan.price.yearly / 12).toFixed(0) : plan.price.monthly}
+                        {sym}{displayPrice}
                       </span>
                       <span className="text-sm text-gray-400">/mo</span>
                       {billingCycle === 'yearly' && key !== 'FREE' && plan.savings && (
                         <span className="ml-2 text-xs text-green-400 font-bold">Save {plan.savings}!</span>
                       )}
                     </div>
-                  )}
-                  {billingCycle === 'yearly' && key !== 'FREE' && key !== 'CUSTOM' && (
-                    <p className="text-xs text-gray-500 mb-2">Billed ${plan.price.yearly}/year</p>
-                  )}
+                    {billingCycle === 'yearly' && key !== 'FREE' && (
+                      <p className="text-xs text-gray-500 mb-2">Billed {sym}{yearlyPrice}/year</p>
+                    )}
+                    {key === 'FREE' && <p className="text-xs text-green-400 mb-2">Forever free</p>}
 
-                  <ul className="space-y-1 mb-4 flex-1">
-                    {(plan.features || []).map((f: string) => (
-                      <li key={f} className="text-xs text-gray-400 flex items-center gap-1.5">
-                        <span className="text-green-400 text-[10px]">✔</span>{f}
-                      </li>
-                    ))}
-                  </ul>
+                    <ul className="space-y-1 mb-4 flex-1">
+                      {(plan.features || []).map((f: string) => (
+                        <li key={f} className="text-xs text-gray-400 flex items-center gap-1.5">
+                          <span className="text-green-400 text-[10px]">✔</span>{f}
+                        </li>
+                      ))}
+                    </ul>
 
-                  {key !== user?.plan && key !== 'FREE' && key !== 'CUSTOM' && (
-                    <button onClick={() => checkout.mutate({ plan: key })} disabled={checkout.isPending}
-                      className="w-full py-2 rounded-lg text-xs font-semibold text-white"
-                      style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
-                      Upgrade to {plan.name}
-                    </button>
-                  )}
-                  {key === 'CUSTOM' && key !== user?.plan && (
-                    <button onClick={() => checkout.mutate({ plan: 'CUSTOM', customPosts, customAiCredits: customAi })} disabled={checkout.isPending}
-                      className="w-full py-2 rounded-lg text-xs font-semibold text-white"
-                      style={{ background: 'linear-gradient(135deg, #ec4899, #a855f7)' }}>
-                      Get Custom Plan
-                    </button>
-                  )}
-                  {key === user?.plan && <p className="text-center text-xs text-purple-400 font-medium">Current Plan ✔</p>}
-                </div>
-              ))}
+                    {key !== user?.plan && key !== 'FREE' && (
+                      <button onClick={() => checkout.mutate({ plan: key })} disabled={checkout.isPending}
+                        className="w-full py-2 rounded-lg text-xs font-semibold text-white"
+                        style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
+                        Upgrade to {plan.name}
+                      </button>
+                    )}
+                    {key === user?.plan && <p className="text-center text-xs text-purple-400 font-medium">Current Plan ✔</p>}
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          {/* Custom Plan Configurator */}
-          <div className="card p-6" style={{ border: '1px solid rgba(236,72,153,0.3)' }}>
-            <h2 className="font-semibold text-white mb-1">🎛️ Custom Plan Builder</h2>
-            <p className="text-xs text-gray-400 mb-5">Only pay for what you need — build your own plan</p>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm text-gray-300">Posts per month</label>
-                  <span className="text-sm font-bold text-white">{customPosts}</span>
-                </div>
-                <input type="range" min={10} max={500} step={10} value={customPosts}
-                  onChange={e => setCustomPosts(Number(e.target.value))}
-                  className="w-full accent-purple-500" />
-                <div className="flex justify-between text-xs text-gray-500 mt-1"><span>10</span><span>500+</span></div>
-              </div>
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="text-sm text-gray-300">AI Credits per month</label>
-                  <span className="text-sm font-bold text-white">{customAi}</span>
-                </div>
-                <input type="range" min={100} max={2000} step={100} value={customAi}
-                  onChange={e => setCustomAi(Number(e.target.value))}
-                  className="w-full accent-purple-500" />
-                <div className="flex justify-between text-xs text-gray-500 mt-1"><span>100</span><span>2000+</span></div>
-              </div>
-            </div>
-            <div className="mt-5 p-4 rounded-lg flex items-center justify-between" style={{ background: 'rgba(236,72,153,0.08)', border: '1px solid rgba(236,72,153,0.2)' }}>
-              <div>
-                <p className="text-sm text-gray-300">Your custom price</p>
-                <p className="text-xs text-gray-500">
-                  Base $15 + {Math.ceil(customPosts/10)} post blocks + {Math.ceil(customAi/100)} AI blocks
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-extrabold text-white">
-                  ${billingCycle === 'yearly' ? customYearlyPrice : customMonthlyPrice}
-                </p>
-                <p className="text-xs text-gray-400">/{billingCycle === 'yearly' ? 'year' : 'mo'}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => checkout.mutate({ plan: 'CUSTOM', customPosts, customAiCredits: customAi })}
-              disabled={checkout.isPending}
-              className="mt-4 w-full py-3 rounded-lg text-sm font-semibold text-white transition-all hover:scale-[1.02]"
-              style={{ background: 'linear-gradient(135deg, #ec4899, #a855f7)' }}>
-              {checkout.isPending ? 'Processing...' : `Subscribe — $${billingCycle === 'yearly' ? customYearlyPrice : customMonthlyPrice}/${billingCycle === 'yearly' ? 'yr' : 'mo'}`}
-            </button>
+          {/* Trust badges */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-400" /> Cancel anytime
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-400" /> No hidden charges
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-400" /> {currency === 'inr' ? 'Secure payments via Razorpay' : 'Secure payments via Stripe'}
+            </span>
           </div>
 
           {/* Invoices */}
           {invoices && invoices.length > 0 && (
-            <div className="card p-6">
-              <h2 className="font-semibold text-white mb-4">Invoice History</h2>
+            <div className="dashboard-surface p-6">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-semibold text-white">Invoice History</h2>
+                  <p className="mt-1 text-xs text-slate-400">Recent charges, status aur receipt access.</p>
+                </div>
+                <div className="dashboard-inline-stat px-3 py-2 text-xs text-slate-300">{invoices.length} invoices</div>
+              </div>
               <div className="space-y-2">
                 {invoices.map((inv: any) => (
-                  <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                  <div key={inv.id} className="dashboard-list-row flex items-center justify-between p-3">
                     <div>
                       <p className="text-sm text-gray-300">{new Date(inv.createdAt).toLocaleDateString()}</p>
                       <p className="text-xs text-gray-500">{inv.status}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-mono text-white">${(inv.amount / 100).toFixed(2)}</span>
+                      <span className="text-sm font-mono text-white">{sym}{(inv.amount / 100).toFixed(2)}</span>
                       {inv.invoiceUrl && <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-400">View →</a>}
                     </div>
                   </div>
@@ -317,7 +310,7 @@ export default function SettingsPage() {
 
       {/* Security Tab */}
       {tab === 'security' && (
-        <div className="card p-6 space-y-5">
+        <div className="dashboard-surface p-6 space-y-5">
           <h2 className="font-semibold text-white">Change Password</h2>
           {[
             { label: 'Current Password', key: 'currentPassword' },

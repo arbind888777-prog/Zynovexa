@@ -10,7 +10,9 @@ import {
 // Plan limits for AI requests per month
 const PLAN_LIMITS = {
   FREE: 20,
+  STARTER: 100,
   PRO: 500,
+  GROWTH: Infinity,
   BUSINESS: Infinity,
 };
 

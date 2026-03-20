@@ -122,8 +122,9 @@ const structuredData = {
       applicationCategory: 'BusinessApplication',
       offers: [
         { '@type': 'Offer', name: 'Free Plan', price: '0', priceCurrency: 'USD' },
-        { '@type': 'Offer', name: 'Pro Plan', price: '29', priceCurrency: 'USD' },
-        { '@type': 'Offer', name: 'Business Plan', price: '79', priceCurrency: 'USD' },
+        { '@type': 'Offer', name: 'Starter Plan', price: '5', priceCurrency: 'USD' },
+        { '@type': 'Offer', name: 'Pro Plan', price: '9', priceCurrency: 'USD' },
+        { '@type': 'Offer', name: 'Growth Plan', price: '19', priceCurrency: 'USD' },
       ],
       aggregateRating: {
         '@type': 'AggregateRating',

@@ -21,12 +21,16 @@ const NAV = [
 
 const PLAN_STYLES: Record<string, string> = {
   FREE: 'badge-purple',
+  STARTER: 'badge-blue',
   PRO: 'badge-yellow',
+  GROWTH: 'badge-green',
   BUSINESS: 'badge-green',
 };
 const PLAN_LABELS: Record<string, string> = {
   FREE: '🆓 Free',
+  STARTER: '🌱 Starter',
   PRO: '⚡ Pro',
+  GROWTH: '📈 Growth',
   BUSINESS: '💼 Business',
 };
 
@@ -139,38 +143,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const planCls = PLAN_STYLES[plan] ?? 'badge-purple';
 
   const SidebarContent = () => (
-    <aside className="flex flex-col h-full" style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)' }}>
+    <aside className="dashboard-sidebar flex flex-col h-full">
       {/* Brand */}
       <div className="flex items-center justify-between px-5 py-4 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>Z</div>
-          <span className="text-lg font-extrabold gradient-text">Zynovexa</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>Z</div>
+            <span className="text-lg font-extrabold gradient-text">Zynovexa</span>
+          </Link>
+          <span className="dashboard-inline-stat hidden xl:inline-flex px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Live workspace</span>
+        </div>
         <button className="lg:hidden p-1 text-slate-400 hover:text-white transition-colors" onClick={() => setSidebarOpen(false)} aria-label="Close menu">✕</button>
       </div>
 
       {/* User */}
       <div className="px-4 py-4 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-        <div className="flex items-center gap-3">
+        <div className="dashboard-panel flex items-center gap-3 p-3.5">
           <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
             style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
             {user?.name?.[0]?.toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate leading-none mb-1">{user?.name || 'Creator'}</p>
+            <p className="text-[11px] text-slate-500 truncate mb-1.5">{user?.email || 'workspace@zynovexa.com'}</p>
             <span className={`badge ${planCls} text-[10px] px-2 py-0.5`}>{planBadge}</span>
           </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Workspace</div>
         {NAV.map(item => {
           const active = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
           return (
             <Link key={item.href} href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                active ? 'nav-active text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-white/5'
+              className={`dashboard-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                active ? 'nav-active text-white font-medium' : 'text-slate-400 hover:text-white'
               }`}>
               <span className="text-base leading-none">{item.icon}</span>
               <span>{item.label}</span>
@@ -182,24 +191,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Theme & Logout */}
       <div className="p-3 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
+        <div className="dashboard-panel p-2.5">
         <div className="flex items-center justify-between px-3 py-2 mb-1">
           <span className="text-xs text-slate-500">Theme</span>
           <ThemeToggle />
         </div>
         <Link href="/settings/billing"
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:text-white hover:bg-white/5 transition-all mb-1">
+          className="dashboard-quick-link flex items-center gap-2 px-3 py-2 text-xs text-slate-300 transition-all mb-1">
           <span>⬆️</span><span>Upgrade Plan</span>
         </Link>
         <button onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-all">
+          className="dashboard-surface-muted w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-red-400 transition-all">
           <span>🚪</span><span>Sign Out</span>
         </button>
+        </div>
       </div>
     </aside>
   );
 
   return (
-    <div className="flex min-h-screen hero-bg">
+    <div className="dashboard-shell flex min-h-screen">
       {/* ── Desktop Sidebar ──────────────────────────── */}
       <div className="hidden lg:flex flex-col w-64 fixed left-0 top-0 bottom-0 z-30">
         <SidebarContent />
@@ -231,6 +242,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="font-extrabold gradient-text">Zynovexa</span>
           </Link>
           <div className="flex items-center gap-2">
+            <span className={`badge ${planCls} hidden sm:inline-flex text-[10px] px-2 py-0.5`}>{planBadge}</span>
             <ThemeToggle className="scale-[0.8]" />
             <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold"
               style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>

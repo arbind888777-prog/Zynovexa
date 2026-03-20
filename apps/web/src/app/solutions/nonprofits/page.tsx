@@ -23,7 +23,7 @@ export default function NonprofitsPage() {
     <MarketingLayout>
       <section className="pt-32 pb-20 px-4 sm:px-6 text-center relative overflow-hidden">
         <div className="orb orb-pink w-[500px] h-[500px] -top-40 left-1/2 -translate-x-1/2 pointer-events-none" />
-        <div className="max-w-4xl mx-auto relative z-10">
+        <div className="max-w-4xl mx-auto relative z-10 marketing-hero-panel">
           <span className="badge badge-purple mb-4 inline-block">❤️ For Nonprofits</span>
           <h1 className="text-5xl sm:text-7xl font-black text-white leading-none mb-6">
             Amplify your<br /><span className="gradient-text">mission</span>
@@ -31,6 +31,11 @@ export default function NonprofitsPage() {
           <p className="text-slate-400 text-xl mb-10 max-w-2xl mx-auto">
             Zynovexa helps nonprofits, NGOs, and charities grow their online presence, engage supporters, and drive real-world impact.
           </p>
+          <div className="flex flex-wrap justify-center gap-3 mb-8 text-xs sm:text-sm">
+            <span className="marketing-logo-pill">Campaign storytelling that moves donors</span>
+            <span className="marketing-logo-pill">Volunteer outreach in one calendar</span>
+            <span className="marketing-logo-pill">Impact reporting your board can use</span>
+          </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/signup" className="btn btn-primary btn-xl">Apply for Nonprofit Plan</Link>
             <Link href="/pricing" className="btn btn-secondary btn-xl">See Nonprofit Pricing</Link>
@@ -44,7 +49,7 @@ export default function NonprofitsPage() {
           <p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-600 mb-6">Trusted by nonprofits worldwide</p>
           <div className="flex flex-wrap justify-center gap-6">
             {ORGS.map(org => (
-              <span key={org} className="text-slate-500 text-sm font-medium px-4 py-2 rounded-lg" style={{ background: 'var(--bg2)' }}>{org}</span>
+              <span key={org} className="marketing-logo-pill text-sm font-medium">{org}</span>
             ))}
           </div>
         </div>
@@ -56,9 +61,9 @@ export default function NonprofitsPage() {
           <div className="text-center mb-14">
             <h2 className="text-4xl font-black text-white mb-3">Tools built for your mission</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="marketing-grid-shell grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map(f => (
-              <div key={f.title} className="card card-hover p-6">
+              <div key={f.title} className="card card-hover marketing-metric-card premium-tilt-card p-6">
                 <div className="text-4xl mb-4">{f.icon}</div>
                 <h3 className="text-lg font-bold text-white mb-2">{f.title}</h3>
                 <p className="text-sm text-slate-400">{f.desc}</p>
@@ -71,7 +76,7 @@ export default function NonprofitsPage() {
       {/* Nonprofit discount highlight */}
       <section className="py-16 px-4 sm:px-6" style={{ background: 'var(--bg2)' }}>
         <div className="max-w-3xl mx-auto text-center">
-          <div className="card p-10">
+          <div className="marketing-callout p-10">
             <div className="text-5xl mb-4">🌍</div>
             <h2 className="text-3xl font-black text-white mb-3">50% off for verified nonprofits</h2>
             <p className="text-slate-400 mb-6">We believe technology should be accessible to organizations doing good in the world. Apply with your EIN or charity registration number.</p>

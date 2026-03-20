@@ -28,9 +28,9 @@ const FEATURES = [
 ];
 
 const PRICING = [
-  { plan: 'Free', zynovexa: '$0/mo — Unlimited posts, 3 accounts, 50 AI credits', competitor: '$0/mo — 5 posts per profile, 1 social set' },
-  { plan: 'Pro / Starter', zynovexa: '$19/mo — 10 accounts, 500 AI credits, analytics', competitor: '$25/mo — 30 posts/profile, 1 social set' },
-  { plan: 'Business / Growth', zynovexa: '$49/mo — 25 accounts, unlimited AI, teams', competitor: '$45/mo — 150 posts/profile, 3 social sets' },
+  { plan: 'Free', zynovexa: '$0/mo — 5 posts/month, 2 platforms, 20 AI credits', competitor: '$0/mo — 5 posts per profile, 1 social set' },
+  { plan: 'Starter', zynovexa: '$5/mo — 30 posts/month, 3 platforms, 100 AI credits', competitor: '$25/mo — 30 posts/profile, 1 social set' },
+  { plan: 'Growth', zynovexa: '$19/mo — Unlimited posts, unlimited AI, teams', competitor: '$45/mo — 150 posts/profile, 3 social sets' },
 ];
 
 const TESTIMONIALS = [
@@ -53,7 +53,7 @@ export default function LaterAlternativePage() {
     <MarketingLayout>
       <section className="pt-32 pb-16 px-4 sm:px-6 text-center relative overflow-hidden">
         <div className="orb orb-purple w-[600px] h-[600px] -top-60 left-1/2 -translate-x-1/2 pointer-events-none" />
-        <div className="max-w-4xl mx-auto relative z-10">
+        <div className="max-w-4xl mx-auto relative z-10 marketing-hero-panel">
           <span className="badge badge-purple mb-4 inline-block">🏆 #1 Later Alternative</span>
           <h1 className="text-4xl sm:text-7xl font-black text-white leading-none mb-6">
             Zynovexa vs <span className="gradient-text">Later</span>
@@ -75,9 +75,9 @@ export default function LaterAlternativePage() {
             <span className="badge badge-blue mb-4 inline-block">Why Switch?</span>
             <h2 className="text-3xl sm:text-5xl font-black text-white mb-4">6 reasons to upgrade from Later</h2>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="marketing-grid-shell grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {REASONS.map(r => (
-              <div key={r.title} className="card card-hover p-6">
+              <div key={r.title} className="card card-hover marketing-metric-card premium-tilt-card p-6">
                 <span className="text-3xl mb-3 block">{r.icon}</span>
                 <h3 className="text-lg font-bold text-white mb-2">{r.title}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{r.desc}</p>
@@ -92,7 +92,7 @@ export default function LaterAlternativePage() {
           <div className="text-center mb-10">
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">Feature-by-feature comparison</h2>
           </div>
-          <div className="card overflow-hidden">
+          <div className="marketing-table-shell overflow-hidden">
             <div className="grid grid-cols-12 gap-0 text-sm font-bold border-b p-4" style={{ borderColor: 'var(--border)' }}>
               <div className="col-span-5 text-slate-400">Feature</div>
               <div className="col-span-3 text-center gradient-text">Zynovexa</div>
@@ -119,7 +119,7 @@ export default function LaterAlternativePage() {
           </div>
           <div className="space-y-4">
             {PRICING.map(p => (
-              <div key={p.plan} className="card p-6 grid md:grid-cols-3 gap-4 items-center">
+              <div key={p.plan} className="marketing-compare-row p-6 grid md:grid-cols-3 gap-4 items-center">
                 <div><span className="badge badge-purple text-xs">{p.plan}</span></div>
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Zynovexa</p>
@@ -142,7 +142,7 @@ export default function LaterAlternativePage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {TESTIMONIALS.map(t => (
-              <div key={t.name} className="card p-6 card-hover">
+              <div key={t.name} className="card marketing-metric-card premium-tilt-card p-6 card-hover">
                 <p className="text-slate-300 text-sm leading-relaxed mb-4">&ldquo;{t.quote}&rdquo;</p>
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{t.avatar}</span>
@@ -159,7 +159,7 @@ export default function LaterAlternativePage() {
 
       <section className="py-20 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="card p-10 sm:p-14" style={{ border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.04)' }}>
+          <div className="marketing-callout p-10 sm:p-14">
             <span className="text-5xl mb-4 block">🚀</span>
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">Ready to level up from Later?</h2>
             <p className="text-slate-400 mb-8 max-w-xl mx-auto">
