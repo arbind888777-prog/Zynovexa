@@ -7,6 +7,7 @@ import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AccountsService } from './accounts.service';
 import { ConnectAccountDto, UpdateAccountDto } from './dto/account.dto';
+import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
 
 @ApiTags('Accounts')
 @ApiBearerAuth()
@@ -60,8 +61,9 @@ export class AccountsController {
     summary: 'Get Google OAuth URL to connect YouTube account',
     description: 'Returns { url }. Frontend does window.location.href = url to initiate OAuth.',
   })
-  getYoutubeConnectUrl(@Request() req) {
-    return this.accountsService.generateYoutubeConnectUrl(req.user.id);
+  @ApiQuery({ name: 'frontend', required: false, description: 'Current frontend origin for post-OAuth redirect' })
+  getYoutubeConnectUrl(@Request() req, @Query('frontend') frontend?: string) {
+    return this.accountsService.generateYoutubeConnectUrl(req.user.id, frontend);
   }
 
   @Get('connect/youtube/callback')
@@ -72,20 +74,20 @@ export class AccountsController {
     @Query('error') error: string,
     @Res() res: Response,
   ) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const fallbackFrontendUrl = sanitizeFrontendUrl(process.env.FRONTEND_URL);
 
     if (error) {
-      return res.redirect(`${frontendUrl}/accounts?error=youtube_denied`);
+      return res.redirect(`${fallbackFrontendUrl}/accounts?error=youtube_denied`);
     }
     if (!code || !state) {
-      return res.redirect(`${frontendUrl}/accounts?error=youtube_invalid`);
+      return res.redirect(`${fallbackFrontendUrl}/accounts?error=youtube_invalid`);
     }
 
     try {
-      await this.accountsService.handleYoutubeCallback(code, state);
-      return res.redirect(`${frontendUrl}/accounts?connected=youtube`);
+      const result = await this.accountsService.handleYoutubeCallback(code, state);
+      return res.redirect(`${result.frontendUrl}/accounts?connected=youtube`);
     } catch (err: any) {
-      return res.redirect(`${frontendUrl}/accounts?error=youtube_failed`);
+      return res.redirect(`${fallbackFrontendUrl}/accounts?error=youtube_failed`);
     }
   }
 }

@@ -8,6 +8,8 @@ import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { SignupDto, LoginDto, RefreshTokenDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
+import { decodeFrontendState, sanitizeFrontendUrl } from '../common/utils/frontend-url';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -57,15 +59,17 @@ export class AuthController {
 
   @Get('google')
   @ApiOperation({ summary: 'Initiate Google OAuth login' })
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   googleAuth() { /* passport redirects to Google */ }
 
   @Get('google/callback')
   @ApiExcludeEndpoint()
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Request() req, @Res() res: Response) {
+    const fallbackFrontendUrl = sanitizeFrontendUrl(process.env.FRONTEND_URL);
+    const frontendUrl = decodeFrontendState(req.query?.state) || fallbackFrontendUrl;
+
     try {
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
       const result = await this.authService.googleLogin(req.user);
       const isProduction = process.env.NODE_ENV === 'production';
 
@@ -86,7 +90,7 @@ export class AuthController {
 
       return res.redirect(`${frontendUrl}/auth/google/callback?success=true`);
     } catch {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/login?error=google_failed`);
+      return res.redirect(`${frontendUrl}/login?error=google_failed`);
     }
   }
 

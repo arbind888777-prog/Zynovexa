@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
 
 export interface SendMailOptions {
   to: string;
@@ -151,7 +152,7 @@ export class MailService {
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   private appUrl(): string {
-    return this.config.get('FRONTEND_URL', 'http://localhost:3001');
+    return sanitizeFrontendUrl(this.config.get<string>('FRONTEND_URL'));
   }
 
   private escapeHtml(str: string): string {

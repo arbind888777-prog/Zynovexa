@@ -108,7 +108,7 @@ export default function AccountsPage() {
   const handleConnectYoutube = async () => {
     setYtConnecting(true);
     try {
-      const res = await accountsApi.getYoutubeConnectUrl();
+      const res = await accountsApi.getYoutubeConnectUrl(window.location.origin);
       const { url } = res.data?.data ?? res.data;
       if (!url) throw new Error('No OAuth URL returned');
       window.location.href = url; // full-page redirect to Google consent screen

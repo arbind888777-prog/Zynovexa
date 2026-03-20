@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
 import { join } from 'path';
+import { getAllowedFrontendOrigins } from './common/utils/frontend-url';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -26,7 +27,7 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: [process.env.FRONTEND_URL || 'http://localhost:3001'],
+    origin: getAllowedFrontendOrigins(process.env.FRONTEND_URL),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

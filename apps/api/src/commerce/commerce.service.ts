@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import Stripe from 'stripe';
+import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
 import {
   CreateCommerceCheckoutDto,
   CreateCourseDto,
@@ -321,7 +322,7 @@ export class CommerceService {
       throw new BadRequestException('You already own this item');
     }
 
-    const frontendUrl = this.config.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+    const frontendUrl = sanitizeFrontendUrl(this.config.get<string>('FRONTEND_URL'));
     let customerId = buyer.subscription?.stripeCustomerId || null;
     if (!customerId) {
       const customer = await this.stripe.customers.create({ email: buyer.email, name: buyer.name, metadata: { userId } });

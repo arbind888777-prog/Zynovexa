@@ -129,7 +129,7 @@ export const accountsApi = {
   disconnect: (id: string) => api.delete(`/accounts/${id}`),
   update: (id: string, data: any) => api.put(`/accounts/${id}`, data),
   // YouTube OAuth connect flow
-  getYoutubeConnectUrl: () => api.get('/accounts/connect/youtube'),
+  getYoutubeConnectUrl: (frontend?: string) => api.get('/accounts/connect/youtube', { params: frontend ? { frontend } : undefined }),
 };
 
 // ─── Analytics API ─────────────────────────────────────────────────────────

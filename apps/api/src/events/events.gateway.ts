@@ -11,6 +11,7 @@ import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Server, Socket } from 'socket.io';
+import { getAllowedFrontendOrigins } from '../common/utils/frontend-url';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -18,7 +19,7 @@ interface AuthenticatedSocket extends Socket {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: getAllowedFrontendOrigins(process.env.FRONTEND_URL),
     credentials: true,
   },
   namespace: '/ws',

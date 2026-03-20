@@ -11,6 +11,7 @@ import { TokenEncryptionService } from './token-encryption.service';
 import { ConnectAccountDto, UpdateAccountDto } from './dto/account.dto';
 import { YoutubeService } from '../video-analytics/youtube.service';
 import * as jwt from 'jsonwebtoken';
+import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
 
 function normalizeYoutubeHandle(handle?: string | null) {
   if (!handle) return '';
@@ -282,9 +283,10 @@ export class AccountsService {
    * Step 1: Generate Google OAuth URL with YouTube scopes.
    * Frontend receives this URL and does window.location.href = url.
    */
-  generateYoutubeConnectUrl(userId: string): { url: string } {
+  generateYoutubeConnectUrl(userId: string, frontendUrl?: string): { url: string } {
     const secret   = this.config.get<string>('JWT_ACCESS_SECRET')!;
-    const state    = jwt.sign({ userId, purpose: 'yt-connect' }, secret, { expiresIn: '5m' });
+    const safeFrontendUrl = sanitizeFrontendUrl(frontendUrl, this.config.get<string>('FRONTEND_URL'));
+    const state    = jwt.sign({ userId, purpose: 'yt-connect', frontendUrl: safeFrontendUrl }, secret, { expiresIn: '5m' });
     const callback = this.config.get('YOUTUBE_CONNECT_CALLBACK_URL')
       || 'http://localhost:4000/api/accounts/connect/youtube/callback';
 
@@ -321,6 +323,7 @@ export class AccountsService {
     }
     if (payload.purpose !== 'yt-connect') throw new Error('Invalid state purpose');
     const userId = payload.userId as string;
+    const frontendUrl = sanitizeFrontendUrl(payload.frontendUrl, this.config.get<string>('FRONTEND_URL'));
 
     const callback = this.config.get('YOUTUBE_CONNECT_CALLBACK_URL')
       || 'http://localhost:4000/api/accounts/connect/youtube/callback';
@@ -355,7 +358,7 @@ export class AccountsService {
 
     const tokenExpiresAt = new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString();
 
-    return this.connect(userId, {
+    const account = await this.connect(userId, {
       platform:       'YOUTUBE' as any,
       accessToken:    tokens.access_token,
       refreshToken:   tokens.refresh_token || undefined,
@@ -367,6 +370,11 @@ export class AccountsService {
       scopes:         (tokens.scope || '').split(' ').filter(Boolean),
       tokenExpiresAt,
     });
+
+    return {
+      account,
+      frontendUrl,
+    };
   }
 
   // ─── Internal use only (post scheduler, analytics sync) ────────────────────
