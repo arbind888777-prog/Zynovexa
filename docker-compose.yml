@@ -1,11 +1,13 @@
 version: '3.9'
 
 services:
-  # ─── PostgreSQL ───────────────────────────────────────────────
-  postgres:
+  # ─── Local Database (optional) ────────────────────────────────
+  localdb:
     image: postgres:15-alpine
-    container_name: zynovexa-postgres
+    container_name: zynovexa-localdb
     restart: unless-stopped
+    profiles:
+      - local-db
     environment:
       POSTGRES_DB: zynovexa
       POSTGRES_USER: zynovexa
@@ -36,20 +38,20 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── pgAdmin (DB GUI) ─────────────────────────────────────────
+  # ─── Database GUI (optional) ──────────────────────────────────
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: zynovexa-pgadmin
     restart: unless-stopped
+    profiles:
+      - devtools
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@zynovexa.com
       PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
       - '5050:80'
     depends_on:
-      - postgres
-    profiles:
-      - dev
+      - localdb
 
   # ─── API (NestJS) ─────────────────────────────────────────────
   api:
@@ -63,12 +65,9 @@ services:
     env_file:
       - ./apps/api/.env
     environment:
-      DATABASE_URL: postgresql://zynovexa:zynovexa_pass_2026@postgres:5432/zynovexa
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
@@ -81,12 +80,16 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3000
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     container_name: zynovexa-web
     restart: unless-stopped
     ports:
       - '3001:3001'
     environment:
       NODE_ENV: production
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     depends_on:
       - api
 

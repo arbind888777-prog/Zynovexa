@@ -7,6 +7,7 @@ const mockPush = jest.fn();
 jest.mock('@/stores/auth.store', () => ({
   useAuthStore: () => ({
     signup: mockSignup,
+    exchangeSupabaseToken: jest.fn(),
     isLoading: false,
   }),
 }));
@@ -19,6 +20,11 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('sonner', () => ({
   toast: { success: jest.fn(), error: jest.fn() },
+}));
+
+jest.mock('@/lib/supabase', () => ({
+  isSupabaseEnabled: false,
+  supabase: null,
 }));
 
 import SignupPage from '../../app/(auth)/signup/page';

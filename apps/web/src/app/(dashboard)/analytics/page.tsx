@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { analyticsApi, unwrapApiResponse } from '@/lib/api';
+import { analyticsApi, proAnalyticsApi, unwrapApiResponse } from '@/lib/api';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
 
@@ -362,6 +362,7 @@ function MetricCard({ label, value, sub, icon }: any) {
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [mainTab, setMainTab] = useState<'overview' | 'pro'>('overview');
 
   const { data: overview, isLoading: overviewLoading, isError: overviewError } = useQuery({ queryKey: ['analytics-overview', period], queryFn: () => analyticsApi.getOverview({ period }).then(unwrapApiResponse) });
   const { data: chart, isLoading: chartLoading } = useQuery({ queryKey: ['analytics-chart', period], queryFn: () => analyticsApi.getChartData({ period }).then(unwrapApiResponse) });
@@ -378,6 +379,12 @@ export default function AnalyticsPage() {
   });
   const platformShares = getPlatformShareData(platforms);
 
+  // Pro Analytics data
+  const { data: proOverview } = useQuery({ queryKey: ['pro-overview'], queryFn: () => proAnalyticsApi.getOverview().then(unwrapApiResponse).catch((e: any) => e?.response?.status === 403 ? { __locked: true } : null), enabled: mainTab === 'pro' });
+  const { data: proRanking } = useQuery({ queryKey: ['pro-ranking'], queryFn: () => proAnalyticsApi.getContentRanking().then(unwrapApiResponse).catch(() => null), enabled: mainTab === 'pro' });
+  const { data: proCompetitors } = useQuery({ queryKey: ['pro-competitors'], queryFn: () => proAnalyticsApi.getCompetitors().then(unwrapApiResponse).catch(() => null), enabled: mainTab === 'pro' });
+  const proLocked = (proOverview as any)?.__locked === true;
+
   return (
     <div className="dashboard-content-shell space-y-8 animate-fade-in">
       <div className="dashboard-headerband flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -386,18 +393,24 @@ export default function AnalyticsPage() {
           <h1 className="mt-2 text-2xl font-bold text-white">📈 Analytics</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-400">Cross-platform reach, engagement aur growth patterns ko ek premium view me track karo.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {PERIODS.map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
-              className={`dashboard-tab ${period === p ? 'dashboard-tab-active text-white' : 'text-gray-400 hover:text-white'}`}>
-              {p}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 rounded-xl p-1" style={{ background: 'var(--surface)' }}>
+            <button onClick={() => setMainTab('overview')} className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${mainTab === 'overview' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>📊 Overview</button>
+            <button onClick={() => setMainTab('pro')} className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${mainTab === 'pro' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>🔬 Pro Analytics</button>
+          </div>
+          {mainTab === 'overview' && <div className="flex flex-wrap gap-2">
+            {PERIODS.map(p => (
+              <button key={p} onClick={() => setPeriod(p)}
+                className={`dashboard-tab ${period === p ? 'dashboard-tab-active text-white' : 'text-gray-400 hover:text-white'}`}>
+                {p}
+              </button>
+            ))}
+          </div>}
         </div>
       </div>
 
       {/* Error State */}
-      {overviewError && (
+      {mainTab === 'overview' && overviewError && (
         <div className="card p-8 text-center">
           <p className="text-4xl mb-3">⚠️</p>
           <p className="text-red-400 mb-2">Failed to load analytics data</p>
@@ -406,7 +419,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* Loading State */}
-      {isLoading && (
+      {mainTab === 'overview' && isLoading && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
@@ -424,8 +437,94 @@ export default function AnalyticsPage() {
         </div>
       )}
 
+      {/* Pro Analytics Tab */}
+      {mainTab === 'pro' && (
+        <div className="space-y-6">
+          {proLocked ? (
+            <div className="card p-12 text-center">
+              <p className="text-5xl mb-4">🔒</p>
+              <h2 className="text-xl font-bold text-white mb-2">Pro Analytics</h2>
+              <p className="text-slate-400 mb-6 max-w-md mx-auto">Engagement rates, content ranking, aur competitor tracking ke liye Pro plan chahiye.</p>
+              <Link href="/settings?tab=billing" className="btn btn-primary">Upgrade to Pro</Link>
+            </div>
+          ) : (
+            <>
+              {/* Pro Metrics */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard icon="💬" label="Engagement Rate" value={proOverview?.engagementRate ? `${proOverview.engagementRate}%` : '—'} sub="Avg across platforms" />
+                <MetricCard icon="🖱️" label="Click-Through Rate" value={proOverview?.ctr ? `${proOverview.ctr}%` : '—'} sub="Links & CTAs" />
+                <MetricCard icon="📈" label="Follower Growth" value={proOverview?.followerGrowthRate ? `${proOverview.followerGrowthRate}%` : '—'} sub="This month" />
+                <MetricCard icon="⭐" label="Content Score" value={proOverview?.avgContentScore ?? '—'} sub="AI-powered rating" />
+              </div>
+
+              {/* Content Ranking */}
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="dashboard-surface dashboard-soft-float p-6">
+                  <h2 className="font-semibold text-white mb-1">🏆 Top Performing Content</h2>
+                  <p className="text-xs text-slate-400 mb-4">Sabse zyada engagement wale posts</p>
+                  <div className="space-y-3">
+                    {(proRanking as any)?.top?.length > 0 ? (proRanking as any).top.slice(0, 5).map((p: any, i: number) => (
+                      <div key={p.id || i} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <span className="text-lg">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '📄'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{p.title || p.caption || 'Untitled'}</p>
+                          <p className="text-xs text-slate-400">{p.platform} · {p.engagements ?? 0} engagements</p>
+                        </div>
+                        {p.score && <span className="text-xs font-bold text-emerald-400">{p.score}%</span>}
+                      </div>
+                    )) : <p className="text-sm text-slate-500">No ranking data yet — keep posting!</p>}
+                  </div>
+                </div>
+
+                <div className="dashboard-surface dashboard-soft-float p-6">
+                  <h2 className="font-semibold text-white mb-1">📉 Needs Improvement</h2>
+                  <p className="text-xs text-slate-400 mb-4">Low-performing content jo optimize karna chahiye</p>
+                  <div className="space-y-3">
+                    {(proRanking as any)?.worst?.length > 0 ? (proRanking as any).worst.slice(0, 5).map((p: any, i: number) => (
+                      <div key={p.id || i} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <span className="text-lg">⚠️</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{p.title || p.caption || 'Untitled'}</p>
+                          <p className="text-xs text-slate-400">{p.platform} · {p.engagements ?? 0} engagements</p>
+                        </div>
+                        {p.score && <span className="text-xs font-bold text-red-400">{p.score}%</span>}
+                      </div>
+                    )) : <p className="text-sm text-slate-500">Not enough data yet.</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Competitor Tracking */}
+              <div className="dashboard-surface dashboard-soft-float p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-white">👀 Competitor Tracking</h2>
+                    <p className="mt-1 text-xs text-slate-400">Track competitors aur unke performance se compare karo.</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {(proCompetitors as any)?.length > 0 ? (proCompetitors as any).map((c: any, i: number) => (
+                    <div key={c.handle || i} className="flex items-center gap-4 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">{(c.handle || '?')[0].toUpperCase()}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white font-medium">@{c.handle}</p>
+                        <p className="text-xs text-slate-400">{c.platform} · {c.followers ?? '?'} followers</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-400">Engagement</p>
+                        <p className="text-sm font-bold text-white">{c.engagementRate ?? '—'}%</p>
+                      </div>
+                    </div>
+                  )) : <p className="text-sm text-slate-500 text-center py-4">No competitors added yet. Add competitors from the API to start tracking.</p>}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Overview */}
-      {!isLoading && !overviewError && (
+      {mainTab === 'overview' && !isLoading && !overviewError && (
       <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon="👁️" label="Total Impressions" value={overview?.totalImpressions} sub={`Last ${period}`} />
@@ -507,7 +606,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* Empty State */}
-      {!isLoading && !overviewError && !hasRealAnalytics && (
+      {mainTab === 'overview' && !isLoading && !overviewError && !hasRealAnalytics && (
         <DemoAnalyticsState />
       )}
       </>

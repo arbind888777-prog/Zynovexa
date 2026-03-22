@@ -7,16 +7,58 @@ import { toast } from 'sonner';
 import ThemeToggle from '@/components/theme-toggle';
 import FloatingSocialIcons from '@/components/FloatingSocialIcons';
 
-const NAV = [
-  { href: '/dashboard',        icon: '📊', label: 'Dashboard' },
-  { href: '/create',           icon: '✏️', label: 'Create Post' },
-  { href: '/video',            icon: '🎬', label: 'Video Studio' },
-  { href: '/posts',            icon: '📋', label: 'My Posts' },
-  { href: '/analytics',        icon: '📈', label: 'Analytics' },
-  { href: '/accounts',         icon: '🔗', label: 'Accounts' },
-  { href: '/ai',               icon: '🤖', label: 'AI Studio' },
-  { href: '/settings',         icon: '⚙️', label: 'Settings' },
-  { href: '/settings/billing', icon: '💳', label: 'Billing' },
+const NAV_GROUPS = [
+  {
+    label: 'Overview',
+    items: [
+      { href: '/dashboard', icon: '📊', label: 'Dashboard' },
+    ],
+  },
+  {
+    label: 'Content',
+    items: [
+      { href: '/create',  icon: '✏️', label: 'Create Post' },
+      { href: '/video',   icon: '🎬', label: 'Video Studio' },
+      { href: '/posts',   icon: '📋', label: 'My Posts' },
+    ],
+  },
+  {
+    label: 'Commerce',
+    items: [
+      { href: '/products',  icon: '🛍️', label: 'Products' },
+      { href: '/courses',   icon: '🎓', label: 'Courses' },
+      { href: '/store',     icon: '🏪', label: 'My Store' },
+      { href: '/buyers',    icon: '👥', label: 'Buyers' },
+      { href: '/revenue',   icon: '💰', label: 'Revenue' },
+      { href: '/purchases', icon: '📥', label: 'My Purchases' },
+    ],
+  },
+  {
+    label: 'Analytics',
+    items: [
+      { href: '/analytics',     icon: '📈', label: 'Analytics' },
+    ],
+  },
+  {
+    label: 'AI Tools',
+    items: [
+      { href: '/ai',           icon: '🤖', label: 'AI Studio' },
+      { href: '/growth-coach', icon: '🧠', label: 'Growth Coach' },
+    ],
+  },
+  {
+    label: 'Connect',
+    items: [
+      { href: '/accounts',     icon: '🔗', label: 'Accounts' },
+      { href: '/gamification', icon: '🎮', label: 'Gamification' },
+    ],
+  },
+  {
+    label: 'Settings',
+    items: [
+      { href: '/settings',         icon: '⚙️', label: 'Settings' },
+    ],
+  },
 ];
 
 const PLAN_STYLES: Record<string, string> = {
@@ -141,6 +183,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const plan = user?.plan || 'FREE';
   const planBadge = PLAN_LABELS[plan] ?? plan;
   const planCls = PLAN_STYLES[plan] ?? 'badge-purple';
+  const navGroups = user?.role === 'ADMIN'
+    ? [
+        ...NAV_GROUPS,
+        {
+          label: 'Admin',
+          items: [
+            { href: '/admin/users', icon: '🛡️', label: 'Users & Plans' },
+          ],
+        },
+      ]
+    : NAV_GROUPS;
 
   const SidebarContent = () => (
     <aside className="dashboard-sidebar flex flex-col h-full">
@@ -172,21 +225,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Workspace</div>
-        {NAV.map(item => {
-          const active = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
-          return (
-            <Link key={item.href} href={item.href}
-              className={`dashboard-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                active ? 'nav-active text-white font-medium' : 'text-slate-400 hover:text-white'
-              }`}>
-              <span className="text-base leading-none">{item.icon}</span>
-              <span>{item.label}</span>
-              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-purple-400" />}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+        {navGroups.map(group => (
+          <div key={group.label}>
+            <div className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">{group.label}</div>
+            <div className="space-y-0.5">
+              {group.items.map(item => {
+                const active = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+                return (
+                  <Link key={item.href} href={item.href}
+                    className={`dashboard-nav-item flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${
+                      active ? 'nav-active text-white font-medium' : 'text-slate-400 hover:text-white'
+                    }`}>
+                    <span className="text-base leading-none">{item.icon}</span>
+                    <span>{item.label}</span>
+                    {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-purple-400" />}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Theme & Logout */}

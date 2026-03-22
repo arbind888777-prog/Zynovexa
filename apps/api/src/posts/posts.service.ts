@@ -92,9 +92,11 @@ export class PostsService {
       success: false,
       mode: 'youtube-manual',
       manualRequired: true,
-      error: 'YouTube Data API se third-party apps sirf video upload direct publish kar sakti hain. Is text/image post ko app ne save aur schedule kar liya hai, lekin publish manually YouTube par karna padega.',
+      error: 'YouTube API sirf video upload support karta hai. Text/image post ke liye YouTube Studio mein jaake Community tab se manually post karo. Agar video post karna hai toh video attach karke dubara try karo.',
       publishedAt: new Date().toISOString(),
       manualTitle: post.title || post.caption?.slice(0, 90) || 'YouTube post',
+      manualUrl: 'https://studio.youtube.com',
+      hint: 'YouTube Studio > Community tab se text post create karo, ya video attach karke app se publish karo.',
     };
   }
 
@@ -277,6 +279,7 @@ export class PostsService {
         scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
         hashtags: dto.hashtags || [],
         location: dto.location,
+        attachedProductId: dto.attachedProductId || null,
         viralScore,
         status: dto.scheduledAt ? 'SCHEDULED' : 'DRAFT',
       },
@@ -431,7 +434,7 @@ export class PostsService {
         data: {
           userId,
           title: 'YouTube Manual Publish Required',
-          message: `Scheduled time aa gaya, lekin YouTube API text/image post ko direct publish nahi karti. "${post.title || post.caption.slice(0, 40)}..." ko manually YouTube par publish karo ya video add karke dubara schedule karo.`,
+          message: `YouTube API sirf video upload support karta hai. "${post.title || post.caption.slice(0, 40)}..." ko YouTube Studio > Community tab se manually post karo, ya video attach karke dubara schedule karo. Link: https://studio.youtube.com`,
           type: 'INFO',
         },
       });

@@ -78,6 +78,58 @@ export class UsersService {
     };
   }
 
+  async getAdminUsers(filters?: { query?: string; plan?: string; role?: string }) {
+    const search = filters?.query?.trim();
+    const plan = filters?.plan?.trim()?.toUpperCase();
+    const role = filters?.role?.trim()?.toUpperCase();
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        ...(search
+          ? {
+              OR: [
+                { email: { contains: search, mode: 'insensitive' } },
+                { name: { contains: search, mode: 'insensitive' } },
+                { handle: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+        ...(plan ? { plan: plan as any } : {}),
+        ...(role ? { role: role as any } : {}),
+      },
+      include: {
+        subscription: true,
+        activityLogs: {
+          where: { action: 'login' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        _count: {
+          select: {
+            posts: true,
+            socialAccounts: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    return users.map((user) => {
+      const { password, activityLogs, subscription, _count, ...safe } = user as any;
+
+      return {
+        ...safe,
+        subscription,
+        stats: {
+          posts: _count?.posts || 0,
+          connectedAccounts: _count?.socialAccounts || 0,
+        },
+        lastLoginAt: activityLogs?.[0]?.createdAt || null,
+      };
+    });
+  }
+
   async completeOnboarding(id: string, dto: { userType?: string; niche?: string; platforms?: string[]; goal?: string }) {
     // Compose a rich niche string: "userType:creator|niche:finance|goal:grow"
     const nicheStr = [dto.userType, dto.niche].filter(Boolean).join(' / ') || dto.userType || '';

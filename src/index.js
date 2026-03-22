@@ -16,16 +16,24 @@ import notificationsRoutes from './routes/notifications';
 import adminRoutes from './routes/admin';
 import videoAnalyticsRoutes from './routes/video-analytics';
 import seoRoutes from './routes/seo';
+// Growth platform modules
+import trustRoutes from './routes/trust';
+import growthCoachRoutes from './routes/growth-coach';
+import gamificationRoutes from './routes/gamification';
+import proAnalyticsRoutes from './routes/pro-analytics';
+import aiEngineRoutes from './routes/ai-engine';
+import integrationsRoutes from './routes/integrations';
+import pricingRoutes from './routes/pricing';
+import commerceRoutes from './routes/commerce';
 // Page renderers
 import { landingPage } from './pages/landing';
-import { aboutPage } from './pages/about';
 import { authPage } from './pages/auth';
 import { onboardingPage } from './pages/onboarding';
 import { dashboardPage } from './pages/dashboard';
 import { adminPanelPage } from './pages/admin';
-import { privacyPage } from './pages/privacy';
-import { dataDeletionPage } from './pages/data-deletion';
-import { termsPage } from './pages/terms';
+import { storefrontPage } from './pages/storefront';
+import { checkoutPage } from './pages/checkout';
+import { orderSuccessPage } from './pages/order-success';
 const app = new Hono();
 // ---- Auto-initialize database on first request ----
 let dbInitialized = false;
@@ -63,6 +71,44 @@ app.use('*', async (c, next) => {
           CREATE TABLE IF NOT EXISTS video_metadata (id TEXT PRIMARY KEY, post_id TEXT NOT NULL, user_id TEXT NOT NULL, title TEXT DEFAULT '', description TEXT DEFAULT '', tags TEXT DEFAULT '[]', category TEXT DEFAULT '', thumbnail_url TEXT DEFAULT '', duration_seconds INTEGER DEFAULT 0, video_url TEXT DEFAULT '', visibility TEXT DEFAULT 'public', seo_title TEXT DEFAULT '', seo_description TEXT DEFAULT '', seo_tags TEXT DEFAULT '[]', views INTEGER DEFAULT 0, watch_time_minutes INTEGER DEFAULT 0, avg_retention_pct REAL DEFAULT 0, ctr_pct REAL DEFAULT 0, likes INTEGER DEFAULT 0, comments INTEGER DEFAULT 0, subscribers_gained INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
           CREATE INDEX IF NOT EXISTS idx_video_meta_user ON video_metadata(user_id);
           CREATE INDEX IF NOT EXISTS idx_video_meta_post ON video_metadata(post_id);
+          CREATE TABLE IF NOT EXISTS testimonials (id TEXT PRIMARY KEY, user_name TEXT NOT NULL, user_title TEXT DEFAULT '', user_avatar TEXT DEFAULT '', platform TEXT DEFAULT '', rating INTEGER DEFAULT 5, content TEXT NOT NULL, followers_before INTEGER DEFAULT 0, followers_after INTEGER DEFAULT 0, featured INTEGER DEFAULT 0, approved INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')));
+          CREATE TABLE IF NOT EXISTS case_studies (id TEXT PRIMARY KEY, title TEXT NOT NULL, user_name TEXT DEFAULT '', niche TEXT DEFAULT '', description TEXT DEFAULT '', challenge TEXT DEFAULT '', solution TEXT DEFAULT '', results TEXT DEFAULT '{}', metrics_before TEXT DEFAULT '{}', metrics_after TEXT DEFAULT '{}', published INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')));
+          CREATE TABLE IF NOT EXISTS roadmap_items (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT DEFAULT '', category TEXT DEFAULT 'feature', status TEXT DEFAULT 'planned', votes INTEGER DEFAULT 0, eta TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')));
+          CREATE TABLE IF NOT EXISTS growth_recommendations (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, recommendation_type TEXT DEFAULT 'content', title TEXT NOT NULL, description TEXT DEFAULT '', priority TEXT DEFAULT 'medium', data TEXT DEFAULT '{}', dismissed INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS weekly_reports (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, week_start TEXT NOT NULL, week_end TEXT NOT NULL, summary TEXT DEFAULT '{}', highlights TEXT DEFAULT '[]', recommendations TEXT DEFAULT '[]', created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS competitor_profiles (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, platform TEXT NOT NULL, username TEXT NOT NULL, display_name TEXT DEFAULT '', followers_count INTEGER DEFAULT 0, niche TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS competitor_snapshots (id TEXT PRIMARY KEY, competitor_id TEXT NOT NULL, followers INTEGER DEFAULT 0, engagement_rate REAL DEFAULT 0, posts_count INTEGER DEFAULT 0, avg_likes INTEGER DEFAULT 0, avg_comments INTEGER DEFAULT 0, snapshot_date TEXT DEFAULT (date('now')), FOREIGN KEY (competitor_id) REFERENCES competitor_profiles(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS user_streaks (id TEXT PRIMARY KEY, user_id TEXT UNIQUE NOT NULL, current_streak INTEGER DEFAULT 0, longest_streak INTEGER DEFAULT 0, last_activity_date TEXT DEFAULT '', total_posts INTEGER DEFAULT 0, total_ai_uses INTEGER DEFAULT 0, xp_points INTEGER DEFAULT 0, level INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS user_badges (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, badge_id TEXT NOT NULL, badge_name TEXT NOT NULL, earned_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS user_reminders (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, type TEXT DEFAULT 'daily_post', message TEXT DEFAULT '', remind_at TEXT NOT NULL, enabled INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS ai_prompt_templates (id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT DEFAULT 'general', platform TEXT DEFAULT 'all', audience_type TEXT DEFAULT 'general', tone TEXT DEFAULT 'professional', template_text TEXT NOT NULL, is_premium INTEGER DEFAULT 0, usage_count INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')));
+          CREATE TABLE IF NOT EXISTS content_scores (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, content_text TEXT DEFAULT '', overall_score INTEGER DEFAULT 0, hook_score INTEGER DEFAULT 0, readability_score INTEGER DEFAULT 0, engagement_score INTEGER DEFAULT 0, suggestions TEXT DEFAULT '[]', created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+          CREATE INDEX IF NOT EXISTS idx_growth_rec_user ON growth_recommendations(user_id);
+          CREATE INDEX IF NOT EXISTS idx_competitor_user ON competitor_profiles(user_id);
+          CREATE INDEX IF NOT EXISTS idx_streak_user ON user_streaks(user_id);
+          CREATE INDEX IF NOT EXISTS idx_badges_user ON user_badges(user_id);
+          CREATE INDEX IF NOT EXISTS idx_scores_user ON content_scores(user_id);
+          CREATE TABLE IF NOT EXISTS creator_storefronts (id TEXT PRIMARY KEY, user_id TEXT UNIQUE NOT NULL, username TEXT UNIQUE NOT NULL, headline TEXT DEFAULT '', bio TEXT DEFAULT '', accent_color TEXT DEFAULT '#3b6cf5', created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS digital_products (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, storefront_id TEXT DEFAULT '', title TEXT NOT NULL, description TEXT DEFAULT '', price INTEGER NOT NULL DEFAULT 0, currency TEXT DEFAULT 'usd', delivery_type TEXT DEFAULT 'file', thumbnail_url TEXT DEFAULT '', delivery_link TEXT DEFAULT '', is_published INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (storefront_id) REFERENCES creator_storefronts(id) ON DELETE SET NULL);
+          CREATE TABLE IF NOT EXISTS product_assets (id TEXT PRIMARY KEY, product_id TEXT UNIQUE NOT NULL, file_name TEXT DEFAULT '', mime_type TEXT DEFAULT 'application/octet-stream', file_size INTEGER DEFAULT 0, file_data_base64 TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (product_id) REFERENCES digital_products(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS commerce_orders (id TEXT PRIMARY KEY, seller_user_id TEXT NOT NULL, product_id TEXT NOT NULL, buyer_name TEXT DEFAULT '', buyer_email TEXT NOT NULL, amount INTEGER NOT NULL DEFAULT 0, platform_fee_percent REAL DEFAULT 0, platform_fee_amount INTEGER DEFAULT 0, seller_net_amount INTEGER DEFAULT 0, currency TEXT DEFAULT 'usd', payment_provider TEXT DEFAULT 'stripe', external_order_id TEXT DEFAULT '', external_payment_id TEXT DEFAULT '', payment_status TEXT DEFAULT 'pending', delivery_status TEXT DEFAULT 'pending', source_platform TEXT DEFAULT '', source_post_id TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now')), paid_at TEXT DEFAULT '', delivered_at TEXT DEFAULT '', FOREIGN KEY (seller_user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES digital_products(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS product_download_tokens (id TEXT PRIMARY KEY, order_id TEXT NOT NULL, product_id TEXT NOT NULL, token_hash TEXT NOT NULL, expires_at TEXT NOT NULL, max_downloads INTEGER DEFAULT 3, download_count INTEGER DEFAULT 0, last_downloaded_at TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (order_id) REFERENCES commerce_orders(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES digital_products(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS product_events (id TEXT PRIMARY KEY, product_id TEXT NOT NULL, seller_user_id TEXT NOT NULL, order_id TEXT DEFAULT '', event_type TEXT NOT NULL, session_id TEXT DEFAULT '', source_platform TEXT DEFAULT '', source_post_id TEXT DEFAULT '', visitor_email TEXT DEFAULT '', metadata TEXT DEFAULT '{}', created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (product_id) REFERENCES digital_products(id) ON DELETE CASCADE, FOREIGN KEY (seller_user_id) REFERENCES users(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS post_product_links (id TEXT PRIMARY KEY, post_id TEXT NOT NULL, user_id TEXT NOT NULL, product_id TEXT NOT NULL, cta_text TEXT DEFAULT 'Buy here', created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES digital_products(id) ON DELETE CASCADE);
+          CREATE TABLE IF NOT EXISTS email_jobs (id TEXT PRIMARY KEY, user_id TEXT DEFAULT '', recipient_email TEXT NOT NULL, subject TEXT NOT NULL, html_body TEXT DEFAULT '', status TEXT DEFAULT 'queued', created_at TEXT DEFAULT (datetime('now')), sent_at TEXT DEFAULT '');
+          CREATE TABLE IF NOT EXISTS rate_limit_buckets (id TEXT PRIMARY KEY, scope TEXT NOT NULL, identifier TEXT NOT NULL, window_start TEXT NOT NULL, hits INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')));
+          CREATE INDEX IF NOT EXISTS idx_storefront_username ON creator_storefronts(username);
+          CREATE INDEX IF NOT EXISTS idx_products_user ON digital_products(user_id);
+          CREATE INDEX IF NOT EXISTS idx_products_storefront ON digital_products(storefront_id);
+          CREATE INDEX IF NOT EXISTS idx_orders_product ON commerce_orders(product_id);
+          CREATE INDEX IF NOT EXISTS idx_orders_seller ON commerce_orders(seller_user_id);
+          CREATE INDEX IF NOT EXISTS idx_orders_status ON commerce_orders(payment_status);
+          CREATE INDEX IF NOT EXISTS idx_downloads_order ON product_download_tokens(order_id);
+          CREATE INDEX IF NOT EXISTS idx_downloads_hash ON product_download_tokens(token_hash);
+          CREATE INDEX IF NOT EXISTS idx_product_events_product ON product_events(product_id);
+          CREATE INDEX IF NOT EXISTS idx_product_events_type ON product_events(event_type);
+          CREATE INDEX IF NOT EXISTS idx_post_product_links_post ON post_product_links(post_id);
+          CREATE INDEX IF NOT EXISTS idx_rate_limit_lookup ON rate_limit_buckets(scope, identifier, window_start);
         `);
                 dbInitialized = true;
                 console.log('[Zynovexa] Database initialized successfully');
@@ -92,19 +138,26 @@ app.route('/api/notifications', notificationsRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/video-analytics', videoAnalyticsRoutes);
 app.route('/api/seo', seoRoutes);
+// Growth platform routes
+app.route('/api/trust', trustRoutes);
+app.route('/api/growth-coach', growthCoachRoutes);
+app.route('/api/gamification', gamificationRoutes);
+app.route('/api/pro-analytics', proAnalyticsRoutes);
+app.route('/api/ai-engine', aiEngineRoutes);
+app.route('/api/integrations', integrationsRoutes);
+app.route('/api/pricing', pricingRoutes);
+app.route('/api', commerceRoutes);
 // ---- Page Routes ----
 // Landing page (public)
 app.get('/', (c) => c.html(landingPage()));
-app.get('/about', (c) => c.html(aboutPage()));
-app.get('/privacy', (c) => c.html(privacyPage()));
-app.get('/data-deletion', (c) => c.html(dataDeletionPage()));
-app.get('/delete-account', (c) => c.redirect('/data-deletion', 301));
-app.get('/terms', (c) => c.html(termsPage()));
 // Auth pages
 app.get('/login', (c) => c.html(authPage('login')));
 app.get('/signup', (c) => c.html(authPage('signup')));
 // Onboarding
 app.get('/onboarding', (c) => c.html(onboardingPage()));
+// Commerce pages
+app.get('/checkout/:productId', (c) => c.html(checkoutPage(c.req.param('productId'))));
+app.get('/success/:orderId', (c) => c.html(orderSuccessPage(c.req.param('orderId'))));
 // Dashboard (all authenticated pages are single-page, JS handles routing)
 app.get('/app', (c) => c.html(dashboardPage()));
 app.get('/app/*', (c) => c.html(dashboardPage()));
@@ -158,6 +211,14 @@ app.post('/api/init-demo', async (c) => {
     catch (e) {
         return c.json({ success: false, message: e.message }, 500);
     }
+});
+const reservedSlugs = new Set(['api', 'app', 'admin', 'login', 'signup', 'onboarding', 'checkout', 'success']);
+app.get('/:username', (c) => {
+    const username = c.req.param('username');
+    if (reservedSlugs.has(username)) {
+        return c.notFound();
+    }
+    return c.html(storefrontPage(username));
 });
 async function hashPw(pw) {
     const encoder = new TextEncoder();

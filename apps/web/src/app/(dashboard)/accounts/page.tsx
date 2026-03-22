@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { accountsApi, unwrapApiResponse } from '@/lib/api';
+import { accountsApi, integrationsApi, unwrapApiResponse } from '@/lib/api';
 import { toast } from 'sonner';
 import { Platform, YoutubeInsights } from '@/types';
 import ConfirmDialog from '@/components/confirm-dialog';
@@ -46,6 +46,7 @@ export default function AccountsPage() {
     id: string; platform: string; handle: string;
   } | null>(null);
   const [ytConnecting, setYtConnecting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'accounts' | 'queue'>('accounts');
 
   // ── Handle OAuth redirect result from URL params ──
   useEffect(() => {
@@ -137,6 +138,12 @@ export default function AccountsPage() {
     }
   };
 
+  const { data: queueData } = useQuery({
+    queryKey: ['integrations-queue'],
+    queryFn: () => integrationsApi.getQueue().then(r => r.data?.data ?? r.data ?? []),
+    enabled: activeTab === 'queue',
+  });
+
   const reconnectCount = (stats?.platforms ?? []).filter((p: any) => p.reconnectRequired).length;
 
   return (
@@ -149,12 +156,51 @@ export default function AccountsPage() {
           <h1 className="mt-2 text-2xl font-bold text-white">🔗 Connected Accounts</h1>
           <p className="mt-2 text-sm text-slate-400">Schedule, analytics aur audience sync ke liye apne social channels ko ek jagah se manage karo.</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-          <p className="font-semibold text-white">{stats?.connected ?? 0} live connections</p>
-          <p className="mt-1 text-xs text-slate-400">YouTube live sync available, baaki platform rollouts staged hain.</p>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 rounded-xl p-1" style={{ background: 'var(--surface)' }}>
+            <button onClick={() => setActiveTab('accounts')} className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${activeTab === 'accounts' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>🔗 Accounts</button>
+            <button onClick={() => setActiveTab('queue')} className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${activeTab === 'queue' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>📤 Queue</button>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+            <p className="font-semibold text-white">{stats?.connected ?? 0} live connections</p>
+          </div>
         </div>
       </div>
 
+      {activeTab === 'queue' ? (
+        /* ── Publishing Queue Tab ── */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">📤 Publishing Queue</h2>
+            <span className="text-xs text-slate-400">{(queueData as any[])?.length || 0} posts queued</span>
+          </div>
+          {(!queueData || (queueData as any[]).length === 0) ? (
+            <div className="dashboard-surface p-8 text-center">
+              <p className="text-4xl mb-3">📭</p>
+              <p className="text-slate-400 text-sm">No posts in the publishing queue</p>
+              <p className="text-xs text-slate-500 mt-1">Schedule posts from Create Post to see them here.</p>
+            </div>
+          ) : (
+            (queueData as any[]).map((item: any) => (
+              <div key={item.id} className="dashboard-surface p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">
+                    {item.payload?.platform === 'INSTAGRAM' ? '📸' : item.payload?.platform === 'YOUTUBE' ? '▶️' : item.payload?.platform === 'TIKTOK' ? '🎵' : item.payload?.platform === 'LINKEDIN' ? '💼' : item.payload?.platform === 'TWITTER' ? '🐦' : '📄'}
+                  </span>
+                  <div>
+                    <p className="text-sm text-white font-medium">{item.payload?.platform || 'Unknown'} — Post</p>
+                    <p className="text-xs text-slate-400">Scheduled: {new Date(item.scheduledFor || item.scheduledAt).toLocaleString()}</p>
+                  </div>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-400' : item.status === 'PROCESSING' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                  {item.status}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+      <>
       {/* Reconnect required banner */}
       {reconnectCount > 0 && (
         <div className="mb-6 flex items-start gap-3 p-4 rounded-xl text-sm"
@@ -414,6 +460,9 @@ export default function AccountsPage() {
             );
           })}
         </div>
+      )}
+
+      </>
       )}
 
       {/* Disconnect confirm */}

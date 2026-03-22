@@ -4,9 +4,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UploadsService } from './uploads.service';
 import { UploadsController } from './uploads.controller';
 import { multerConfig } from './multer.config';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
   imports: [
+    SupabaseModule,
     MulterModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => multerConfig(config),

@@ -20,7 +20,7 @@ const PROTECTED_PREFIXES = [
 const AUTH_ROUTES = ['/login', '/signup'];
 
 // Routes that need no redirect logic at all (public or special)
-const PUBLIC_ROUTES = ['/', '/auth/google/callback', '/pricing', '/about', '/contact'];
+const PUBLIC_ROUTES = ['/', '/auth/google/callback', '/auth/confirm', '/pricing', '/about', '/contact'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

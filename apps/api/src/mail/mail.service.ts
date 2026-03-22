@@ -135,6 +135,21 @@ export class MailService {
     });
   }
 
+  /** Magic link (passwordless) login */
+  async sendMagicLogin(to: string, token: string) {
+    const loginUrl = `${this.appUrl()}/auth/magic-login?token=${encodeURIComponent(token)}`;
+    return this.send({
+      to,
+      subject: 'Your login link — Zynovexa',
+      html: this.layout(`
+        <h2>Sign in to Zynovexa 🔗</h2>
+        <p>Click the button below to log in instantly. No password needed!</p>
+        ${this.button('Sign In Now', loginUrl)}
+        <p style="color:#888;font-size:13px;margin-top:16px;">This link expires in 15 minutes. If you didn't request this, you can safely ignore it.</p>
+      `),
+    });
+  }
+
   /** Brand deal status update */
   async sendBrandDealUpdate(to: string, name: string, brandName: string, status: string, dealValue: number) {
     return this.send({

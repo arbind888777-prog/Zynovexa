@@ -19,7 +19,10 @@ posts.get('/', async (c) => {
   const { limit, offset } = getPagination(url);
   const status = url.searchParams.get('status') || '';
   
-  let query = 'SELECT * FROM posts WHERE user_id = ?';
+  let query = `SELECT p.*, (
+      SELECT product_id FROM post_product_links ppl WHERE ppl.post_id = p.id LIMIT 1
+    ) as attached_product_id
+    FROM posts p WHERE user_id = ?`;
   const params: any[] = [userId];
   if (status) { query += ' AND status = ?'; params.push(status); }
   query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
@@ -36,7 +39,12 @@ posts.get('/', async (c) => {
 // GET /api/posts/:id - Get single post
 posts.get('/:id', async (c) => {
   const userId = c.get('userId');
-  const post = await c.env.DB.prepare('SELECT * FROM posts WHERE id = ? AND user_id = ?').bind(c.req.param('id'), userId).first();
+  const post = await c.env.DB.prepare(`
+    SELECT p.*, (
+      SELECT product_id FROM post_product_links ppl WHERE ppl.post_id = p.id LIMIT 1
+    ) as attached_product_id
+    FROM posts p WHERE p.id = ? AND p.user_id = ?
+  `).bind(c.req.param('id'), userId).first();
   if (!post) return c.json(apiError('Post not found'), 404);
   return c.json(apiSuccess({ post }));
 });
@@ -45,7 +53,25 @@ posts.get('/:id', async (c) => {
 posts.post('/', async (c) => {
   try {
     const userId = c.get('userId');
-    const { caption, media_urls, media_type, platforms, status, scheduled_at, hashtags } = await c.req.json();
+    const { caption, media_urls, media_type, platforms, status, scheduled_at, hashtags, attached_product_id } = await c.req.json();
+
+    let finalCaption = caption || '';
+    let attachedProduct: any = null;
+    if (attached_product_id) {
+      attachedProduct = await c.env.DB.prepare(
+        `SELECT p.id, p.title, s.username
+         FROM digital_products p
+         LEFT JOIN creator_storefronts s ON p.storefront_id = s.id
+         WHERE p.id = ? AND p.user_id = ?`
+      ).bind(attached_product_id, userId).first();
+      if (!attachedProduct) {
+        return c.json(apiError('Attached product not found'), 404);
+      }
+      const ctaUrl = attachedProduct.username ? `/${attachedProduct.username}` : `/checkout/${attached_product_id}`;
+      if (!finalCaption.includes('Buy here:')) {
+        finalCaption = `${finalCaption.trim()}\n\nBuy here: ${ctaUrl}`.trim();
+      }
+    }
     
     const postId = generateId('post');
     const viralScore = Math.floor(Math.random() * 40) + 40; // Simulated AI score 40-80
@@ -55,11 +81,17 @@ posts.post('/', async (c) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       postId, userId,
-      caption || '', JSON.stringify(media_urls || []),
+      finalCaption, JSON.stringify(media_urls || []),
       media_type || 'text', JSON.stringify(platforms || []),
       status || 'draft', scheduled_at || '', viralScore,
       JSON.stringify(hashtags || [])
     ).run();
+
+    if (attachedProduct) {
+      await c.env.DB.prepare(
+        'INSERT INTO post_product_links (id, post_id, user_id, product_id, cta_text) VALUES (?, ?, ?, ?, ?)'
+      ).bind(generateId('ppl'), postId, userId, attachedProduct.id, 'Buy here').run();
+    }
 
     // If scheduled, create job entries per platform
     if (status === 'scheduled' && scheduled_at) {
@@ -89,12 +121,33 @@ posts.put('/:id', async (c) => {
     const existing = await c.env.DB.prepare('SELECT * FROM posts WHERE id = ? AND user_id = ?').bind(postId, userId).first();
     if (!existing) return c.json(apiError('Post not found'), 404);
 
-    const { caption, media_urls, media_type, platforms, status, scheduled_at, hashtags } = await c.req.json();
+    const { caption, media_urls, media_type, platforms, status, scheduled_at, hashtags, attached_product_id } = await c.req.json();
+    let finalCaption = caption ?? (existing as any).caption;
+
+    await c.env.DB.prepare('DELETE FROM post_product_links WHERE post_id = ? AND user_id = ?').bind(postId, userId).run();
+    if (attached_product_id) {
+      const attachedProduct = await c.env.DB.prepare(
+        `SELECT p.id, s.username
+         FROM digital_products p
+         LEFT JOIN creator_storefronts s ON p.storefront_id = s.id
+         WHERE p.id = ? AND p.user_id = ?`
+      ).bind(attached_product_id, userId).first() as any;
+      if (!attachedProduct) {
+        return c.json(apiError('Attached product not found'), 404);
+      }
+      const ctaUrl = attachedProduct.username ? `/${attachedProduct.username}` : `/checkout/${attached_product_id}`;
+      if (finalCaption && !String(finalCaption).includes('Buy here:')) {
+        finalCaption = `${String(finalCaption).trim()}\n\nBuy here: ${ctaUrl}`.trim();
+      }
+      await c.env.DB.prepare(
+        'INSERT INTO post_product_links (id, post_id, user_id, product_id, cta_text) VALUES (?, ?, ?, ?, ?)'
+      ).bind(generateId('ppl'), postId, userId, attachedProduct.id, 'Buy here').run();
+    }
     
     await c.env.DB.prepare(`
       UPDATE posts SET caption = ?, media_urls = ?, media_type = ?, platforms = ?, status = ?, scheduled_at = ?, hashtags = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?
     `).bind(
-      caption ?? (existing as any).caption,
+      finalCaption,
       media_urls ? JSON.stringify(media_urls) : (existing as any).media_urls,
       media_type ?? (existing as any).media_type,
       platforms ? JSON.stringify(platforms) : (existing as any).platforms,

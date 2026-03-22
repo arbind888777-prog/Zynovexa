@@ -12,10 +12,11 @@ import {
   RawBodyRequest,
   Req,
   Request,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiExcludeEndpoint, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Request as ExpressRequest } from 'express';
+import { Request as ExpressRequest, Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CommerceService } from './commerce.service';
 import {
@@ -40,6 +41,24 @@ import { CourseAccessGuard } from './guards/course-access.guard';
 export class CommerceController {
   constructor(private commerceService: CommerceService) {}
 
+  @Get('public/stores/:storeSlug')
+  @ApiOperation({ summary: 'Get public store with published products and courses' })
+  getPublicStore(@Param('storeSlug') storeSlug: string) {
+    return this.commerceService.getPublicStore(storeSlug);
+  }
+
+  @Get('public/handle/:handle')
+  @ApiOperation({ summary: 'Get public store by creator handle (e.g. techmaster436)' })
+  getPublicStoreByHandle(@Param('handle') handle: string) {
+    return this.commerceService.getPublicStoreByHandle(handle);
+  }
+
+  @Get('public/product/:productId')
+  @ApiOperation({ summary: 'Get a public product by ID' })
+  getPublicProductById(@Param('productId') productId: string) {
+    return this.commerceService.getPublicProductById(productId);
+  }
+
   @Get('public/stores/:storeSlug/products/:productSlug')
   @ApiOperation({ summary: 'Get a public product page by store and product slug' })
   getPublicProduct(@Param('storeSlug') storeSlug: string, @Param('productSlug') productSlug: string) {
@@ -57,6 +76,21 @@ export class CommerceController {
   @ApiExcludeEndpoint()
   handleWebhook(@Req() req: RawBodyRequest<ExpressRequest>, @Headers('stripe-signature') sig: string) {
     return this.commerceService.handleWebhook(req.rawBody as Buffer, sig);
+  }
+
+  @Post('webhook/razorpay')
+  @HttpCode(200)
+  @ApiExcludeEndpoint()
+  handleRazorpayWebhook(@Body() body: any, @Headers('x-razorpay-signature') sig: string) {
+    return this.commerceService.handleRazorpayWebhook(body, sig);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('checkout/razorpay')
+  @ApiOperation({ summary: 'Create a Razorpay checkout order for a product or course' })
+  createRazorpayCheckout(@Request() req, @Body() dto: CreateCommerceCheckoutDto) {
+    return this.commerceService.createRazorpayCheckout(req.user.id, dto);
   }
 
   @ApiBearerAuth()
@@ -193,6 +227,14 @@ export class CommerceController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @Get('buyers')
+  @ApiOperation({ summary: 'Get all purchases/buyers for the creator (sales table)' })
+  getCreatorBuyers(@Request() req, @Query('page') page?: string) {
+    return this.commerceService.getCreatorBuyers(req.user.id, parseInt(page || '1', 10));
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get('buyer/dashboard')
   @ApiOperation({ summary: 'Get the authenticated buyer dashboard and owned purchases' })
   getBuyerDashboard(@Request() req) {
@@ -234,5 +276,16 @@ export class CommerceController {
     @Body() dto: UpdateLessonProgressDto,
   ) {
     return this.commerceService.updateLessonProgress(courseId, lessonId, req.user.id, dto);
+  }
+
+  @Get('video/:lessonId')
+  @ApiOperation({ summary: 'Resolve a signed video URL and redirect to the actual video' })
+  async getVideoStream(
+    @Param('lessonId') lessonId: string,
+    @Query('token') token: string,
+    @Res() res: Response,
+  ) {
+    const videoUrl = await this.commerceService.resolveVideoUrl(lessonId, token);
+    return res.redirect(videoUrl);
   }
 }

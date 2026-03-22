@@ -80,6 +80,26 @@ export function dashboardPage() {
         <a href="#" onclick="navigate('monetization')" data-page="monetization" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
           <i class="fas fa-dollar-sign w-5 text-center text-gray-400"></i> Monetization
         </a>
+        <a href="#" onclick="navigate('products')" data-page="products" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+          <i class="fas fa-bag-shopping w-5 text-center text-gray-400"></i> Products
+        </a>
+        <div class="border-t border-gray-100 my-3"></div>
+        <p class="px-3 text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">Growth Tools</p>
+        <a href="#" onclick="navigate('growth-coach')" data-page="growth-coach" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+          <i class="fas fa-seedling w-5 text-center text-green-400"></i> Growth Coach
+        </a>
+        <a href="#" onclick="navigate('ai-engine')" data-page="ai-engine" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+          <i class="fas fa-wand-magic-sparkles w-5 text-center text-purple-400"></i> AI Engine
+        </a>
+        <a href="#" onclick="navigate('pro-analytics')" data-page="pro-analytics" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+          <i class="fas fa-chart-line w-5 text-center text-blue-400"></i> Pro Analytics
+        </a>
+        <a href="#" onclick="navigate('gamification')" data-page="gamification" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+          <i class="fas fa-trophy w-5 text-center text-yellow-400"></i> Achievements
+        </a>
+        <a href="#" onclick="navigate('pricing')" data-page="pricing" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+          <i class="fas fa-gem w-5 text-center text-pink-400"></i> Upgrade
+        </a>
         <div class="border-t border-gray-100 my-3"></div>
         <a href="#" onclick="navigate('billing')" data-page="billing" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
           <i class="fas fa-credit-card w-5 text-center text-gray-400"></i> Billing
@@ -145,8 +165,14 @@ ${buildVideoAnalyticsPage()}
 ${buildSEOPage()}
 ${buildAIPage()}
 ${buildMonetizationPage()}
+${buildProductsPage()}
 ${buildBillingPage()}
 ${buildSettingsPage()}
+${buildGrowthCoachPage()}
+${buildAIEnginePage()}
+${buildProAnalyticsPage()}
+${buildGamificationPage()}
+${buildPricingPage()}
       </div>
     </main>
   </div>
@@ -291,6 +317,14 @@ function buildCreatePostPage() {
           <div id="hashtag-area" class="mt-4">
             <label class="text-xs font-medium text-gray-500 mb-1 block">Hashtags</label>
             <input id="post-hashtags" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="#contentcreator #viral #trending">
+          </div>
+
+          <div class="mt-4">
+            <label class="text-xs font-medium text-gray-500 mb-1 block">Attach Product</label>
+            <select id="attach-product-select" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+              <option value="">No product attached</option>
+            </select>
+            <p class="text-xs text-gray-400 mt-1">We will automatically add a CTA like “Buy here”.</p>
           </div>
         </div>
 
@@ -1220,6 +1254,86 @@ function buildBillingPage() {
 </div>`;
 }
 // ============================================================
+// PRODUCTS PAGE
+// ============================================================
+function buildProductsPage() {
+    return `
+<div class="page" id="page-products">
+  <div class="fade-in">
+    <p class="text-sm text-gray-500 mb-6">Create, sell, and track digital products from one dashboard.</p>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="glass-card stat-card p-4">
+        <div class="text-xs text-gray-400">Products</div>
+        <div class="text-2xl font-black" id="prod-summary-count">0</div>
+      </div>
+      <div class="glass-card stat-card p-4">
+        <div class="text-xs text-gray-400">Sales</div>
+        <div class="text-2xl font-black" id="prod-summary-sales">0</div>
+      </div>
+      <div class="glass-card stat-card p-4">
+        <div class="text-xs text-gray-400">Revenue</div>
+        <div class="text-2xl font-black" id="prod-summary-revenue">$0</div>
+      </div>
+      <div class="glass-card stat-card p-4">
+        <div class="text-xs text-gray-400">Weekly Summary</div>
+        <div class="text-sm font-semibold mt-1" id="prod-summary-weekly">Loading...</div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="glass-card p-6">
+          <h3 class="font-bold mb-4">Create Product</h3>
+          <div class="space-y-3">
+            <input id="product-title" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Product title">
+            <textarea id="product-description" rows="4" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" placeholder="What does the buyer get?"></textarea>
+            <input id="product-price" type="number" min="1" step="1" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Price in USD cents, e.g. 2900">
+            <select id="product-delivery-type" onchange="toggleProductDeliveryType()" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+              <option value="file">Upload PDF or ZIP</option>
+              <option value="link">Secure link access</option>
+            </select>
+            <div id="product-file-wrap">
+              <input id="product-file" type="file" accept=".pdf,.zip,application/pdf,application/zip" onchange="handleProductFile(event)" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+              <p id="product-file-status" class="text-xs text-gray-400 mt-1">No file selected.</p>
+            </div>
+            <div id="product-link-wrap" class="hidden">
+              <input id="product-link" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="https://secure-link.example.com/private-resource">
+            </div>
+            <input id="product-thumbnail" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Thumbnail image URL">
+            <button onclick="createProduct()" id="create-product-btn" class="w-full py-2.5 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 transition">Create Product</button>
+          </div>
+        </div>
+
+        <div class="glass-card p-6">
+          <h3 class="font-bold mb-3">AI Sales Suggestions</h3>
+          <div id="product-ai-suggestions" class="space-y-2 text-sm text-gray-500">
+            <div>Loading suggestions...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-3 space-y-6">
+        <div class="glass-card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold">Your Storefront</h3>
+            <button onclick="copyStorefrontLink()" id="storefront-copy-btn" class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition">Copy Store Link</button>
+          </div>
+          <div id="storefront-link-box" class="text-sm text-gray-500">Loading storefront...</div>
+        </div>
+
+        <div class="glass-card p-6">
+          <h3 class="font-bold mb-4">Products</h3>
+          <div id="products-list" class="space-y-3">
+            <div class="text-sm text-gray-400">Loading products...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+// ============================================================
 // SETTINGS PAGE
 // ============================================================
 function buildSettingsPage() {
@@ -1278,6 +1392,329 @@ function buildSettingsPage() {
 </div>`;
 }
 // ============================================================
+// GROWTH COACH PAGE
+// ============================================================
+function buildGrowthCoachPage() {
+    return `
+<div class="page" id="page-growth-coach">
+  <div class="fade-in">
+    <p class="text-sm text-gray-500 mb-6">Your personal AI coach — daily recommendations, weekly reports, and growth insights.</p>
+
+    <!-- Streak Banner -->
+    <div id="gc-streak-banner" class="glass-card p-4 mb-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+      <div class="flex items-center gap-4">
+        <div class="text-3xl">🔥</div>
+        <div>
+          <div class="font-bold text-lg" id="gc-streak-count">0 Day Streak</div>
+          <div class="text-sm opacity-90" id="gc-streak-msg">Start posting to build your streak!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's Recommendations -->
+    <h3 class="font-bold text-sm uppercase text-gray-400 mb-3">Today's Recommendations</h3>
+    <div id="gc-recommendations" class="space-y-3 mb-8">
+      <div class="text-sm text-gray-400">Loading recommendations...</div>
+    </div>
+
+    <!-- Weekly Report -->
+    <h3 class="font-bold text-sm uppercase text-gray-400 mb-3">Weekly Report</h3>
+    <div id="gc-weekly" class="glass-card p-6 mb-6">
+      <div class="text-sm text-gray-400">Loading weekly report...</div>
+    </div>
+
+    <!-- Best Posting Time -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="glass-card p-4 text-center">
+        <div class="text-2xl mb-1">📅</div>
+        <div class="text-xs text-gray-400">Best Day</div>
+        <div id="gc-best-day" class="font-bold">—</div>
+      </div>
+      <div class="glass-card p-4 text-center">
+        <div class="text-2xl mb-1">⏰</div>
+        <div class="text-xs text-gray-400">Best Time</div>
+        <div id="gc-best-time" class="font-bold">—</div>
+      </div>
+      <div class="glass-card p-4 text-center">
+        <div class="text-2xl mb-1">🎯</div>
+        <div class="text-xs text-gray-400">Focus Area</div>
+        <div id="gc-focus" class="font-bold">—</div>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+// ============================================================
+// AI ENGINE PAGE
+// ============================================================
+function buildAIEnginePage() {
+    return `
+<div class="page" id="page-ai-engine">
+  <div class="fade-in">
+    <p class="text-sm text-gray-500 mb-6">Advanced AI content generator with niche-specific prompts and quality scoring.</p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Input Panel -->
+      <div class="lg:col-span-1 space-y-4">
+        <div class="glass-card p-5">
+          <h3 class="font-bold mb-4">Generate Content</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs font-medium text-gray-500 mb-1 block">Content Type</label>
+              <select id="aie-type" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <option value="caption">Caption</option>
+                <option value="hook">Hook Ideas</option>
+                <option value="viral_reel">Viral Reel Caption</option>
+                <option value="youtube_script">YouTube Script</option>
+                <option value="script">Video Script</option>
+                <option value="hashtags">Smart Hashtags</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 mb-1 block">Platform</label>
+              <select id="aie-platform" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <option value="all">All Platforms</option>
+                <option value="instagram">Instagram</option>
+                <option value="youtube">YouTube</option>
+                <option value="tiktok">TikTok</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="twitter">Twitter / X</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 mb-1 block">Audience</label>
+              <select id="aie-audience" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <option value="general">General</option>
+                <option value="gen_z">Gen Z</option>
+                <option value="millennials">Millennials</option>
+                <option value="professionals">Professionals</option>
+                <option value="entrepreneurs">Entrepreneurs</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 mb-1 block">Tone</label>
+              <select id="aie-tone" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <option value="professional">Professional</option>
+                <option value="casual">Casual</option>
+                <option value="hinglish">Hinglish</option>
+                <option value="humorous">Humorous</option>
+                <option value="motivational">Motivational</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 mb-1 block">Niche</label>
+              <input id="aie-niche" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="e.g. tech, fitness, lifestyle">
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 mb-1 block">Topic / Idea</label>
+              <textarea id="aie-input" rows="3" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="What do you want to create content about?"></textarea>
+            </div>
+            <button onclick="generateAIContent()" id="aie-btn" class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-brand-600 text-white text-sm rounded-lg hover:opacity-90 transition font-semibold">
+              <i class="fas fa-wand-magic-sparkles mr-2"></i>Generate
+            </button>
+            <div class="text-xs text-gray-400 text-center" id="aie-usage">— / — used today</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output Panel -->
+      <div class="lg:col-span-2">
+        <div id="aie-output-empty" class="glass-card p-12 text-center">
+          <div class="text-5xl mb-4">✨</div>
+          <div class="text-gray-400 text-sm">Choose your settings and generate content.<br>AI will create platform-optimized content with scoring.</div>
+        </div>
+        <div id="aie-output" class="hidden space-y-4">
+          <!-- Score Card -->
+          <div class="glass-card p-5">
+            <h3 class="font-bold mb-3">Content Score</h3>
+            <div class="grid grid-cols-4 gap-3">
+              <div class="text-center">
+                <div class="text-3xl font-black" id="aie-score-overall">—</div>
+                <div class="text-[10px] text-gray-400 uppercase">Overall</div>
+              </div>
+              <div class="text-center">
+                <div class="text-xl font-bold text-orange-500" id="aie-score-hook">—</div>
+                <div class="text-[10px] text-gray-400 uppercase">Hook</div>
+              </div>
+              <div class="text-center">
+                <div class="text-xl font-bold text-blue-500" id="aie-score-read">—</div>
+                <div class="text-[10px] text-gray-400 uppercase">Readability</div>
+              </div>
+              <div class="text-center">
+                <div class="text-xl font-bold text-green-500" id="aie-score-engage">—</div>
+                <div class="text-[10px] text-gray-400 uppercase">Engagement</div>
+              </div>
+            </div>
+            <div id="aie-suggestions" class="mt-3 space-y-1"></div>
+          </div>
+          <!-- Generated Content -->
+          <div class="glass-card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-bold">Generated Content</h3>
+              <button onclick="copyAIContent()" class="text-xs text-brand-600 hover:text-brand-700"><i class="fas fa-copy mr-1"></i>Copy</button>
+            </div>
+            <pre id="aie-content" class="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-xl border border-gray-100 max-h-[500px] overflow-y-auto"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+// ============================================================
+// PRO ANALYTICS PAGE
+// ============================================================
+function buildProAnalyticsPage() {
+    return `
+<div class="page" id="page-pro-analytics">
+  <div class="fade-in">
+    <p class="text-sm text-gray-500 mb-6">Advanced metrics, competitor tracking, and content performance ranking.</p>
+
+    <div id="pa-locked" class="hidden glass-card p-12 text-center">
+      <div class="text-5xl mb-4">📊</div>
+      <h3 class="font-bold text-lg mb-2">Pro Analytics</h3>
+      <p class="text-gray-400 text-sm mb-4">Unlock advanced insights, competitor tracking, and content ranking with a Pro plan.</p>
+      <button onclick="navigate('pricing')" class="px-6 py-2 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 transition">Upgrade to Pro</button>
+    </div>
+
+    <div id="pa-content" class="space-y-6">
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass-card stat-card p-4">
+          <div class="text-xs text-gray-400">Engagement Rate</div>
+          <div class="text-2xl font-black" id="pa-engagement-rate">—</div>
+          <div class="text-xs mt-1" id="pa-engagement-trend"></div>
+        </div>
+        <div class="glass-card stat-card p-4">
+          <div class="text-xs text-gray-400">Avg. CTR</div>
+          <div class="text-2xl font-black" id="pa-ctr">—</div>
+          <div class="text-xs mt-1" id="pa-ctr-trend"></div>
+        </div>
+        <div class="glass-card stat-card p-4">
+          <div class="text-xs text-gray-400">Growth Rate</div>
+          <div class="text-2xl font-black" id="pa-growth-rate">—</div>
+          <div class="text-xs mt-1" id="pa-growth-trend"></div>
+        </div>
+        <div class="glass-card stat-card p-4">
+          <div class="text-xs text-gray-400">Total Posts</div>
+          <div class="text-2xl font-black" id="pa-total-posts">—</div>
+        </div>
+      </div>
+
+      <!-- Content Ranking -->
+      <div class="glass-card p-5">
+        <h3 class="font-bold mb-4"><i class="fas fa-ranking-star text-yellow-500 mr-2"></i>Content Ranking</h3>
+        <div id="pa-ranking" class="space-y-2">
+          <div class="text-sm text-gray-400">Loading content ranking...</div>
+        </div>
+      </div>
+
+      <!-- Competitor Tracking -->
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold"><i class="fas fa-binoculars text-blue-500 mr-2"></i>Competitor Tracking</h3>
+          <button onclick="showAddCompetitor()" class="text-xs bg-brand-600 text-white px-3 py-1.5 rounded-lg hover:bg-brand-700 transition"><i class="fas fa-plus mr-1"></i>Add</button>
+        </div>
+        <div id="pa-competitors" class="space-y-3">
+          <div class="text-sm text-gray-400">No competitors added yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+// ============================================================
+// GAMIFICATION / ACHIEVEMENTS PAGE
+// ============================================================
+function buildGamificationPage() {
+    return `
+<div class="page" id="page-gamification">
+  <div class="fade-in">
+    <p class="text-sm text-gray-500 mb-6">Track your progress, earn badges, and climb the leaderboard.</p>
+
+    <!-- XP & Level -->
+    <div class="glass-card p-6 mb-6 bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+      <div class="flex items-center gap-6">
+        <div class="text-center">
+          <div class="text-4xl font-black" id="gam-level">1</div>
+          <div class="text-xs opacity-90">Level</div>
+        </div>
+        <div class="flex-1">
+          <div class="flex justify-between text-sm mb-1">
+            <span id="gam-xp">0 XP</span>
+            <span id="gam-xp-next">100 XP to next level</span>
+          </div>
+          <div class="w-full bg-white/30 rounded-full h-3">
+            <div id="gam-xp-bar" class="bg-white rounded-full h-3 transition-all" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="text-center">
+          <div class="text-4xl">🔥</div>
+          <div class="text-sm font-bold" id="gam-streak">0</div>
+          <div class="text-xs opacity-90">Day Streak</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="glass-card stat-card p-4 text-center">
+        <div class="text-2xl font-black" id="gam-posts">0</div>
+        <div class="text-xs text-gray-400">Total Posts</div>
+      </div>
+      <div class="glass-card stat-card p-4 text-center">
+        <div class="text-2xl font-black" id="gam-ai-uses">0</div>
+        <div class="text-xs text-gray-400">AI Uses</div>
+      </div>
+      <div class="glass-card stat-card p-4 text-center">
+        <div class="text-2xl font-black" id="gam-longest">0</div>
+        <div class="text-xs text-gray-400">Longest Streak</div>
+      </div>
+      <div class="glass-card stat-card p-4 text-center">
+        <div class="text-2xl font-black" id="gam-badges-count">0</div>
+        <div class="text-xs text-gray-400">Badges Earned</div>
+      </div>
+    </div>
+
+    <!-- Badges -->
+    <h3 class="font-bold text-sm uppercase text-gray-400 mb-3">Badges</h3>
+    <div id="gam-badges" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mb-6">
+      <div class="text-sm text-gray-400">Loading badges...</div>
+    </div>
+
+    <!-- Leaderboard -->
+    <h3 class="font-bold text-sm uppercase text-gray-400 mb-3">Leaderboard</h3>
+    <div class="glass-card p-5">
+      <div id="gam-leaderboard" class="space-y-2">
+        <div class="text-sm text-gray-400">Loading leaderboard...</div>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+// ============================================================
+// PRICING PAGE
+// ============================================================
+function buildPricingPage() {
+    return `
+<div class="page" id="page-pricing">
+  <div class="fade-in">
+    <div class="text-center mb-8">
+      <h2 class="text-2xl font-black mb-2">Choose Your Growth Plan</h2>
+      <p class="text-gray-500 text-sm">Invest in your creator journey. Cancel anytime.</p>
+      <div class="inline-flex bg-gray-100 rounded-lg p-1 mt-4">
+        <button onclick="setPricingCycle('monthly')" id="price-monthly-btn" class="px-4 py-1.5 text-sm rounded-md bg-white shadow font-semibold">Monthly</button>
+        <button onclick="setPricingCycle('yearly')" id="price-yearly-btn" class="px-4 py-1.5 text-sm rounded-md text-gray-500">Yearly <span class="text-green-500 text-xs">-17%</span></button>
+      </div>
+    </div>
+
+    <div id="pricing-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="text-sm text-gray-400 text-center col-span-4">Loading plans...</div>
+    </div>
+  </div>
+</div>`;
+}
+// ============================================================
 // MAIN DASHBOARD JAVASCRIPT
 // ============================================================
 function dashboardScript() {
@@ -1299,19 +1736,26 @@ function dashboardScript() {
       const link = document.querySelector('[data-page="' + page + '"]');
       if (link) link.classList.add('active');
       
-      const titles = { dashboard:'Dashboard', create:'Create Post', 'video-post':'Video Post', scheduled:'Scheduled Posts', accounts:'Accounts', analytics:'Analytics', 'video-analytics':'Video Analytics', seo:'SEO Tools', ai:'AI Assistant', monetization:'Monetization', billing:'Billing', settings:'Settings' };
+      const titles = { dashboard:'Dashboard', create:'Create Post', 'video-post':'Video Post', scheduled:'Scheduled Posts', accounts:'Accounts', analytics:'Analytics', 'video-analytics':'Video Analytics', seo:'SEO Tools', ai:'AI Assistant', monetization:'Monetization', products:'Products', billing:'Billing', settings:'Settings', 'growth-coach':'Growth Coach', 'ai-engine':'AI Engine', 'pro-analytics':'Pro Analytics', gamification:'Achievements', pricing:'Upgrade Plan' };
       document.getElementById('page-title').textContent = titles[page] || page;
       currentPage = page;
       
       // Load page data
       if (page === 'dashboard') loadDashboard();
+      else if (page === 'create') loadProductOptions();
       else if (page === 'scheduled') loadPosts();
       else if (page === 'accounts') loadAccounts();
       else if (page === 'analytics') loadAnalytics();
       else if (page === 'video-analytics') loadVideoAnalytics();
       else if (page === 'monetization') loadMonetization();
+      else if (page === 'products') loadProductsDashboard();
       else if (page === 'billing') loadBilling();
       else if (page === 'settings') loadSettings();
+      else if (page === 'growth-coach') loadGrowthCoach();
+      else if (page === 'ai-engine') loadAIEngine();
+      else if (page === 'pro-analytics') loadProAnalytics();
+      else if (page === 'gamification') loadGamification();
+      else if (page === 'pricing') loadPricingPlans();
 
       // Close mobile sidebar
       document.getElementById('sidebar').classList.add('-translate-x-full');
@@ -1468,12 +1912,13 @@ function dashboardScript() {
       const scheduled_at = document.getElementById('post-schedule').value;
       if (status === 'scheduled' && !scheduled_at) return alert('Select a schedule date');
       
-      const hashtags = document.getElementById('post-hashtags').value.split(/\\s+/).filter(h => h.startsWith('#'));
+      const hashtags = document.getElementById('post-hashtags').value.split(/\s+/).filter(h => h.startsWith('#'));
+      const attached_product_id = document.getElementById('attach-product-select').value;
       
       try {
         const res = await fetch(API + '/api/posts', {
           method: 'POST', headers,
-          body: JSON.stringify({ caption, platforms, status, scheduled_at, hashtags, media_type: 'text' })
+          body: JSON.stringify({ caption, platforms, status, scheduled_at, hashtags, media_type: 'text', attached_product_id })
         });
         const json = await res.json();
         if (json.success) {
@@ -1481,6 +1926,7 @@ function dashboardScript() {
           document.getElementById('post-caption').value = '';
           document.getElementById('post-hashtags').value = '';
           document.getElementById('post-schedule').value = '';
+          document.getElementById('attach-product-select').value = '';
           document.querySelectorAll('.platform-cb').forEach(c => c.checked = false);
           navigate('scheduled');
         } else {
@@ -2328,6 +2774,411 @@ function dashboardScript() {
             '<i class="fas fa-copy text-purple-400 text-xs"></i></div>'
           ).join('');
       } catch(e) { alert('Title optimization failed'); }
+    }
+
+    let productUploadPayload = null;
+    let storefrontLink = '';
+
+    async function loadProductOptions() {
+      try {
+        const res = await fetch(API + '/api/products/mine', { headers });
+        const json = await res.json();
+        const select = document.getElementById('attach-product-select');
+        if (!select) return;
+        const products = json.success ? (json.data.products || []) : [];
+        select.innerHTML = '<option value="">No product attached</option>' + products.map(product =>
+          '<option value="' + product.id + '">' + product.title + ' ($' + (Number(product.price || 0) / 100).toFixed(2) + ')</option>'
+        ).join('');
+      } catch (error) {}
+    }
+
+    function toggleProductDeliveryType() {
+      const type = document.getElementById('product-delivery-type').value;
+      document.getElementById('product-file-wrap').classList.toggle('hidden', type !== 'file');
+      document.getElementById('product-link-wrap').classList.toggle('hidden', type !== 'link');
+    }
+
+    function handleProductFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) {
+        productUploadPayload = null;
+        document.getElementById('product-file-status').textContent = 'No file selected.';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function() {
+        const result = String(reader.result || '');
+        productUploadPayload = {
+          file_name: file.name,
+          file_type: file.type || 'application/octet-stream',
+          file_size: file.size,
+          file_data_base64: result.includes(',') ? result.split(',')[1] : result,
+        };
+        document.getElementById('product-file-status').textContent = file.name + ' ready for secure delivery';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function loadProductsDashboard() {
+      try {
+        const [productsRes, weeklyRes, suggestionsRes] = await Promise.all([
+          fetch(API + '/api/products/mine', { headers }),
+          fetch(API + '/api/reports/weekly-revenue', { headers }),
+          fetch(API + '/api/ai/sales-suggestions', { headers }),
+        ]);
+        const productsJson = await productsRes.json();
+        const weeklyJson = await weeklyRes.json();
+        const suggestionsJson = await suggestionsRes.json();
+
+        const products = productsJson.success ? (productsJson.data.products || []) : [];
+        const sales = products.reduce((sum, product) => sum + Number(product.sales_count || 0), 0);
+        const revenue = products.reduce((sum, product) => sum + Number(product.revenue_total || 0), 0);
+
+        document.getElementById('prod-summary-count').textContent = products.length;
+        document.getElementById('prod-summary-sales').textContent = sales;
+        document.getElementById('prod-summary-revenue').textContent = '$' + (revenue / 100).toFixed(2);
+        document.getElementById('prod-summary-weekly').textContent = weeklyJson.success ? weeklyJson.data.summary : 'Weekly report unavailable';
+
+        storefrontLink = products.length && products[0].username ? window.location.origin + '/' + products[0].username : '';
+        document.getElementById('storefront-link-box').innerHTML = storefrontLink
+          ? '<a href="' + storefrontLink + '" target="_blank" class="text-brand-600 font-semibold hover:underline">' + storefrontLink + '</a>'
+          : '<span class="text-gray-400">Your storefront URL will appear after your first product is created.</span>';
+
+        document.getElementById('products-list').innerHTML = products.length ? products.map(product =>
+          '<div class="border border-gray-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-4">' +
+            '<div class="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center">' +
+              (product.thumbnail_url ? '<img src="' + product.thumbnail_url + '" class="w-full h-full object-cover">' : '<i class="fas fa-file-arrow-down text-gray-300 text-2xl"></i>') +
+            '</div>' +
+            '<div class="flex-1 min-w-0">' +
+              '<div class="flex items-start justify-between gap-3">' +
+                '<div><div class="font-bold">' + product.title + '</div><div class="text-sm text-gray-500 mt-1 line-clamp-2">' + product.description + '</div></div>' +
+                '<div class="text-right"><div class="text-lg font-black">$' + (Number(product.price || 0) / 100).toFixed(2) + '</div><div class="text-xs text-gray-400">' + (product.delivery_type === 'link' ? 'Link delivery' : 'File delivery') + '</div></div>' +
+              '</div>' +
+              '<div class="flex flex-wrap gap-4 mt-3 text-xs text-gray-500">' +
+                '<span>Sales: <b>' + Number(product.sales_count || 0) + '</b></span>' +
+                '<span>Revenue: <b>$' + (Number(product.revenue_total || 0) / 100).toFixed(2) + '</b></span>' +
+                '<a href="/checkout/' + product.id + '" target="_blank" class="text-brand-600 font-semibold hover:underline">Checkout link</a>' +
+              '</div>' +
+            '</div>' +
+          '</div>'
+        ).join('') : '<div class="text-sm text-gray-400">No products yet. Create one in under 2 minutes.</div>';
+
+        document.getElementById('product-ai-suggestions').innerHTML = suggestionsJson.success
+          ? (suggestionsJson.data.suggestions || []).map(item => '<div class="flex items-start gap-2"><i class="fas fa-lightbulb text-yellow-400 mt-0.5"></i><span>' + item + '</span></div>').join('')
+          : '<div>No suggestions right now.</div>';
+
+        loadProductOptions();
+      } catch (error) {
+        document.getElementById('products-list').innerHTML = '<div class="text-sm text-red-500">Could not load product dashboard.</div>';
+      }
+    }
+
+    async function createProduct() {
+      const title = document.getElementById('product-title').value.trim();
+      const description = document.getElementById('product-description').value.trim();
+      const price = Number(document.getElementById('product-price').value || 0);
+      const delivery_type = document.getElementById('product-delivery-type').value;
+      const thumbnail_url = document.getElementById('product-thumbnail').value.trim();
+      const delivery_link = document.getElementById('product-link').value.trim();
+
+      if (!title || !description || !price) return alert('Title, description, and price are required.');
+      if (delivery_type === 'file' && !productUploadPayload) return alert('Upload a PDF or ZIP file.');
+      if (delivery_type === 'link' && !delivery_link) return alert('Enter a secure delivery link.');
+
+      const btn = document.getElementById('create-product-btn');
+      btn.disabled = true;
+      btn.textContent = 'Creating product...';
+      try {
+        const payload = {
+          title,
+          description,
+          price,
+          delivery_type,
+          thumbnail_url,
+          delivery_link,
+          ...(productUploadPayload || {}),
+        };
+        const res = await fetch(API + '/api/products/create', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!json.success) return alert(json.message || 'Failed to create product');
+
+        document.getElementById('product-title').value = '';
+        document.getElementById('product-description').value = '';
+        document.getElementById('product-price').value = '';
+        document.getElementById('product-thumbnail').value = '';
+        document.getElementById('product-link').value = '';
+        document.getElementById('product-file').value = '';
+        document.getElementById('product-file-status').textContent = 'No file selected.';
+        productUploadPayload = null;
+        alert('Product created. Storefront: ' + json.data.storefront_url);
+        loadProductsDashboard();
+      } catch (error) {
+        alert('Error creating product');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Product';
+      }
+    }
+
+    function copyStorefrontLink() {
+      if (!storefrontLink) return alert('Create a product first.');
+      navigator.clipboard.writeText(storefrontLink).then(() => {
+        const btn = document.getElementById('storefront-copy-btn');
+        const previous = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = previous; }, 1200);
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // GROWTH COACH
+    // ═══════════════════════════════════════════════════════════
+    async function loadGrowthCoach() {
+      try {
+        const res = await fetch(API + '/api/growth-coach/daily', { headers });
+        const d = (await res.json()).data || {};
+        // Streak
+        const streak = d.streak || {};
+        document.getElementById('gc-streak-count').textContent = (streak.current_streak || 0) + ' Day Streak';
+        document.getElementById('gc-streak-msg').textContent = streak.current_streak > 0 ? 'Keep the momentum going! Post today to extend your streak.' : 'Start posting to build your streak!';
+        // Recommendations
+        const recs = d.recommendations || [];
+        document.getElementById('gc-recommendations').innerHTML = recs.length ? recs.map(r =>
+          '<div class="glass-card p-4 hover:shadow-md transition"><div class="flex items-start gap-3"><div class="text-2xl">' +
+          (r.type === 'content' ? '📝' : r.type === 'timing' ? '⏰' : '💡') +
+          '</div><div class="flex-1"><div class="font-semibold text-sm">' + r.title + '</div><div class="text-xs text-gray-500 mt-1">' + r.description + '</div></div></div></div>'
+        ).join('') : '<div class="text-sm text-gray-400">No recommendations today. Check back tomorrow!</div>';
+        // Best time / day
+        document.getElementById('gc-best-day').textContent = d.best_posting?.day || 'Post today!';
+        document.getElementById('gc-best-time').textContent = d.best_posting?.time || '10:00 AM';
+        document.getElementById('gc-focus').textContent = d.focus || 'Consistency';
+      } catch(e) { console.error('Growth coach error:', e); }
+      // Weekly
+      try {
+        const wr = await fetch(API + '/api/growth-coach/weekly-report', { headers });
+        const w = (await wr.json()).data || {};
+        const s = w.summary || {};
+        document.getElementById('gc-weekly').innerHTML =
+          '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">' +
+          '<div><div class="text-xs text-gray-400">Posts This Week</div><div class="text-xl font-bold">' + (s.posts_this_week || 0) + '</div></div>' +
+          '<div><div class="text-xs text-gray-400">Total Engagement</div><div class="text-xl font-bold">' + (s.total_engagement || 0) + '</div></div>' +
+          '<div><div class="text-xs text-gray-400">Followers Gained</div><div class="text-xl font-bold text-green-600">+' + (s.followers_change || 0) + '</div></div>' +
+          '<div><div class="text-xs text-gray-400">AI Uses</div><div class="text-xl font-bold">' + (s.ai_uses || 0) + '</div></div></div>' +
+          '<div class="text-sm text-gray-600">' + (w.highlights || []).map(h => '<div class="flex items-center gap-2 py-1"><i class="fas fa-check-circle text-green-500 text-xs"></i><span>' + h + '</span></div>').join('') + '</div>';
+      } catch(e) {}
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // AI ENGINE
+    // ═══════════════════════════════════════════════════════════
+    async function loadAIEngine() {
+      // Update usage counter
+      try {
+        const r = await fetch(API + '/api/pricing/my-plan', { headers });
+        const d = (await r.json()).data || {};
+        const ai = d.usage?.ai_today || {};
+        document.getElementById('aie-usage').textContent = (ai.used || 0) + ' / ' + (ai.limit || 10) + ' used today';
+      } catch(e) {}
+    }
+
+    async function generateAIContent() {
+      const btn = document.getElementById('aie-btn');
+      const input = document.getElementById('aie-input').value.trim();
+      if (!input) { alert('Enter a topic or idea first'); return; }
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+      try {
+        const res = await fetch(API + '/api/ai-engine/generate', {
+          method: 'POST', headers,
+          body: JSON.stringify({
+            input,
+            type: document.getElementById('aie-type').value,
+            platform: document.getElementById('aie-platform').value,
+            audience: document.getElementById('aie-audience').value,
+            tone: document.getElementById('aie-tone').value,
+            niche: document.getElementById('aie-niche').value || 'general',
+          })
+        });
+        const d = (await res.json()).data || {};
+        document.getElementById('aie-output-empty').classList.add('hidden');
+        document.getElementById('aie-output').classList.remove('hidden');
+        document.getElementById('aie-content').textContent = d.content || 'No content generated.';
+        const s = d.score || {};
+        document.getElementById('aie-score-overall').textContent = s.overall || '—';
+        document.getElementById('aie-score-overall').className = 'text-3xl font-black ' + (s.overall >= 80 ? 'text-green-600' : s.overall >= 60 ? 'text-yellow-600' : 'text-red-600');
+        document.getElementById('aie-score-hook').textContent = s.hook || '—';
+        document.getElementById('aie-score-read').textContent = s.readability || '—';
+        document.getElementById('aie-score-engage').textContent = s.engagement || '—';
+        document.getElementById('aie-suggestions').innerHTML = (s.suggestions || []).map(sg =>
+          '<div class="text-xs text-gray-500 flex items-start gap-1"><i class="fas fa-lightbulb text-yellow-400 mt-0.5"></i><span>' + sg + '</span></div>'
+        ).join('');
+        const u = d.usage || {};
+        document.getElementById('aie-usage').textContent = (u.used || 0) + ' / ' + (u.limit || 10) + ' used today';
+      } catch(e) { alert('Generation failed: ' + e.message); }
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-wand-magic-sparkles mr-2"></i>Generate';
+    }
+
+    function copyAIContent() {
+      const t = document.getElementById('aie-content').textContent;
+      navigator.clipboard.writeText(t).then(() => { alert('Copied to clipboard!'); });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PRO ANALYTICS
+    // ═══════════════════════════════════════════════════════════
+    async function loadProAnalytics() {
+      try {
+        const res = await fetch(API + '/api/pro-analytics/overview', { headers });
+        if (res.status === 403) { document.getElementById('pa-locked').classList.remove('hidden'); document.getElementById('pa-content').classList.add('hidden'); return; }
+        document.getElementById('pa-locked').classList.add('hidden'); document.getElementById('pa-content').classList.remove('hidden');
+        const d = (await res.json()).data || {};
+        document.getElementById('pa-engagement-rate').textContent = (d.engagement_rate || 0).toFixed(1) + '%';
+        document.getElementById('pa-ctr').textContent = (d.avg_ctr || 0).toFixed(1) + '%';
+        document.getElementById('pa-growth-rate').textContent = (d.follower_growth_rate || 0).toFixed(1) + '%';
+        document.getElementById('pa-total-posts').textContent = d.total_posts || 0;
+      } catch(e) { console.error('Pro analytics error:', e); }
+      // Content ranking
+      try {
+        const cr = await fetch(API + '/api/pro-analytics/content-ranking', { headers });
+        const cd = (await cr.json()).data || {};
+        const top = cd.top_posts || [];
+        document.getElementById('pa-ranking').innerHTML = top.length ? top.map((p, i) =>
+          '<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50"><div class="font-bold text-lg text-gray-300 w-6">' + (i+1) + '</div><div class="flex-1"><div class="text-sm font-medium truncate">' + (p.caption || 'Untitled').substring(0,60) + '</div><div class="text-xs text-gray-400">Score: ' + (p.score || 0) + ' | ' + (p.likes || 0) + ' likes</div></div></div>'
+        ).join('') : '<div class="text-sm text-gray-400">No ranked content yet.</div>';
+      } catch(e) {}
+      // Competitors
+      try {
+        const cp = await fetch(API + '/api/pro-analytics/competitors', { headers });
+        const cpd = (await cp.json()).data || {};
+        const comps = cpd.competitors || [];
+        document.getElementById('pa-competitors').innerHTML = comps.length ? comps.map(c =>
+          '<div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg"><div><div class="font-semibold text-sm">@' + c.username + '</div><div class="text-xs text-gray-400">' + c.platform + ' · ' + (c.followers_count || 0).toLocaleString() + ' followers</div></div><button onclick="deleteCompetitor(\\'' + c.id + '\\')" class="text-xs text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button></div>'
+        ).join('') : '<div class="text-sm text-gray-400">Add competitors to track.</div>';
+      } catch(e) {}
+    }
+
+    async function showAddCompetitor() {
+      const u = prompt('Enter competitor username (e.g. @creator):');
+      const p = prompt('Platform (instagram, youtube, tiktok, linkedin, twitter):');
+      if (!u || !p) return;
+      try {
+        await fetch(API + '/api/pro-analytics/competitors', { method: 'POST', headers, body: JSON.stringify({ platform: p, username: u.replace('@','') }) });
+        loadProAnalytics();
+      } catch(e) { alert('Failed to add competitor'); }
+    }
+
+    async function deleteCompetitor(id) {
+      if (!confirm('Remove this competitor?')) return;
+      await fetch(API + '/api/pro-analytics/competitors/' + id, { method: 'DELETE', headers });
+      loadProAnalytics();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // GAMIFICATION
+    // ═══════════════════════════════════════════════════════════
+    async function loadGamification() {
+      try {
+        const res = await fetch(API + '/api/gamification/profile', { headers });
+        const d = (await res.json()).data || {};
+        const p = d.profile || {};
+        const xpLevels = [0,100,300,600,1000,1500,2500,4000,6000,9000,15000];
+        const lvl = p.level || 1;
+        const xp = p.xp_points || 0;
+        const nextXp = xpLevels[lvl] || 15000;
+        const prevXp = xpLevels[lvl-1] || 0;
+        const pct = Math.min(100, ((xp - prevXp) / (nextXp - prevXp)) * 100);
+        document.getElementById('gam-level').textContent = lvl;
+        document.getElementById('gam-xp').textContent = xp + ' XP';
+        document.getElementById('gam-xp-next').textContent = (nextXp - xp) + ' XP to Level ' + (lvl+1);
+        document.getElementById('gam-xp-bar').style.width = pct + '%';
+        document.getElementById('gam-streak').textContent = p.current_streak || 0;
+        document.getElementById('gam-posts').textContent = p.total_posts || 0;
+        document.getElementById('gam-ai-uses').textContent = p.total_ai_uses || 0;
+        document.getElementById('gam-longest').textContent = p.longest_streak || 0;
+        // Badges
+        const badges = d.badges || [];
+        const earned = badges.filter(b => b.earned);
+        document.getElementById('gam-badges-count').textContent = earned.length;
+        document.getElementById('gam-badges').innerHTML = badges.map(b =>
+          '<div class="glass-card p-3 text-center ' + (b.earned ? '' : 'opacity-40 grayscale') + '"><div class="text-2xl mb-1">' + b.icon + '</div><div class="text-[10px] font-bold">' + b.name + '</div>' + (b.earned ? '<div class="text-[9px] text-green-500">✓ Earned</div>' : '<div class="text-[9px] text-gray-400">' + b.requirement + '</div>') + '</div>'
+        ).join('');
+      } catch(e) { console.error('Gamification error:', e); }
+      // Leaderboard
+      try {
+        const lb = await fetch(API + '/api/gamification/leaderboard', { headers });
+        const ld = (await lb.json()).data || {};
+        const entries = ld.leaderboard || [];
+        document.getElementById('gam-leaderboard').innerHTML = entries.length ? entries.map((e, i) =>
+          '<div class="flex items-center gap-3 p-2 rounded-lg ' + (i < 3 ? 'bg-yellow-50' : '') + '"><div class="font-bold text-lg w-6 text-center">' + (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1)) + '</div><div class="flex-1"><div class="text-sm font-medium">' + (e.name || 'Creator') + '</div><div class="text-xs text-gray-400">Level ' + e.level + ' · ' + e.xp_points + ' XP · 🔥' + e.current_streak + '</div></div></div>'
+        ).join('') : '<div class="text-sm text-gray-400">No leaderboard data yet.</div>';
+      } catch(e) {}
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PRICING
+    // ═══════════════════════════════════════════════════════════
+    let pricingCycle = 'monthly';
+    let allPlans = [];
+
+    async function loadPricingPlans() {
+      try {
+        const res = await fetch(API + '/api/pricing/plans');
+        const d = (await res.json()).data || {};
+        allPlans = d.plans || [];
+        renderPricingGrid();
+      } catch(e) { console.error('Pricing error:', e); }
+    }
+
+    function setPricingCycle(cycle) {
+      pricingCycle = cycle;
+      document.getElementById('price-monthly-btn').className = 'px-4 py-1.5 text-sm rounded-md ' + (cycle === 'monthly' ? 'bg-white shadow font-semibold' : 'text-gray-500');
+      document.getElementById('price-yearly-btn').className = 'px-4 py-1.5 text-sm rounded-md ' + (cycle === 'yearly' ? 'bg-white shadow font-semibold' : 'text-gray-500');
+      renderPricingGrid();
+    }
+
+    function renderPricingGrid() {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      document.getElementById('pricing-grid').innerHTML = allPlans.map(p => {
+        const price = pricingCycle === 'yearly' ? p.priceYearly : p.price;
+        const monthly = pricingCycle === 'yearly' ? Math.round(p.priceYearly / 12) : p.price;
+        const isCurrent = user.plan === p.id;
+        const features = Object.entries(p.features || {}).filter(([k,v]) => v);
+        return '<div class="glass-card p-6 ' + (p.badge === 'POPULAR' ? 'border-2 border-brand-500 relative' : '') + '">' +
+          (p.badge ? '<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-600 text-white text-[10px] font-bold px-3 py-0.5 rounded-full">' + p.badge + '</div>' : '') +
+          '<h3 class="font-bold text-lg">' + p.name + '</h3>' +
+          '<p class="text-xs text-gray-400 mt-1">' + p.description + '</p>' +
+          '<div class="mt-4"><span class="text-3xl font-black">$' + monthly + '</span><span class="text-gray-400 text-sm">/mo</span></div>' +
+          (pricingCycle === 'yearly' ? '<div class="text-xs text-green-500">$' + price + '/year (save $' + (p.price * 12 - p.priceYearly) + ')</div>' : '') +
+          '<ul class="mt-4 space-y-2 text-sm">' + features.map(([k]) =>
+            '<li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i>' + k.replace(/_/g, ' ') + '</li>'
+          ).join('') + '</ul>' +
+          '<div class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">' +
+          Object.entries(p.limits || {}).map(([k,v]) => '<div>' + k.replace(/_/g, ' ') + ': <b>' + (v >= 9999 ? '∞' : v) + '</b></div>').join('') + '</div>' +
+          (isCurrent ? '<button class="w-full mt-4 py-2.5 bg-gray-100 text-gray-500 text-sm rounded-lg font-semibold" disabled>Current Plan</button>' :
+          p.price === 0 ? '<button class="w-full mt-4 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition" disabled>Free Forever</button>' :
+          '<button onclick="upgradePlan(\\'' + p.id + '\\')" class="w-full mt-4 py-2.5 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 transition font-semibold">Upgrade to ' + p.name + '</button>') +
+          '</div>';
+      }).join('');
+    }
+
+    async function upgradePlan(planId) {
+      if (!confirm('Upgrade to ' + planId + ' plan?')) return;
+      try {
+        const res = await fetch(API + '/api/pricing/upgrade', { method: 'POST', headers, body: JSON.stringify({ plan: planId, billing_cycle: pricingCycle }) });
+        const d = await res.json();
+        if (d.success) {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          user.plan = planId;
+          localStorage.setItem('user', JSON.stringify(user));
+          alert('Upgraded to ' + d.data.plan.name + '! 🎉');
+          renderPricingGrid();
+          document.getElementById('sidebar-plan').textContent = d.data.plan.name;
+        } else { alert(d.message || 'Upgrade failed'); }
+      } catch(e) { alert('Upgrade failed: ' + e.message); }
     }
 
     // ---- Boot ----

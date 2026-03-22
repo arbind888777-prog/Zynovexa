@@ -5,14 +5,14 @@ import MarketingLayout from '@/components/MarketingLayout';
 import FloatingSocialIcons from '@/components/FloatingSocialIcons';
 
 export const metadata: Metadata = {
-  title: 'Zynovexa — #1 AI Social Media Manager for Creators',
+  title: 'Zynovexa — AI Social Media Manager & Creator Commerce Platform',
   description:
-    'Zynovexa helps 50,000+ creators schedule posts, generate viral AI captions, grow analytics, and monetize across Instagram, YouTube, TikTok, Twitter, LinkedIn & more. Start free today.',
+    'Zynovexa helps 50,000+ creators schedule posts, generate viral AI captions, sell digital products, courses & templates, and grow across Instagram, YouTube, TikTok, Twitter, LinkedIn & more. Start free today.',
   alternates: { canonical: 'https://zynovexa.com' },
   openGraph: {
-    title: 'Zynovexa — #1 AI Social Media Manager for Creators',
+    title: 'Zynovexa — AI Social Media Manager & Creator Commerce Platform',
     description:
-      'Schedule. Create. Grow. Monetize. The all-in-one AI platform for creators across 7 social platforms.',
+      'Schedule. Create. Sell. Grow. The all-in-one AI platform for creators across 7 social platforms with built-in digital commerce.',
     url: 'https://zynovexa.com',
     type: 'website',
   },
@@ -335,6 +335,86 @@ export default async function LandingPage() {
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ─── Creator Commerce ─────────────────────────────────── */}
+      <section className="section-shell">
+        <div className="max-w-6xl mx-auto">
+          <div className="section-intro">
+            <span className="section-kicker text-emerald-300">Creator Commerce</span>
+            <h2 className="section-title">Sell digital products directly from your creator page</h2>
+            <p className="section-copy">Every creator gets a unique storefront — zynovexa.com/yourhandle — where fans buy your courses, templates, ebooks, and more.</p>
+          </div>
+          <div className="marketing-grid-shell grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              { icon: '🏪', title: 'Your Storefront', desc: 'Get zynovexa.com/yourhandle — a beautiful creator page with your products, courses, bio, and social links.', color: 'from-emerald-500/20 to-teal-500/20', border: 'border-emerald-500/30' },
+              { icon: '📦', title: '5 Product Types', desc: 'Sell digital downloads, templates, ebooks, courses, and coaching sessions — all from one dashboard.', color: 'from-blue-500/20 to-indigo-500/20', border: 'border-blue-500/30' },
+              { icon: '💳', title: 'Razorpay + Stripe', desc: 'Accept payments in INR via Razorpay or globally via Stripe. Instant checkout with zero setup friction.', color: 'from-purple-500/20 to-pink-500/20', border: 'border-purple-500/30' },
+              { icon: '🎓', title: 'Course Builder', desc: 'Create courses with lessons, video content, and drip access. Track student progress and completion.', color: 'from-amber-500/20 to-orange-500/20', border: 'border-amber-500/30' },
+              { icon: '📊', title: 'Sales Analytics', desc: 'Track revenue, buyers, product performance, and net earnings after platform fees — all real-time.', color: 'from-pink-500/20 to-rose-500/20', border: 'border-pink-500/30' },
+              { icon: '🔒', title: 'Secure Downloads', desc: 'Download limits per purchase, signed URLs, and automatic access management. Built-in buyer protection.', color: 'from-violet-500/20 to-purple-500/20', border: 'border-violet-500/30' },
+            ].map((f, i) => (
+              <div key={f.title} className={`card card-hover p-6 relative overflow-hidden group border ${f.border} animate-fade-in delay-${Math.min((i+1)*100, 300)}`}>
+                <div className={`absolute inset-0 bg-gradient-to-br ${f.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                <div className="relative z-10">
+                  <span className="text-3xl mb-4 block">{f.icon}</span>
+                  <h3 className="font-semibold text-white text-base mb-2">{f.title}</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── How it Works ──────────────────────────────────────── */}
+      <section className="section-shell-tight">
+        <div className="max-w-4xl mx-auto">
+          <div className="section-intro">
+            <span className="section-kicker text-amber-300">How it works</span>
+            <h2 className="section-title">From signup to your first sale in 3 steps</h2>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-6">
+            {[
+              { step: '01', title: 'Create your account', desc: 'Sign up free. You instantly get zynovexa.com/yourhandle — your unique creator page.', icon: '🚀' },
+              { step: '02', title: 'Upload your products', desc: 'Add digital products, courses, or templates. Set your price, upload files, and publish.', icon: '📦' },
+              { step: '03', title: 'Share & earn', desc: 'Share your link everywhere. Fans buy directly. Money lands in your account minus a small platform fee.', icon: '💰' },
+            ].map((s, i) => (
+              <div key={s.step} className={`text-center p-6 animate-fade-in delay-${(i+1)*100}`}>
+                <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-2xl" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15))', border: '1px solid rgba(99,102,241,0.25)' }}>
+                  {s.icon}
+                </div>
+                <div className="text-xs font-bold text-purple-400 mb-2">STEP {s.step}</div>
+                <h3 className="text-lg font-bold text-white mb-2">{s.title}</h3>
+                <p className="text-sm text-slate-400">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Platform Fee Comparison ───────────────────────────── */}
+      <section className="section-shell-tight">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="section-intro">
+            <span className="section-kicker text-green-300">Low platform fee</span>
+            <h2 className="section-title">Keep more of what you earn</h2>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { plan: 'Free / Basic', fee: '5%', desc: 'Get started at zero cost' },
+              { plan: 'Pro', fee: '3%', desc: 'For serious creators' },
+              { plan: 'Business', fee: '2%', desc: 'Maximum earnings' },
+            ].map(p => (
+              <div key={p.plan} className="card p-5">
+                <p className="text-3xl font-black text-white">{p.fee}</p>
+                <p className="text-sm font-semibold text-purple-400 mt-1">{p.plan}</p>
+                <p className="text-xs text-slate-500 mt-1">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-slate-500 mt-4">No hidden fees. No monthly minimums. You only pay when you sell.</p>
         </div>
       </section>
 

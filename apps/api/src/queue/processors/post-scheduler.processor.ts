@@ -2,12 +2,16 @@ import { Process, Processor, OnQueueFailed, OnQueueCompleted } from '@nestjs/bul
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PostsService } from '../../posts/posts.service';
 
 @Processor('post-scheduler')
 export class PostSchedulerProcessor {
   private readonly logger = new Logger(PostSchedulerProcessor.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private postsService: PostsService,
+  ) {}
 
   @Process('publish')
   async handlePublish(job: Job<{ postId: string; userId: string }>) {
@@ -16,7 +20,6 @@ export class PostSchedulerProcessor {
 
     const post = await this.prisma.post.findFirst({
       where: { id: postId, userId },
-      include: { accounts: { include: { socialAccount: true } } },
     });
 
     if (!post) {
@@ -28,49 +31,8 @@ export class PostSchedulerProcessor {
       return { skipped: true };
     }
 
-    // Build publish results per platform
-    const publishResults: Record<string, any> = {};
-    for (const platform of post.platforms) {
-      // In production, each platform adapter would handle the actual API call
-      // For now, we mark as published with simulated data
-      publishResults[platform] = {
-        success: true,
-        publishedAt: new Date().toISOString(),
-        platformPostId: `sim_${platform.toLowerCase()}_${Date.now()}`,
-      };
-    }
-
-    // Update post status
-    await this.prisma.post.update({
-      where: { id: postId },
-      data: {
-        status: 'PUBLISHED',
-        publishedAt: new Date(),
-        publishResults,
-      },
-    });
-
-    // Update PostAccount records
-    for (const pa of post.accounts) {
-      await this.prisma.postAccount.update({
-        where: { id: pa.id },
-        data: {
-          status: 'PUBLISHED',
-          publishedAt: new Date(),
-          publishedUrl: `https://${pa.socialAccount.platform.toLowerCase()}.com/p/sim_${Date.now()}`,
-        },
-      });
-    }
-
-    // Create notification
-    await this.prisma.notification.create({
-      data: {
-        userId,
-        title: 'Post Published',
-        message: `Your post "${post.title || post.caption.slice(0, 40)}..." has been published to ${post.platforms.join(', ')}.`,
-        type: 'SUCCESS',
-      },
-    });
+    // Delegate to PostsService which handles real platform API calls (YouTube upload, etc.)
+    const updatedPost = await this.postsService.publish(postId, userId, { suppressRecoverableError: true });
 
     // Update scheduled job record
     await this.prisma.scheduledJob.updateMany({
@@ -79,7 +41,7 @@ export class PostSchedulerProcessor {
     });
 
     this.logger.log(`Post ${postId} published successfully`);
-    return { postId, platforms: post.platforms, publishResults };
+    return { postId, platforms: post.platforms, publishResults: updatedPost.publishResults };
   }
 
   @OnQueueFailed()

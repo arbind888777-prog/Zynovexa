@@ -22,6 +22,14 @@ import { MonetizationModule } from './monetization/monetization.module';
 import { VideoAnalyticsModule } from './video-analytics/video-analytics.module';
 import { SeoModule } from './seo/seo.module';
 import { CommerceModule } from './commerce/commerce.module';
+import { TrustModule } from './trust/trust.module';
+import { GrowthCoachModule } from './growth-coach/growth-coach.module';
+import { IntegrationsModule } from './integrations/integrations.module';
+import { GamificationModule } from './gamification/gamification.module';
+import { RetentionModule } from './retention/retention.module';
+import { AiEngineModule } from './ai-engine/ai-engine.module';
+import { ProAnalyticsModule } from './pro-analytics/pro-analytics.module';
+import { SupabaseModule } from './supabase/supabase.module';
 import * as net from 'net';
 
 const appLogger = new Logger('AppModule');
@@ -56,6 +64,7 @@ async function isRedisAvailable(host = 'localhost', port = 6379): Promise<boolea
 
     // Core
     PrismaModule,
+    SupabaseModule,
 
     // Infrastructure (QueueModule loaded dynamically — see onModuleInit)
     MailModule,
@@ -77,6 +86,15 @@ async function isRedisAvailable(host = 'localhost', port = 6379): Promise<boolea
     SeoModule,
     AdminModule,
     HealthModule,
+
+    // New Growth Modules
+    TrustModule,
+    GrowthCoachModule,
+    IntegrationsModule,
+    GamificationModule,
+    RetentionModule,
+    AiEngineModule,
+    ProAnalyticsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

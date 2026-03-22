@@ -8,16 +8,19 @@ version: '3.9'
 #
 # Required: set DOMAIN variable in .env file at project root
 #   DOMAIN=yourdomain.com
-#   POSTGRES_PASSWORD=your_secure_password
+#   NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_public_anon_key
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
 
-  # ─── PostgreSQL ─────────────────────────────────────────────────────────────
-  postgres:
+  # ─── Local Database (optional) ─────────────────────────────────────────────
+  localdb:
     image: postgres:15-alpine
-    container_name: zynovexa-postgres
+    container_name: zynovexa-localdb
     restart: unless-stopped
+    profiles:
+      - local-db
     environment:
       POSTGRES_DB: zynovexa
       POSTGRES_USER: zynovexa
@@ -73,12 +76,9 @@ services:
       - ./apps/api/.env
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://zynovexa:${POSTGRES_PASSWORD:-zynovexa_secure_2026}@postgres:5432/zynovexa
       REDIS_URL: redis://redis:6379
       PORT: 3000
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
@@ -103,6 +103,8 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://${DOMAIN:-localhost}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     container_name: zynovexa-web
     restart: unless-stopped
     expose:
@@ -112,6 +114,8 @@ services:
       PORT: 3001
       HOSTNAME: '0.0.0.0'
       NEXT_PUBLIC_API_URL: https://${DOMAIN:-localhost}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     depends_on:
       api:
         condition: service_healthy

@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Delete, Body, Request, UseGuards, Patch } from '@nestjs/common';
+import { Controller, Get, Put, Delete, Body, Request, UseGuards, Patch, Query, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { IsOptional, IsString, IsArray } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -30,6 +30,21 @@ export class UsersController {
   @ApiOperation({ summary: 'Get dashboard overview stats' })
   getDashboardStats(@Request() req) {
     return this.usersService.getDashboardStats(req.user.id);
+  }
+
+  @Get('admin/list')
+  @ApiOperation({ summary: 'Admin: list users with plan and last login info' })
+  getAdminUsers(
+    @Request() req,
+    @Query('q') query?: string,
+    @Query('plan') plan?: string,
+    @Query('role') role?: string,
+  ) {
+    if (req.user.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin access required');
+    }
+
+    return this.usersService.getAdminUsers({ query, plan, role });
   }
 
   @Put('me')

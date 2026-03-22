@@ -1,6 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { usersApi, analyticsApi, aiApi, postsApi, unwrapApiResponse } from '@/lib/api';
+import { usersApi, analyticsApi, aiApi, postsApi, commerceApi, unwrapApiResponse } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import Link from 'next/link';
 
@@ -262,6 +262,11 @@ export default function DashboardPage() {
     queryKey: ['dashboard-failed-posts'],
     queryFn: () => postsApi.getAll({ status: 'FAILED', page: 1, limit: 3 }).then(unwrapApiResponse),
   });
+  const { data: revenueData } = useQuery({
+    queryKey: ['dashboard-revenue'],
+    queryFn: () => commerceApi.getRevenue(30).then(unwrapApiResponse),
+    retry: false,
+  });
   const { data: bestTimeResult } = useQuery({
     queryKey: ['dashboard-best-time'],
     queryFn: () => aiApi.getBestTimes({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' }).then(unwrapApiResponse),
@@ -352,6 +357,45 @@ export default function DashboardPage() {
         <StatCard icon="❤️" label="Engagements" value={overview?.totalEngagements?.toLocaleString()} sub={`${overview?.avgEngagementRate}% rate`} color="#ec4899" />
         <StatCard icon="👥" label="Total Followers" value={overview?.totalFollowers?.toLocaleString()} sub={`${stats?.connectedAccounts} platforms`} color="#10b981" />
       </div>
+      )}
+
+      {/* Commerce Stats */}
+      {revenueData && (revenueData as any).grossRevenue > 0 && (
+        <div>
+          <h2 className="text-lg font-bold text-white mb-4">💰 Commerce Overview (Last 30 Days)</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard icon="💰" label="Gross Revenue" value={`₹${((revenueData as any).grossRevenue / 100).toLocaleString()}`} sub={`${(revenueData as any).orderCount} orders`} color="#10b981" />
+            <StatCard icon="📦" label="Product Sales" value={`₹${((revenueData as any).productRevenue / 100).toLocaleString()}`} color="#6366f1" />
+            <StatCard icon="🎓" label="Course Sales" value={`₹${((revenueData as any).courseRevenue / 100).toLocaleString()}`} color="#f59e0b" />
+            <StatCard icon="🧾" label="Avg Order" value={`₹${((revenueData as any).averageOrderValue / 100).toLocaleString()}`} color="#ec4899" />
+          </div>
+        </div>
+      )}
+
+      {/* Creator Handle URL */}
+      {user?.handle && (
+        <div className="dashboard-surface dashboard-soft-float p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-white">🔗 Your Public Store</h2>
+              <p className="text-sm text-slate-400 mt-1">
+                Share this link with your audience:
+                <a href={`/${user.handle}`} target="_blank" rel="noreferrer" className="ml-2 text-purple-400 hover:text-purple-300 font-mono">
+                  zynovexa.com/{user.handle}
+                </a>
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/${user.handle}`;
+                navigator.clipboard.writeText(url);
+              }}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-colors"
+            >
+              📋 Copy Link
+            </button>
+          </div>
+        </div>
       )}
 
       {/* AI Usage + Quick Actions */}

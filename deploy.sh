@@ -71,6 +71,8 @@ if [ "$SKIP_BUILD" = false ]; then
 
   docker-compose -f "$COMPOSE_FILE" build \
     --build-arg NEXT_PUBLIC_API_URL="https://${DOMAIN:-localhost}" \
+    --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-}" \
+    --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" \
     --parallel
 
   ok "Docker images built"
@@ -85,16 +87,27 @@ ok "Old containers stopped"
 
 # ── Start services ───────────────────────────────────────────────────────────
 log "Starting services..."
-docker-compose -f "$COMPOSE_FILE" up -d postgres redis
-log "Waiting 15s for database to be ready..."
-sleep 15
+
+LOCAL_DB_ENABLED=false
+case ",${COMPOSE_PROFILES:-}," in
+  *,local-db,*) LOCAL_DB_ENABLED=true ;;
+esac
+
+if [ "$LOCAL_DB_ENABLED" = true ]; then
+  log "Local database profile detected; starting localdb and redis..."
+  docker-compose -f "$COMPOSE_FILE" --profile local-db up -d localdb redis
+  log "Waiting 15s for local database to be ready..."
+  sleep 15
+else
+  log "External database detected; starting redis only..."
+  docker-compose -f "$COMPOSE_FILE" up -d redis
+fi
 
 # ── Run DB migrations ────────────────────────────────────────────────────────
 if [ "$SKIP_MIGRATE" = false ]; then
   log "Running database migrations..."
   docker-compose -f "$COMPOSE_FILE" run --rm \
-    -e DATABASE_URL="postgresql://zynovexa:${POSTGRES_PASSWORD:-zynovexa_secure_2026}@postgres:5432/zynovexa" \
-    api sh -c "npx prisma migrate deploy" || \
+    api sh -c 'if [ -n "$DIRECT_URL" ]; then export DATABASE_URL="$DIRECT_URL"; fi; npx prisma migrate deploy' || \
     warn "Migration step failed — API container will retry on startup"
   ok "Migrations applied"
 else

@@ -6,11 +6,17 @@ import { EmailProcessor } from './processors/email.processor';
 import { AnalyticsSyncProcessor } from './processors/analytics-sync.processor';
 import { QueueService } from './queue.service';
 import { QueueController } from './queue.controller';
+import { PostsModule } from '../posts/posts.module';
+import { AccountsModule } from '../accounts/accounts.module';
+import { VideoAnalyticsModule } from '../video-analytics/video-analytics.module';
 
 const logger = new Logger('QueueModule');
 
 @Module({
   imports: [
+    PostsModule,
+    AccountsModule,
+    VideoAnalyticsModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

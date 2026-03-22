@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import Stripe from 'stripe';
 import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
@@ -25,12 +26,20 @@ import {
 export class CommerceService {
   private stripe: Stripe;
 
-  constructor(private prisma: PrismaService, private config: ConfigService) {
+  constructor(private prisma: PrismaService, private config: ConfigService, private jwt: JwtService) {
     const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY');
     if (!stripeKey) {
       throw new Error('STRIPE_SECRET_KEY is required for commerce module');
     }
     this.stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
+  }
+
+  /** Calculate platform fee based on creator's plan */
+  private async getPlatformFeePercent(creatorId: string): Promise<number> {
+    const user = await this.prisma.user.findUnique({ where: { id: creatorId }, select: { plan: true } });
+    if (!user) return 5;
+    const planFeature = await this.prisma.planFeature.findUnique({ where: { plan: user.plan } });
+    return planFeature?.platformFeePercent ?? 5;
   }
 
   async getOrCreateStore(ownerId: string) {
@@ -98,12 +107,15 @@ export class CommerceService {
         slug: this.slugify(dto.slug),
         description: dto.description,
         shortDescription: dto.shortDescription,
+        type: dto.type || 'DIGITAL',
         price: dto.price,
+        originalPrice: dto.originalPrice,
         currency: (dto.currency || store.currency).toLowerCase(),
         status: dto.status || 'DRAFT',
         assetUrl: dto.assetUrl,
         previewUrl: dto.previewUrl,
         coverImageUrl: dto.coverImageUrl,
+        tags: dto.tags || [],
         publishedAt: dto.status === 'PUBLISHED' ? new Date() : null,
       },
     });
@@ -122,12 +134,15 @@ export class CommerceService {
         slug: dto.slug ? this.slugify(dto.slug) : undefined,
         description: dto.description,
         shortDescription: dto.shortDescription,
+        type: dto.type,
         price: dto.price,
+        originalPrice: dto.originalPrice,
         currency: dto.currency?.toLowerCase(),
         status: dto.status,
         assetUrl: dto.assetUrl,
         previewUrl: dto.previewUrl,
         coverImageUrl: dto.coverImageUrl,
+        tags: dto.tags,
         publishedAt: dto.status === 'PUBLISHED' && !existing.publishedAt ? new Date() : existing.publishedAt,
       },
     });
@@ -259,6 +274,87 @@ export class CommerceService {
     return { message: 'Lesson deleted' };
   }
 
+  async getPublicStore(storeSlug: string) {
+    const store = await this.prisma.store.findUnique({
+      where: { slug: storeSlug, isPublished: true },
+      include: {
+        owner: { select: { name: true, avatarUrl: true, bio: true } },
+        products: {
+          where: { status: 'PUBLISHED' },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, title: true, slug: true, description: true, price: true, coverImageUrl: true, status: true, createdAt: true },
+        },
+        courses: {
+          where: { status: 'PUBLISHED' },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, title: true, slug: true, description: true, price: true, coverImageUrl: true, status: true, createdAt: true },
+        },
+      },
+    });
+    if (!store) throw new NotFoundException('Store not found');
+    return { store, products: store.products, courses: store.courses };
+  }
+
+  async getPublicStoreByHandle(handle: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { handle },
+      select: {
+        id: true, name: true, handle: true, avatarUrl: true, bio: true,
+        socialLinks: true, isVerified: true,
+        ownedStore: {
+          include: {
+            products: {
+              where: { status: 'PUBLISHED' },
+              orderBy: { createdAt: 'desc' },
+              select: {
+                id: true, title: true, slug: true, description: true, shortDescription: true,
+                type: true, price: true, originalPrice: true, coverImageUrl: true,
+                status: true, tags: true, totalSales: true, createdAt: true,
+              },
+            },
+            courses: {
+              where: { status: 'PUBLISHED' },
+              orderBy: { createdAt: 'desc' },
+              select: {
+                id: true, title: true, slug: true, description: true, shortDescription: true,
+                price: true, coverImageUrl: true, status: true, createdAt: true,
+                _count: { select: { lessons: true, enrollments: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!user || !user.ownedStore || !user.ownedStore.isPublished) {
+      throw new NotFoundException('Creator store not found');
+    }
+    return {
+      creator: {
+        name: user.name,
+        handle: user.handle,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        socialLinks: user.socialLinks,
+        isVerified: user.isVerified,
+      },
+      store: user.ownedStore,
+      products: user.ownedStore.products,
+      courses: user.ownedStore.courses,
+    };
+  }
+
+  async getPublicProductById(productId: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, status: 'PUBLISHED', store: { isPublished: true } },
+      include: {
+        store: { select: { id: true, name: true, slug: true } },
+        creator: { select: { id: true, name: true } },
+      },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    return product;
+  }
+
   async getPublicProduct(storeSlug: string, productSlug: string) {
     const product = await this.prisma.product.findFirst({
       where: {
@@ -345,7 +441,7 @@ export class CommerceService {
           },
         },
       }],
-      success_url: `${frontendUrl}/dashboard/buyer?success=true`,
+      success_url: `${frontendUrl}/purchases?success=true`,
       cancel_url: `${frontendUrl}/store/${item.store.slug}/${dto.itemType === 'PRODUCT' ? 'products' : 'courses'}/${item.slug}?canceled=true`,
       metadata: {
         itemType: dto.itemType,
@@ -356,7 +452,138 @@ export class CommerceService {
       },
     });
 
-    return { url: session.url, sessionId: session.id };
+    return { url: session.url, sessionId: session.id, provider: 'stripe' };
+  }
+
+  async createRazorpayCheckout(userId: string, dto: CreateCommerceCheckoutDto) {
+    const buyer = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, name: true } });
+    if (!buyer) throw new NotFoundException('Buyer not found');
+
+    const item = await this.resolveCheckoutItem(dto);
+    if (item.creatorId === userId) {
+      throw new BadRequestException('You cannot purchase your own item');
+    }
+
+    const existingAccess = dto.itemType === 'PRODUCT'
+      ? await this.prisma.productAccess.findUnique({ where: { productId_buyerId: { productId: item.id, buyerId: userId } } })
+      : await this.prisma.courseEnrollment.findUnique({ where: { courseId_buyerId: { courseId: item.id, buyerId: userId } } });
+    if (existingAccess) throw new BadRequestException('You already own this item');
+
+    const razorpayKeyId = this.config.get<string>('RAZORPAY_KEY_ID');
+    const razorpaySecret = this.config.get<string>('RAZORPAY_KEY_SECRET');
+
+    if (!razorpayKeyId || !razorpaySecret) {
+      throw new BadRequestException('Razorpay not configured — use Stripe checkout instead');
+    }
+
+    // Create Razorpay order via API
+    const Razorpay = require('razorpay');
+    const rzp = new Razorpay({ key_id: razorpayKeyId, key_secret: razorpaySecret });
+
+    const order = await rzp.orders.create({
+      amount: item.price, // Razorpay expects paisa for INR or smallest unit
+      currency: (item.currency || 'INR').toUpperCase(),
+      receipt: `order_${Date.now()}`,
+      notes: {
+        itemType: dto.itemType,
+        itemId: item.id,
+        storeId: item.storeId,
+        creatorId: item.creatorId,
+        buyerId: userId,
+      },
+    });
+
+    return {
+      provider: 'razorpay',
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: razorpayKeyId,
+      buyerName: buyer.name,
+      buyerEmail: buyer.email,
+      itemTitle: item.title,
+      metadata: {
+        itemType: dto.itemType,
+        itemId: item.id,
+        storeId: item.storeId,
+        creatorId: item.creatorId,
+        buyerId: userId,
+      },
+    };
+  }
+
+  async handleRazorpayWebhook(body: any, signature: string) {
+    const razorpaySecret = this.config.get<string>('RAZORPAY_WEBHOOK_SECRET');
+    if (!razorpaySecret) throw new BadRequestException('Razorpay webhook secret not configured');
+
+    const crypto = require('crypto');
+    const expectedSignature = crypto.createHmac('sha256', razorpaySecret).update(JSON.stringify(body)).digest('hex');
+    if (expectedSignature !== signature) throw new BadRequestException('Invalid webhook signature');
+
+    if (body.event === 'payment.captured') {
+      const payment = body.payload?.payment?.entity;
+      if (!payment) return { received: true };
+
+      const notes = payment.notes || {};
+      if (!notes.itemId || !notes.buyerId || !notes.storeId || !notes.creatorId) return { received: true };
+
+      const item = notes.itemType === 'PRODUCT'
+        ? await this.prisma.product.findUnique({ where: { id: notes.itemId } })
+        : await this.prisma.course.findUnique({ where: { id: notes.itemId } });
+      if (!item) return { received: true };
+
+      // Calculate platform fee
+      const feePercent = await this.getPlatformFeePercent(notes.creatorId);
+      const totalAmount = payment.amount;
+      const platformFee = Math.round(totalAmount * feePercent / 100);
+      const sellerAmount = totalAmount - platformFee;
+
+      await this.prisma.$transaction(async (tx) => {
+        const purchase = await tx.commercePurchase.create({
+          data: {
+            storeId: notes.storeId,
+            creatorId: notes.creatorId,
+            buyerId: notes.buyerId,
+            stripeCheckoutSessionId: `razorpay_${payment.id}`,
+            razorpayOrderId: payment.order_id,
+            razorpayPayId: payment.id,
+            totalAmount,
+            platformFee,
+            sellerAmount,
+            currency: payment.currency || 'inr',
+            status: 'FULFILLED',
+            fulfilledAt: new Date(),
+          },
+        });
+
+        await tx.commercePurchaseItem.create({
+          data: {
+            purchaseId: purchase.id,
+            itemType: notes.itemType as 'PRODUCT' | 'COURSE',
+            productId: notes.itemType === 'PRODUCT' ? item.id : null,
+            courseId: notes.itemType === 'COURSE' ? item.id : null,
+            titleSnapshot: item.title,
+            priceSnapshot: item.price,
+          },
+        });
+
+        if (notes.itemType === 'PRODUCT') {
+          await tx.productAccess.upsert({
+            where: { productId_buyerId: { productId: item.id, buyerId: notes.buyerId } },
+            create: { productId: item.id, buyerId: notes.buyerId, purchaseId: purchase.id },
+            update: { purchaseId: purchase.id },
+          });
+        } else {
+          await tx.courseEnrollment.upsert({
+            where: { courseId_buyerId: { courseId: item.id, buyerId: notes.buyerId } },
+            create: { courseId: item.id, buyerId: notes.buyerId, purchaseId: purchase.id },
+            update: { purchaseId: purchase.id },
+          });
+        }
+      });
+    }
+
+    return { received: true };
   }
 
   async handleWebhook(rawBody: Buffer, signature: string) {
@@ -474,6 +701,44 @@ export class CommerceService {
     };
   }
 
+  async getCreatorBuyers(creatorId: string, page: number) {
+    const take = 20;
+    const skip = (page - 1) * take;
+
+    const [purchases, totalCount] = await Promise.all([
+      this.prisma.commercePurchase.findMany({
+        where: { creatorId, status: { in: ['PAID', 'FULFILLED'] } },
+        include: {
+          buyer: { select: { name: true } }, // privacy: no email/phone
+          items: { select: { titleSnapshot: true, priceSnapshot: true, itemType: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.commercePurchase.count({
+        where: { creatorId, status: { in: ['PAID', 'FULFILLED'] } },
+      }),
+    ]);
+
+    return {
+      purchases: purchases.map(p => ({
+        id: p.id,
+        buyerName: p.buyer.name,
+        items: p.items,
+        totalAmount: p.totalAmount,
+        platformFee: p.platformFee,
+        sellerAmount: p.sellerAmount,
+        currency: p.currency,
+        status: p.status,
+        createdAt: p.createdAt,
+      })),
+      total: totalCount,
+      page,
+      totalPages: Math.ceil(totalCount / take),
+    };
+  }
+
   async getProductDownload(productId: string, userId: string) {
     const access = await this.prisma.productAccess.findUnique({
       where: { productId_buyerId: { productId, buyerId: userId } },
@@ -481,9 +746,14 @@ export class CommerceService {
     });
     if (!access) throw new ForbiddenException('Purchase required');
 
+    // Enforce download limit
+    if (access.downloadCount >= access.downloadLimit) {
+      throw new BadRequestException(`Download limit reached (${access.downloadLimit} downloads). Contact support for help.`);
+    }
+
     await this.prisma.productAccess.update({
       where: { id: access.id },
-      data: { lastDownloadedAt: new Date() },
+      data: { lastDownloadedAt: new Date(), downloadCount: { increment: 1 } },
     });
 
     return {
@@ -491,6 +761,8 @@ export class CommerceService {
       title: access.product.title,
       assetUrl: access.product.assetUrl,
       previewUrl: access.product.previewUrl,
+      downloadsUsed: access.downloadCount + 1,
+      downloadsRemaining: access.downloadLimit - access.downloadCount - 1,
     };
   }
 
@@ -547,7 +819,17 @@ export class CommerceService {
       update: { lastViewedAt: new Date() },
     });
 
-    return lesson;
+    // Replace raw videoUrl with a time-limited signed token
+    const result: any = { ...lesson };
+    if (lesson.videoUrl) {
+      const videoToken = await this.jwt.signAsync(
+        { lessonId: lesson.id, userId, purpose: 'video-access' },
+        { secret: this.config.get('JWT_ACCESS_SECRET'), expiresIn: '4h' },
+      );
+      result.videoUrl = `/api/commerce/video/${lesson.id}?token=${videoToken}`;
+    }
+
+    return result;
   }
 
   async updateLessonProgress(courseId: string, lessonId: string, userId: string, dto: UpdateLessonProgressDto) {
@@ -583,6 +865,32 @@ export class CommerceService {
     });
 
     return { progressPercent };
+  }
+
+  async resolveVideoUrl(lessonId: string, token: string): Promise<string> {
+    let payload: { lessonId: string; userId: string; purpose: string };
+    try {
+      payload = await this.jwt.verifyAsync(token, {
+        secret: this.config.get('JWT_ACCESS_SECRET'),
+      });
+    } catch {
+      throw new ForbiddenException('Video access token expired or invalid');
+    }
+
+    if (payload.purpose !== 'video-access' || payload.lessonId !== lessonId) {
+      throw new ForbiddenException('Invalid video token');
+    }
+
+    const lesson = await this.prisma.courseLesson.findUnique({ where: { id: lessonId } });
+    if (!lesson || !lesson.videoUrl) throw new NotFoundException('Lesson video not found');
+
+    // Verify enrollment still exists
+    const enrollment = await this.prisma.courseEnrollment.findFirst({
+      where: { courseId: lesson.courseId, buyerId: payload.userId },
+    });
+    if (!enrollment) throw new ForbiddenException('Purchase required');
+
+    return lesson.videoUrl;
   }
 
   private async resolveCheckoutItem(dto: CreateCommerceCheckoutDto) {
@@ -625,6 +933,12 @@ export class CommerceService {
       : await this.prisma.course.findUnique({ where: { id: metadata.itemId } });
     if (!item) throw new NotFoundException('Purchased item not found');
 
+    // Calculate platform fee
+    const feePercent = await this.getPlatformFeePercent(metadata.creatorId);
+    const totalAmount = session.amount_total || item.price;
+    const platformFee = Math.round(totalAmount * feePercent / 100);
+    const sellerAmount = totalAmount - platformFee;
+
     await this.prisma.$transaction(async (tx) => {
       const purchase = existing
         ? await tx.commercePurchase.update({
@@ -632,7 +946,9 @@ export class CommerceService {
             data: {
               stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : existing.stripePaymentIntentId,
               stripeCustomerId: typeof session.customer === 'string' ? session.customer : existing.stripeCustomerId,
-              totalAmount: session.amount_total || existing.totalAmount,
+              totalAmount,
+              platformFee,
+              sellerAmount,
               currency: session.currency || existing.currency,
               status: 'FULFILLED',
               fulfilledAt: new Date(),
@@ -646,7 +962,9 @@ export class CommerceService {
               stripeCheckoutSessionId: session.id,
               stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
               stripeCustomerId: typeof session.customer === 'string' ? session.customer : null,
-              totalAmount: session.amount_total || item.price,
+              totalAmount,
+              platformFee,
+              sellerAmount,
               currency: session.currency || item.currency,
               status: 'FULFILLED',
               fulfilledAt: new Date(),
@@ -672,6 +990,11 @@ export class CommerceService {
           where: { productId_buyerId: { productId: item.id, buyerId: metadata.buyerId } },
           create: { productId: item.id, buyerId: metadata.buyerId, purchaseId: purchase.id },
           update: { purchaseId: purchase.id },
+        });
+        // Update product sales stats
+        await tx.product.update({
+          where: { id: item.id },
+          data: { totalSales: { increment: 1 }, totalRevenue: { increment: totalAmount } },
         });
       } else {
         await tx.courseEnrollment.upsert({

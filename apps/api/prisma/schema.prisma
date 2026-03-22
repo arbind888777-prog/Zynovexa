@@ -6,6 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
@@ -90,6 +91,14 @@ enum CommerceStatus {
   ARCHIVED
 }
 
+enum ProductType {
+  COURSE
+  DIGITAL
+  TEMPLATE
+  EBOOK
+  COACHING
+}
+
 enum CommerceItemType {
   PRODUCT
   COURSE
@@ -110,6 +119,7 @@ model User {
   id                  String   @id @default(cuid())
   email               String   @unique
   name                String
+  handle              String?  @unique  // e.g. techmaster436 — public store URL
   avatarUrl           String?
   password            String?
   provider            String   @default("email")
@@ -118,6 +128,8 @@ model User {
   niche               String?
   bio                 String?
   website             String?
+  socialLinks         Json?    // { instagram, youtube, tiktok, twitter }
+  razorpayAccountId   String?  // For Razorpay Route split payments
   onboardingCompleted Boolean  @default(false)
   isVerified          Boolean  @default(false)
   isActive            Boolean  @default(true)
@@ -147,6 +159,7 @@ model User {
   buyerPurchases  CommercePurchase[] @relation("BuyerPurchases")
   productAccesses ProductAccess[]
   courseEnrollments CourseEnrollment[]
+  streak            UserStreak?
 
   @@map("users")
 }
@@ -195,28 +208,30 @@ model SocialAccount {
 }
 
 model Post {
-  id             String     @id @default(cuid())
-  userId         String
-  title          String?
-  caption        String
-  mediaUrls      String[]
-  mediaType      MediaType  @default(TEXT)
-  platforms      Platform[]
-  status         PostStatus @default(DRAFT)
-  scheduledAt    DateTime?
-  publishedAt    DateTime?
-  publishResults Json?
-  aiGenerated    Boolean    @default(false)
-  viralScore     Float      @default(0)
-  hashtags       String[]
-  location       String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id                String     @id @default(cuid())
+  userId            String
+  title             String?
+  caption           String
+  mediaUrls         String[]
+  mediaType         MediaType  @default(TEXT)
+  platforms         Platform[]
+  status            PostStatus @default(DRAFT)
+  scheduledAt       DateTime?
+  publishedAt       DateTime?
+  publishResults    Json?
+  aiGenerated       Boolean    @default(false)
+  viralScore        Float      @default(0)
+  hashtags          String[]
+  location          String?
+  attachedProductId String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  analytics     Analytics[]
-  accounts      PostAccount[]
-  videoMetadata VideoMetadata[]
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachedProduct Product?        @relation(fields: [attachedProductId], references: [id], onDelete: SetNull)
+  analytics       Analytics[]
+  accounts        PostAccount[]
+  videoMetadata   VideoMetadata[]
 
   @@map("posts")
 }
@@ -493,12 +508,18 @@ model Product {
   slug             String
   description      String
   shortDescription String?
-  price            Int
+  type             ProductType     @default(DIGITAL)
+  price            Int             // in paise/cents (smallest unit)
+  originalPrice    Int?            // for showing discount
   currency         String          @default("usd")
   status           CommerceStatus  @default(DRAFT)
   assetUrl         String
-  previewUrl       String?
+  previewUrl       String?         // free preview file
   coverImageUrl    String?
+  stock            Int?            // null = unlimited, 0 = out of stock
+  tags             String[]
+  totalSales       Int             @default(0)
+  totalRevenue     Int             @default(0)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   publishedAt      DateTime?
@@ -507,6 +528,7 @@ model Product {
   creator       User                   @relation("CreatorProducts", fields: [creatorId], references: [id], onDelete: Cascade)
   purchaseItems CommercePurchaseItem[]
   accesses      ProductAccess[]
+  attachedPosts Post[]
 
   @@unique([storeId, slug])
   @@index([creatorId, status])
@@ -571,11 +593,16 @@ model CommercePurchase {
   stripeCheckoutSessionId String        @unique
   stripePaymentIntentId  String?
   stripeCustomerId       String?
+  razorpayOrderId        String?
+  razorpayPayId          String?
   totalAmount            Int
+  platformFee            Int            @default(0)  // 5% by default
+  sellerAmount           Int            @default(0)  // totalAmount - platformFee
   currency               String         @default("usd")
   status                 PurchaseStatus @default(PENDING)
   fulfilledAt            DateTime?
   refundedAt             DateTime?
+  refundReason           String?
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
 
@@ -617,6 +644,8 @@ model ProductAccess {
   purchaseId       String
   grantedAt        DateTime @default(now())
   lastDownloadedAt DateTime?
+  downloadCount    Int      @default(0)
+  downloadLimit    Int      @default(5)
 
   product  Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
   buyer    User             @relation(fields: [buyerId], references: [id], onDelete: Cascade)
@@ -656,4 +685,52 @@ model CourseLessonProgress {
 
   @@unique([enrollmentId, lessonId])
   @@map("course_lesson_progress")
+}
+
+// ─── Gamification ────────────────────────────────────────────────────────────
+
+model UserStreak {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  totalXp        Int      @default(0)
+  level          Int      @default(1)
+  lastActiveDate DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badges UserBadge[]
+
+  @@map("user_streaks")
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  streakId  String
+  badgeKey  String
+  earnedAt  DateTime @default(now())
+
+  streak UserStreak @relation(fields: [streakId], references: [id], onDelete: Cascade)
+
+  @@unique([streakId, badgeKey])
+  @@map("user_badges")
+}
+
+// ─── Plan Features ───────────────────────────────────────────────────────────
+
+model PlanFeature {
+  id                  String  @id @default(cuid())
+  plan                Plan    @unique
+  maxSocialAccounts   Int     // 3, 5, 10, 25, -1 = unlimited
+  maxScheduledPosts   Int     // per month
+  aiContentGeneration Boolean @default(false)
+  advancedAnalytics   Boolean @default(false)
+  teamMembers         Int     @default(1)
+  customStorefront    Boolean @default(false)
+  prioritySupport     Boolean @default(false)
+  platformFeePercent  Float   @default(5.0)  // 5.0 = 5%
+
+  @@map("plan_features")
 }

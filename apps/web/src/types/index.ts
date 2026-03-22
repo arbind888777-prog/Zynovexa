@@ -11,6 +11,8 @@ export interface User {
   avatarUrl?: string;
   bio?: string;
   website?: string;
+  handle?: string;
+  socialLinks?: Record<string, string>;
   role: Role;
   plan: Plan;
   isVerified: boolean;

@@ -5,11 +5,11 @@
 ```
 Internet → Nginx (80/443) → Next.js Web  (port 3001)
                           → NestJS API   (port 3000)
-                          → PostgreSQL   (internal)
+                          → Supabase DB  (external)
                           → Redis        (internal)
 ```
 
-All services run in Docker containers on the VPS. Nginx acts as a reverse proxy and handles SSL termination.
+App and Redis services run in Docker containers on the VPS. Nginx acts as a reverse proxy and handles SSL termination. Database access is expected to come from Supabase or another external database provider supported by the app.
 
 ---
 
@@ -72,7 +72,9 @@ Minimum required values:
 
 ```env
 DOMAIN=yourdomain.com
-POSTGRES_PASSWORD=change_this_to_strong_password
+COMPOSE_PROFILES=
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_public_anon_key
 ```
 
 ### API `.env` (NestJS configuration)
@@ -88,7 +90,12 @@ Fill in all required values (see `.env.example` at root for reference):
 NODE_ENV=production
 PORT=3000
 
-DATABASE_URL=postgresql://zynovexa:POSTGRES_PASSWORD@postgres:5432/zynovexa
+DATABASE_URL=postgresql://postgres:YOUR_SUPABASE_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require
+DIRECT_URL=postgresql://postgres:YOUR_SUPABASE_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_ANON_KEY=your_public_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_STORAGE_BUCKET=media
 REDIS_URL=redis://redis:6379
 
 JWT_ACCESS_SECRET=generate_a_64_char_random_string_here
@@ -110,6 +117,8 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GOOGLE_CALLBACK_URL=https://yourdomain.com/api/auth/google/callback
 ```
+
+For local non-Docker web development, create `apps/web/.env.local` with the same public Supabase values.
 
 > **Tip:** Generate secure secrets with: `openssl rand -base64 48`
 
@@ -162,8 +171,8 @@ chmod +x deploy.sh
 The script will:
 1. Pull latest code from git
 2. Build Docker images for API and Web
-3. Start PostgreSQL and Redis
-4. Run Prisma database migrations
+3. Start Redis and connect to your external database
+4. Run Prisma database migrations using `DIRECT_URL` when available
 5. Start API, Web, and Nginx services
 6. Perform health checks
 
@@ -227,7 +236,9 @@ docker exec -it zynovexa-api npx prisma studio
 
 ### Backup database
 ```bash
-docker exec zynovexa-postgres pg_dump -U zynovexa zynovexa > backup_$(date +%Y%m%d).sql
+PGPASSWORD=YOUR_SUPABASE_PASSWORD pg_dump \
+  --dbname="postgresql://postgres@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require" \
+  > backup_$(date +%Y%m%d).sql
 ```
 
 ### Stop all services
@@ -243,7 +254,7 @@ If you prefer running apps directly with PM2 (Node.js only, no Docker for app co
 
 ### Prerequisites
 - Node.js 20 LTS installed
-- PostgreSQL 15 and Redis 7 installed on system
+- Supabase or another supported external database provider, plus Redis 7 available
 - PM2 installed globally: `npm install -g pm2`
 
 ### Steps
@@ -296,7 +307,7 @@ zynovexa/
 ├── docker-compose.prod.yml   ← PRODUCTION deployment ← USE THIS
 ├── ecosystem.config.cjs      ← PM2 config (alternative to Docker)
 ├── deploy.sh                 ← Automated deployment script
-├── .env                      ← Root env (DOMAIN, POSTGRES_PASSWORD)
+├── .env                      ← Root env (DOMAIN, optional COMPOSE_PROFILES)
 └── .env.example              ← Template for environment variables
 ```
 
@@ -319,7 +330,7 @@ ufw enable
 |---------|----------|
 | Container won't start | `docker logs zynovexa-api` or `docker logs zynovexa-web` |
 | SSL cert error | Verify DNS points to VPS, rerun certbot step |
-| Database connection refused | Check `apps/api/.env` DATABASE_URL, ensure postgres container is healthy |
+| Database connection refused | Check `apps/api/.env` DATABASE_URL / DIRECT_URL and verify Supabase network access |
 | Port 80/443 in use | `ss -tlnp \| grep :80` — stop conflicting service |
 | API 502 from Nginx | API container not healthy yet — wait 60s and check `docker ps` |
 | Next.js build fails | Ensure `NEXT_PUBLIC_API_URL` is set in `docker-compose.prod.yml` |

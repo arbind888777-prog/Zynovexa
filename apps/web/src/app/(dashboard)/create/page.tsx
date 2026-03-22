@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { postsApi, aiApi, uploadsApi, accountsApi, unwrapApiResponse } from '@/lib/api';
+import { postsApi, aiApi, uploadsApi, accountsApi, commerceApi, unwrapApiResponse } from '@/lib/api';
 import MediaUploader from '@/components/MediaUploader';
 import TagsInput, { formatTagsAsInput, parseTagValue } from '@/components/TagsInput';
 import { toast } from 'sonner';
@@ -139,6 +139,7 @@ export default function CreatePostPage() {
   const [uploading, setUploading] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaLink, setMediaLink] = useState('');
+  const [attachedProductId, setAttachedProductId] = useState<string | null>(null);
 
   const { data: connectedAccounts, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ['accounts'],
@@ -147,6 +148,14 @@ export default function CreatePostPage() {
   const connectedPlatforms = new Set<string>(
     (connectedAccounts ?? []).map((a: any) => a.platform),
   );
+
+  const { data: creatorProducts } = useQuery({
+    queryKey: ['creator-products'],
+    queryFn: () => commerceApi.getCreatorProducts().then(r => {
+      const d = r.data?.data ?? r.data;
+      return Array.isArray(d) ? d : d?.products || [];
+    }),
+  });
 
   const { data: editingPost, isLoading: isLoadingPost } = useQuery({
     queryKey: ['edit-post', editPostId],
@@ -310,6 +319,7 @@ export default function CreatePostPage() {
       hashtags: trimmedTags,
       scheduledAt: mode === 'scheduled' ? form.scheduledAt : undefined,
       ...(isEditing ? { clearSchedule: mode !== 'scheduled' } : {}),
+      ...(attachedProductId ? { attachedProductId } : {}),
       publishNow: mode === 'published',
     };
 
@@ -551,6 +561,29 @@ export default function CreatePostPage() {
                 <p className="mt-2 text-xs text-slate-500">
                   🔒 Locked platforms ko use karne ke liye pehle{' '}
                   <a href="/accounts" className="text-purple-400 hover:underline">Accounts</a> page se connect karo.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">🛍️ Attach Product (Optional)</label>
+              <select
+                value={attachedProductId || ''}
+                onChange={e => setAttachedProductId(e.target.value || null)}
+                className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+              >
+                <option value="">No product attached</option>
+                {(creatorProducts || []).filter((p: any) => p.status === 'PUBLISHED').map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.title} — ${(p.price / 100).toFixed(2)}</option>
+                ))}
+              </select>
+              {attachedProductId && (
+                <p className="text-xs text-emerald-400 mt-1">✅ Product CTA will be added to your post. Buyers can purchase directly!</p>
+              )}
+              {(!creatorProducts || creatorProducts.filter((p: any) => p.status === 'PUBLISHED').length === 0) && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Koi published product nahi hai? <a href="/products/create" className="text-purple-400 hover:underline">Pehle product banao →</a>
                 </p>
               )}
             </div>

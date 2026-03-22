@@ -3,12 +3,16 @@ import * as Joi from 'joi';
 export const envValidationSchema = Joi.object({
   // ── Server ──────────────────────────────────────────────────
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
-  PORT: Joi.number().default(3000),
+  PORT: Joi.number().default(4000),
 
   // ── Database ────────────────────────────────────────────────
   DATABASE_URL: Joi.string().required().pattern(/^postgresql?:\/\//).messages({
     'any.required': 'DATABASE_URL is required (e.g., postgresql://user:pass@host:5432/db)',
     'string.pattern.base': 'DATABASE_URL must start with postgresql:// or postgres://',
+  }),
+  DIRECT_URL: Joi.string().required().pattern(/^postgresql?:\/\//).messages({
+    'any.required': 'DIRECT_URL is required for migrations and direct database access',
+    'string.pattern.base': 'DIRECT_URL must start with postgresql:// or postgres://',
   }),
 
   // ── Redis ───────────────────────────────────────────────────
@@ -34,14 +38,20 @@ export const envValidationSchema = Joi.object({
   GOOGLE_CLIENT_ID: Joi.string().when('NODE_ENV', {
     is: 'production',
     then: Joi.required(),
-    otherwise: Joi.optional().default('placeholder-client-id'),
+    otherwise: Joi.optional(),
   }),
   GOOGLE_CLIENT_SECRET: Joi.string().when('NODE_ENV', {
     is: 'production',
     then: Joi.required(),
-    otherwise: Joi.optional().default('placeholder-secret'),
+    otherwise: Joi.optional(),
   }),
   GOOGLE_CALLBACK_URL: Joi.string().optional(),
+
+  // ── Supabase (optional but recommended) ────────────────────
+  SUPABASE_URL: Joi.string().uri().optional(),
+  SUPABASE_ANON_KEY: Joi.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: Joi.string().optional(),
+  SUPABASE_STORAGE_BUCKET: Joi.string().default('media'),
 
   // ── OpenAI ──────────────────────────────────────────────────
   OPENAI_API_KEY: Joi.string().when('NODE_ENV', {
@@ -59,6 +69,7 @@ export const envValidationSchema = Joi.object({
   SMTP_PORT: Joi.number().optional(),
   SMTP_USER: Joi.string().optional(),
   SMTP_PASS: Joi.string().optional(),
+  EMAIL_FROM: Joi.string().optional(),
   MAIL_FROM: Joi.string().optional(),
 
   // ── Uploads ────────────────────────────────────────────────

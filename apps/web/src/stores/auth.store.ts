@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@/types';
 import { authApi, unwrapApiResponse } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 
 // Set/clear a simple cookie so Next.js middleware can check auth state server-side
 function setAuthCookie(loggedIn: boolean) {
@@ -26,6 +27,7 @@ interface AuthState {
   _hydrated: boolean;
 
   login: (email: string, password: string) => Promise<void>;
+  exchangeSupabaseToken: (accessToken: string) => Promise<void>;
   demoLogin: () => void;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -48,6 +50,20 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const response = await authApi.login({ email, password });
+          const data = unwrapApiResponse<{ user: User; accessToken: string; refreshToken: string }>(response);
+          localStorage.setItem('access_token', data.accessToken);
+          localStorage.setItem('refresh_token', data.refreshToken);
+          setAuthCookie(true);
+          set({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken, isAuthenticated: true });
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      exchangeSupabaseToken: async (accessToken) => {
+        set({ isLoading: true });
+        try {
+          const response = await authApi.exchangeSupabaseToken(accessToken);
           const data = unwrapApiResponse<{ user: User; accessToken: string; refreshToken: string }>(response);
           localStorage.setItem('access_token', data.accessToken);
           localStorage.setItem('refresh_token', data.refreshToken);
@@ -92,6 +108,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try { await authApi.logout(); } catch {}
+        try { await supabase?.auth.signOut(); } catch {}
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         setAuthCookie(false);
@@ -113,6 +130,7 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user) => set({ user }),
       clear: () => {
+        void supabase?.auth.signOut().catch(() => undefined);
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         setAuthCookie(false);

@@ -30,6 +30,10 @@ export class CreatePostDto {
 
   @ApiPropertyOptional() @IsOptional() @IsString()
   location?: string;
+
+  @ApiPropertyOptional({ description: 'Attach a product to this post for content-to-sell CTA' })
+  @IsOptional() @IsString()
+  attachedProductId?: string;
 }
 
 export class UpdatePostDto {
@@ -60,6 +64,10 @@ export class UpdatePostDto {
 
   @ApiPropertyOptional() @IsOptional()
   clearSchedule?: boolean;
+
+  @ApiPropertyOptional({ description: 'Attach a product to this post for content-to-sell CTA' })
+  @IsOptional() @IsString()
+  attachedProductId?: string;
 }
 
 export class PostQueryDto {

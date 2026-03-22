@@ -82,11 +82,23 @@ export class CreateProductDto {
   @MaxLength(320)
   shortDescription?: string;
 
+  @ApiPropertyOptional({ enum: ['COURSE', 'DIGITAL', 'TEMPLATE', 'EBOOK', 'COACHING'], default: 'DIGITAL' })
+  @IsOptional()
+  @IsEnum(['COURSE', 'DIGITAL', 'TEMPLATE', 'EBOOK', 'COACHING'])
+  type?: 'COURSE' | 'DIGITAL' | 'TEMPLATE' | 'EBOOK' | 'COACHING';
+
   @ApiProperty({ example: 2900, description: 'Amount in minor currency units (e.g. cents)' })
   @Type(() => Number)
   @IsInt()
   @Min(0)
   price: number;
+
+  @ApiPropertyOptional({ example: 3900, description: 'Original price before discount (in cents)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  originalPrice?: number;
 
   @ApiPropertyOptional({ example: 'usd' })
   @IsOptional()
@@ -107,6 +119,12 @@ export class CreateProductDto {
   @IsOptional()
   @IsUrl()
   coverImageUrl?: string;
+
+  @ApiPropertyOptional({ example: ['marketing', 'growth'], description: 'Product tags for discovery' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 
   @ApiPropertyOptional({ enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'], default: 'DRAFT' })
   @IsOptional()

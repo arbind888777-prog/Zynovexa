@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { aiApi, unwrapApiResponse } from '@/lib/api';
+import { aiApi, aiEngineApi, unwrapApiResponse } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
-type Tool = 'caption' | 'hashtags' | 'script' | 'image' | 'chat' | 'besttime';
+type Tool = 'caption' | 'hashtags' | 'script' | 'image' | 'chat' | 'besttime' | 'hook' | 'scorer';
 const AI_STUDIO_TRANSFER_KEY = 'zynovexa.aiStudioDraft';
 
 const TOOLS = [
@@ -16,6 +16,8 @@ const TOOLS = [
   { id: 'image', icon: '🎨', name: 'Image Generator', desc: 'Create AI images with DALL-E 3' },
   { id: 'chat', icon: '💬', name: 'Zyx Chatbot', desc: 'Your 24/7 creator growth advisor' },
   { id: 'besttime', icon: '⏰', name: 'Best Time to Post', desc: 'AI-powered posting schedule optimizer' },
+  { id: 'hook', icon: '🎯', name: 'Hook Generator', desc: 'Platform-specific hooks that stop the scroll' },
+  { id: 'scorer', icon: '📊', name: 'Content Scorer', desc: 'Score your content for viral & engagement potential' },
 ] as const;
 
 const PLATFORM_MAP: Record<string, string> = {
@@ -101,6 +103,14 @@ export default function AIStudioPage() {
       else if (activeTool === 'script') res = await aiApi.generateScript({ topic: fields.topic, platform: fields.platform, durationSeconds: parseInt(fields.duration), niche: fields.niche, language: fields.language, brandVoice: fields.brandVoice });
       else if (activeTool === 'image') res = await aiApi.generateImage({ prompt: fields.prompt });
       else if (activeTool === 'besttime') res = await aiApi.getBestTimes({ platform: fields.platform, niche: fields.niche, timezone: fields.timezone });
+      else if (activeTool === 'hook') {
+        res = await aiEngineApi.generate({ niche: fields.niche || 'general', platform: fields.platform || 'instagram', tone: fields.tone, audience: 'general', contentType: 'hook', topic: fields.topic || fields.description });
+        const hookData = unwrapApiResponse(res) as any;
+        setResult({ hookContent: hookData?.content, hookScore: hookData?.score }); return;
+      }
+      else if (activeTool === 'scorer') {
+        res = await aiEngineApi.scoreContent({ content: fields.content, platform: fields.platform || 'instagram' });
+      }
       setResult(unwrapApiResponse(res));
     } catch (e: any) { toast.error(e?.response?.data?.message || 'AI failed'); }
     finally { setLoading(false); }
@@ -192,7 +202,7 @@ export default function AIStudioPage() {
       </div>
 
       {/* Tool Grid */}
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+      <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
         {TOOLS.map(t => (
           <button key={t.id} onClick={() => { setActiveTool(t.id as Tool); setResult(null); }}
             className={`dashboard-tab p-4 text-center transition-all hover:scale-[1.02] ${activeTool === t.id ? 'dashboard-tab-active glow text-white' : 'text-gray-400 hover:text-white'}`}>
@@ -273,6 +283,16 @@ export default function AIStudioPage() {
                 <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['', 'instagram', 'tiktok', 'youtube', 'twitter', 'linkedin'].map(p => <option key={p} value={p}>{p || 'All platforms'}</option>)}</select></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Niche</label><input value={fields.niche} onChange={f('niche')} placeholder="lifestyle, fitness..." className={inputClass} style={inputStyle} /></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Timezone</label><input value={fields.timezone} onChange={f('timezone')} placeholder="America/New_York" className={inputClass} style={inputStyle} /></div>
+              </>}
+              {activeTool === 'hook' && <>
+                <div><label className="block text-xs text-gray-400 mb-1">Topic / Idea *</label><textarea value={fields.topic || fields.description} onChange={f('topic')} rows={3} placeholder="What's the hook about? e.g., morning routine tips..." className={inputClass + ' resize-none'} style={inputStyle} /></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['instagram', 'youtube', 'tiktok', 'twitter', 'linkedin'].map(p => <option key={p}>{p}</option>)}</select></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Niche</label><input value={fields.niche} onChange={f('niche')} placeholder="fitness, tech, food..." className={inputClass} style={inputStyle} /></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Tone</label><select value={fields.tone} onChange={f('tone') as any} className={inputClass} style={inputStyle}>{['casual', 'professional', 'hinglish', 'humorous', 'motivational'].map(t => <option key={t}>{t}</option>)}</select></div>
+              </>}
+              {activeTool === 'scorer' && <>
+                <div><label className="block text-xs text-gray-400 mb-1">Paste your content *</label><textarea value={fields.content} onChange={f('content')} rows={5} placeholder="Paste your caption, script, or any content to score..." className={inputClass + ' resize-none'} style={inputStyle} /></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['instagram', 'youtube', 'tiktok', 'twitter', 'linkedin'].map(p => <option key={p}>{p}</option>)}</select></div>
               </>}
               <button onClick={runTool} disabled={loading} className="w-full py-3 rounded-lg font-semibold text-white disabled:opacity-50 transition-all hover:scale-[1.01]" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
                 {loading ? '✨ Generating...' : '✨ Generate'}
@@ -408,6 +428,54 @@ export default function AIStudioPage() {
                       </button>
                     </div>
                   ))}
+                </div>
+              )}
+              {activeTool === 'hook' && result.hookContent && (
+                <div className="space-y-3">
+                  <div className="dashboard-surface-muted p-4">
+                    <p className="text-xs text-purple-400 font-medium mb-2">🎯 Generated Hook</p>
+                    <p className="text-sm text-gray-200 whitespace-pre-wrap">{result.hookContent}</p>
+                    <div className="flex items-center gap-3 mt-3 text-xs">
+                      <button onClick={() => navigator.clipboard.writeText(result.hookContent).then(() => toast.success('Copied!'))} className="text-purple-400 hover:text-purple-300">📋 Copy</button>
+                      <button onClick={() => sendToCreatePost({ caption: result.hookContent, platforms: normalizePlatforms([fields.platform]), mediaType: 'TEXT' }, 'Hook Create Post me bhej diya gaya.')} className="text-emerald-400 hover:text-emerald-300">Use this result</button>
+                    </div>
+                  </div>
+                  {result.hookScore && (
+                    <div className="dashboard-surface-muted p-4">
+                      <p className="text-xs text-purple-400 font-medium mb-2">Content Score</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {['overall', 'hook', 'readability', 'engagement'].map(k => (
+                          <div key={k} className="text-center p-2 rounded-lg bg-white/5">
+                            <p className={`text-lg font-bold ${(result.hookScore[k] || 0) >= 80 ? 'text-green-400' : (result.hookScore[k] || 0) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>{result.hookScore[k] || 0}</p>
+                            <p className="text-[10px] text-gray-400 capitalize">{k}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeTool === 'scorer' && result && (typeof result.overall === 'number' || typeof result.score === 'number') && (
+                <div className="space-y-3">
+                  <div className="dashboard-surface-muted p-4">
+                    <p className="text-xs text-purple-400 font-medium mb-3">📊 Content Score</p>
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      {['overall', 'hook', 'readability', 'engagement'].map(k => (
+                        <div key={k} className="text-center p-2 rounded-lg bg-white/5">
+                          <p className={`text-lg font-bold ${(result[k] || 0) >= 80 ? 'text-green-400' : (result[k] || 0) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>{result[k] || 0}</p>
+                          <p className="text-[10px] text-gray-400 capitalize">{k}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {result.suggestions?.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-gray-400">Suggestions</p>
+                        {result.suggestions.map((s: string, i: number) => (
+                          <p key={i} className="text-xs text-gray-300 flex items-start gap-1"><span className="text-blue-400">→</span> {s}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

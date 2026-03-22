@@ -67,3 +67,21 @@ export class ChangePasswordDto {
   @MinLength(8)
   newPassword: string;
 }
+
+export class MagicLinkDto {
+  @ApiProperty({ example: 'buyer@example.com' })
+  @IsEmail()
+  email: string;
+}
+
+export class MagicLinkVerifyDto {
+  @ApiProperty()
+  @IsString()
+  token: string;
+}
+
+export class SupabaseExchangeDto {
+  @ApiProperty()
+  @IsString()
+  accessToken: string;
+}

@@ -1,12 +1,12 @@
 import {
-  Controller, Post, Get, Body, UseGuards, Request, HttpCode, HttpStatus, Res,
+  Controller, Post, Get, Body, UseGuards, Request, HttpCode, HttpStatus, Res, Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
-import { SignupDto, LoginDto, RefreshTokenDto } from './dto/auth.dto';
+import { SignupDto, LoginDto, RefreshTokenDto, MagicLinkDto, MagicLinkVerifyDto, SupabaseExchangeDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { decodeFrontendState, sanitizeFrontendUrl } from '../common/utils/frontend-url';
@@ -53,6 +53,32 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current logged-in user' })
   getMe(@Request() req) {
     return this.authService.getMe(req.user.id);
+  }
+
+  // ─── Magic Link (Passwordless) Login ──────────────────────────────────────
+
+  @Post('magic-link')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send a passwordless magic login link via email' })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  sendMagicLink(@Body() dto: MagicLinkDto) {
+    return this.authService.sendMagicLink(dto.email);
+  }
+
+  @Post('magic-link/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify a magic login link token and return auth tokens' })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  verifyMagicLink(@Body() dto: MagicLinkVerifyDto) {
+    return this.authService.verifyMagicLink(dto.token);
+  }
+
+  @Post('supabase/exchange')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Exchange a Supabase access token for local API JWT tokens' })
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  exchangeSupabaseToken(@Body() dto: SupabaseExchangeDto) {
+    return this.authService.exchangeSupabaseToken(dto.accessToken);
   }
 
   // ─── Google OAuth ─────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ const path = require('path');
  * Prerequisites:
  *   - apps/api:  npm run build  (creates apps/api/dist/)
  *   - apps/web:  npm run build  (creates apps/web/.next/standalone/)
- *   - PostgreSQL and Redis must be running on the VPS
+ *   - An external Postgres-compatible database (for example Supabase) and Redis must be available
  */
 module.exports = {
   apps: [

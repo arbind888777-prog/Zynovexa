@@ -74,14 +74,21 @@ api.interceptors.response.use(
 export const authApi = {
   signup: (data: { email: string; password: string; name: string }) => api.post('/auth/signup', data),
   login: (data: { email: string; password: string }) => api.post('/auth/login', data),
+  exchangeSupabaseToken: (accessToken: string) => api.post('/auth/supabase/exchange', { accessToken }),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
+  sendMagicLink: (email: string) => api.post('/auth/magic-link', { email }),
+  verifyMagicLink: (token: string) => api.post('/auth/magic-link/verify', { token }),
 };
 
 // ─── Users API ─────────────────────────────────────────────────────────────
 export const usersApi = {
   updateProfile: (data: any) => api.put('/users/me', data),
   getDashboardStats: () => api.get('/users/dashboard-stats'),
+  getAdminUsers: (filters?: { q?: string; plan?: string; role?: string }) =>
+    api.get('/users/admin/list', {
+      params: filters && Object.values(filters).some(Boolean) ? filters : undefined,
+    }),
   changePassword: (data: { currentPassword: string; newPassword: string }) => api.patch('/users/password', data),
   deleteAccount: () => api.delete('/users/me'),
   completeOnboarding: (data: { userType?: string; platforms?: string[]; niche?: string; goal?: string }) =>
@@ -170,4 +177,115 @@ export const notificationsApi = {
   markRead: (id: string) => api.put(`/notifications/${id}/read`),
   markAllRead: () => api.put('/notifications/read-all'),
   deleteAll: () => api.delete('/notifications'),
+};
+
+// ─── Trust API ─────────────────────────────────────────────────────────────
+export const trustApi = {
+  getTestimonials: (featured?: boolean) => api.get('/trust/testimonials', { params: featured ? { featured: 1 } : {} }),
+  getCaseStudies: () => api.get('/trust/case-studies'),
+  getRoadmap: () => api.get('/trust/roadmap'),
+  voteRoadmap: (id: string) => api.post(`/trust/roadmap/${id}/vote`),
+};
+
+// ─── Growth Coach API ──────────────────────────────────────────────────────
+export const growthCoachApi = {
+  getDaily: () => api.get('/growth-coach/daily'),
+  getWeeklyReport: () => api.get('/growth-coach/weekly-report'),
+};
+
+// ─── AI Engine API ─────────────────────────────────────────────────────────
+export const aiEngineApi = {
+  generate: (data: { niche: string; platform: string; tone: string; audience: string; contentType: string; topic?: string }) =>
+    api.post('/ai-engine/generate', data),
+  scoreContent: (data: { content: string; platform: string }) =>
+    api.post('/ai-engine/score', data),
+};
+
+// ─── Integrations API ──────────────────────────────────────────────────────
+export const integrationsApi = {
+  getPlatforms: () => api.get('/integrations/platforms'),
+  getOAuthUrl: (platform: string) => api.get(`/integrations/oauth/${platform}`),
+  refreshToken: (platform: string) => api.post(`/integrations/refresh/${platform}`),
+  schedulePost: (data: { postId: string; platforms: string[]; scheduledAt: string }) =>
+    api.post('/integrations/schedule', data),
+  getQueue: () => api.get('/integrations/queue'),
+};
+
+// ─── Gamification API ──────────────────────────────────────────────────────
+export const gamificationApi = {
+  getProfile: () => api.get('/gamification/profile'),
+  recordAction: (action: string) => api.post('/gamification/record-action', { action }),
+  getLeaderboard: (limit?: number) => api.get('/gamification/leaderboard', { params: { limit } }),
+};
+
+// ─── Pro Analytics API ─────────────────────────────────────────────────────
+export const proAnalyticsApi = {
+  getOverview: () => api.get('/pro-analytics/overview'),
+  getContentRanking: () => api.get('/pro-analytics/content-ranking'),
+  getCompetitors: () => api.get('/pro-analytics/competitors'),
+  addCompetitor: (data: { handle: string; platform: string }) => api.post('/pro-analytics/competitors', data),
+};
+
+// ─── Commerce API ──────────────────────────────────────────────────────────
+export const commerceApi = {
+  // Store
+  getStore: () => api.get('/commerce/store'),
+  upsertStore: (data: any) => api.put('/commerce/store', data),
+
+  // Products
+  getCreatorProducts: () => api.get('/commerce/products'),
+  createProduct: (data: any) => api.post('/commerce/products', data),
+  updateProduct: (id: string, data: any) => api.put(`/commerce/products/${id}`, data),
+  deleteProduct: (id: string) => api.delete(`/commerce/products/${id}`),
+  getPublicProduct: (storeSlug: string, productSlug: string) =>
+    api.get(`/commerce/public/stores/${storeSlug}/products/${productSlug}`),
+  downloadProduct: (productId: string) =>
+    api.get(`/commerce/buyer/products/${productId}/download`),
+
+  // Courses
+  getCreatorCourses: () => api.get('/commerce/courses'),
+  createCourse: (data: any) => api.post('/commerce/courses', data),
+  updateCourse: (id: string, data: any) => api.put(`/commerce/courses/${id}`, data),
+  deleteCourse: (id: string) => api.delete(`/commerce/courses/${id}`),
+  addLesson: (courseId: string, data: any) => api.post(`/commerce/courses/${courseId}/lessons`, data),
+  updateLesson: (courseId: string, lessonId: string, data: any) => api.put(`/commerce/courses/${courseId}/lessons/${lessonId}`, data),
+  deleteLesson: (courseId: string, lessonId: string) => api.delete(`/commerce/courses/${courseId}/lessons/${lessonId}`),
+  getPublicCourse: (storeSlug: string, courseSlug: string) =>
+    api.get(`/commerce/public/stores/${storeSlug}/courses/${courseSlug}`),
+
+  // Buyer Course Access
+  getOwnedCourse: (courseId: string) => api.get(`/commerce/buyer/courses/${courseId}`),
+  getOwnedLesson: (courseId: string, lessonId: string) => api.get(`/commerce/buyer/courses/${courseId}/lessons/${lessonId}`),
+  updateLessonProgress: (courseId: string, lessonId: string, completed: boolean) =>
+    api.post(`/commerce/buyer/courses/${courseId}/lessons/${lessonId}/progress`, { completed }),
+
+  // Checkout & Payments
+  createCheckout: (data: { itemType: string; productId?: string; courseId?: string }) =>
+    api.post('/commerce/checkout', data),
+  createRazorpayCheckout: (data: { itemType: string; productId?: string; courseId?: string }) =>
+    api.post('/commerce/checkout/razorpay', data),
+
+  // Revenue
+  getRevenue: (days?: number) => api.get('/commerce/revenue', { params: { days } }),
+
+  // Creator Buyers
+  getCreatorBuyers: (page?: number) => api.get('/commerce/buyers', { params: { page } }),
+
+  // Public Store by Handle
+  getStoreByHandle: (handle: string) => api.get(`/commerce/public/handle/${handle}`),
+
+  // Buyer
+  getBuyerDashboard: () => api.get('/commerce/buyer/dashboard'),
+};
+
+// ─── Monetization API ──────────────────────────────────────────────────────
+export const monetizationApi = {
+  createDeal: (data: any) => api.post('/monetization/deals', data),
+  getDeals: (params?: any) => api.get('/monetization/deals', { params }),
+  getDeal: (id: string) => api.get(`/monetization/deals/${id}`),
+  updateDeal: (id: string, data: any) => api.put(`/monetization/deals/${id}`, data),
+  deleteDeal: (id: string) => api.delete(`/monetization/deals/${id}`),
+  getEarnings: () => api.get('/monetization/earnings'),
+  calculateRates: () => api.get('/monetization/rates'),
+  generateMediaKit: () => api.get('/monetization/media-kit'),
 };

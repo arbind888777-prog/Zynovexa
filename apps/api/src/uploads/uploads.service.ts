@@ -1,9 +1,10 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { unlinkSync, existsSync } from 'fs';
+import { unlinkSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { resolveUploadCategory } from './upload-category';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class UploadsService {
@@ -13,6 +14,7 @@ export class UploadsService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private supabase: SupabaseService,
   ) {
     this.baseUrl = this.config.get('API_URL') || `http://localhost:${this.config.get('PORT', 4000)}`;
   }
@@ -20,8 +22,24 @@ export class UploadsService {
   /** Save uploaded file metadata to database */
   async saveFile(userId: string, file: Express.Multer.File, folder = 'general', alt?: string) {
     const subfolder = resolveUploadCategory(file.originalname, file.mimetype) || 'documents';
+    const localPath = (file as any).path as string | undefined;
+    let url = `${this.baseUrl}/uploads/${subfolder}/${file.filename}`;
 
-    const url = `${this.baseUrl}/uploads/${subfolder}/${file.filename}`;
+    if (this.supabase.isConfigured()) {
+      const objectPath = [userId, folder, subfolder, file.filename].filter(Boolean).join('/');
+      const buffer = file.buffer || (localPath ? readFileSync(localPath) : Buffer.alloc(0));
+
+      if (!buffer.length) {
+        this.logger.warn(`Supabase upload skipped for ${file.originalname}: file buffer is empty`);
+      } else {
+        const uploaded = await this.supabase.uploadFile(objectPath, buffer, file.mimetype);
+        url = uploaded.publicUrl;
+      }
+
+      if (localPath && existsSync(localPath)) {
+        unlinkSync(localPath);
+      }
+    }
 
     const mediaFile = await this.prisma.mediaFile.create({
       data: {
@@ -85,13 +103,18 @@ export class UploadsService {
   /** Delete file from storage and database */
   async deleteFile(id: string, userId: string) {
     const file = await this.getFile(id, userId);
+    const supabaseObjectPath = this.supabase.getObjectPathFromPublicUrl(file.url);
+
+    if (supabaseObjectPath) {
+      await this.supabase.removeFile(supabaseObjectPath);
+    }
 
     // Remove physical file
     const uploadDir = this.config.get('UPLOAD_DIR', join(process.cwd(), 'uploads'));
     const subfolder = resolveUploadCategory(file.originalName, file.mimeType) || 'documents';
 
     const filePath = join(uploadDir, subfolder, file.filename);
-    if (existsSync(filePath)) {
+    if (!supabaseObjectPath && existsSync(filePath)) {
       unlinkSync(filePath);
     }
 

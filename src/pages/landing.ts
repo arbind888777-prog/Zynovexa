@@ -245,57 +245,73 @@ export function landingPage(): string {
 
 <!-- ============ PRICING SECTION ============ -->
 <section id="pricing" class="py-20 px-6 bg-gray-50">
-  <div class="max-w-6xl mx-auto">
+  <div class="max-w-7xl mx-auto">
     <div class="text-center mb-16">
       <h2 class="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent <span class="gradient-text">Pricing</span></h2>
       <p class="text-lg text-gray-500">Start free. Upgrade when you're ready to go pro.</p>
     </div>
-    <div class="grid md:grid-cols-3 gap-6">
+    <div class="grid md:grid-cols-4 gap-5">
       <!-- Free Plan -->
-      <div class="bg-white rounded-2xl p-8 border border-gray-200 card-hover">
+      <div class="bg-white rounded-2xl p-6 border border-gray-200 card-hover">
         <div class="text-sm font-semibold text-gray-500 mb-2">FREE</div>
         <div class="text-4xl font-bold mb-1">$0</div>
         <div class="text-sm text-gray-400 mb-6">Forever free</div>
-        <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> 2 social accounts</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> 10 posts/month</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> 20 AI generations</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Basic analytics</li>
-          <li class="flex items-center gap-2 text-sm text-gray-300"><i class="fas fa-xmark"></i> Viral score</li>
-          <li class="flex items-center gap-2 text-sm text-gray-300"><i class="fas fa-xmark"></i> Brand deal tracker</li>
+        <ul class="space-y-2 mb-8">
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 2 social accounts</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 10 AI generations/day</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Basic analytics</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Scheduling</li>
+          <li class="flex items-center gap-2 text-sm text-gray-300"><i class="fas fa-xmark text-xs"></i> Growth Coach</li>
+          <li class="flex items-center gap-2 text-sm text-gray-300"><i class="fas fa-xmark text-xs"></i> Pro Analytics</li>
         </ul>
         <a href="/signup" class="block text-center py-3 border-2 border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition">Get Started</a>
       </div>
       <!-- Pro Plan -->
-      <div class="bg-white rounded-2xl p-8 border-2 border-brand-500 card-hover relative">
+      <div class="bg-white rounded-2xl p-6 border-2 border-brand-500 card-hover relative">
         <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-brand-600 text-white text-xs font-bold rounded-full">MOST POPULAR</div>
         <div class="text-sm font-semibold text-brand-600 mb-2">PRO</div>
-        <div class="text-4xl font-bold mb-1">$19<span class="text-lg text-gray-400">/mo</span></div>
-        <div class="text-sm text-gray-400 mb-6">Billed monthly</div>
-        <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> 10 social accounts</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> 100 posts/month</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> 500 AI generations</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Advanced analytics</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Viral score prediction</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Brand deal tracker</li>
+        <div class="text-4xl font-bold mb-1">$29<span class="text-lg text-gray-400">/mo</span></div>
+        <div class="text-sm text-gray-400 mb-6">For serious creators</div>
+        <ul class="space-y-2 mb-8">
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 5 social accounts</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 100 AI generations/day</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> AI Growth Coach</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Pro Analytics</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Competitor Tracking (3)</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Weekly Reports</li>
         </ul>
         <a href="/signup?plan=pro" class="block text-center py-3 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition shadow-lg shadow-brand-600/25">Start Free Trial</a>
       </div>
-      <!-- Business Plan -->
-      <div class="bg-white rounded-2xl p-8 border border-gray-200 card-hover">
-        <div class="text-sm font-semibold text-gray-500 mb-2">BUSINESS</div>
-        <div class="text-4xl font-bold mb-1">$49<span class="text-lg text-gray-400">/mo</span></div>
-        <div class="text-sm text-gray-400 mb-6">For teams & agencies</div>
-        <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Unlimited accounts</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Unlimited posts</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Unlimited AI</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Everything in Pro</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Media kit generator</li>
-          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500"></i> Priority support</li>
+      <!-- Pro Max Plan -->
+      <div class="bg-white rounded-2xl p-6 border-2 border-purple-400 card-hover relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">NEW</div>
+        <div class="text-sm font-semibold text-purple-600 mb-2">PRO MAX</div>
+        <div class="text-4xl font-bold mb-1">$59<span class="text-lg text-gray-400">/mo</span></div>
+        <div class="text-sm text-gray-400 mb-6">Max power for creators</div>
+        <ul class="space-y-2 mb-8">
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 10 social accounts</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 500 AI generations/day</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Everything in Pro</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 5 Team members</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Custom branding</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Priority support</li>
         </ul>
-        <a href="/signup?plan=business" class="block text-center py-3 border-2 border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition">Get Started</a>
+        <a href="/signup?plan=promax" class="block text-center py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition shadow-lg shadow-purple-600/25">Get Pro Max</a>
+      </div>
+      <!-- Business Plan -->
+      <div class="bg-white rounded-2xl p-6 border border-gray-200 card-hover">
+        <div class="text-sm font-semibold text-gray-500 mb-2">BUSINESS</div>
+        <div class="text-4xl font-bold mb-1">$149<span class="text-lg text-gray-400">/mo</span></div>
+        <div class="text-sm text-gray-400 mb-6">For agencies & teams</div>
+        <ul class="space-y-2 mb-8">
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 25 social accounts</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Unlimited AI</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> Everything in Pro Max</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 25 Team members</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> API Access</li>
+          <li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-green-500 text-xs"></i> 10 Competitors</li>
+        </ul>
+        <a href="/signup?plan=business" class="block text-center py-3 border-2 border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition">Contact Sales</a>
       </div>
     </div>
   </div>
@@ -306,16 +322,18 @@ export function landingPage(): string {
   <div class="max-w-6xl mx-auto">
     <div class="text-center mb-16">
       <h2 class="text-3xl md:text-4xl font-bold mb-4">Loved by <span class="gradient-text">50,000+ Creators</span></h2>
+      <p class="text-gray-500">See what real creators are saying about Zynovexa</p>
     </div>
-    <div class="grid md:grid-cols-3 gap-6">
+    <div class="grid md:grid-cols-3 gap-6" id="testimonials-grid">
       ${[
-        { name: 'Jessica Lee', handle: '@jessicacreates', text: "Zynovexa saved me 3 hours every single day. The AI scheduling alone is worth 10x the price. My engagement is up 40% since I started.", stars: 5 },
-        { name: 'Marcus Chen', handle: '@marcustech', text: "Finally one tool that replaces Buffer, Later, and Canva for me. The viral score prediction is scary accurate — my last 3 posts all went viral.", stars: 5 },
-        { name: 'Priya Sharma', handle: '@priyalifestyle', text: "The monetization tracker helped me negotiate a $5K brand deal. The media kit generator is incredibly professional. Game changer.", stars: 5 }
+        { name: 'Jessica Lee', handle: '@jessicacreates', text: "Zynovexa saved me 3 hours every single day. The AI scheduling alone is worth 10x the price. My engagement is up 40% since I started.", stars: 5, metric: '40% more engagement' },
+        { name: 'Marcus Chen', handle: '@marcustech', text: "Finally one tool that replaces Buffer, Later, and Canva for me. The viral score prediction is scary accurate — my last 3 posts all went viral.", stars: 5, metric: '3 viral posts' },
+        { name: 'Priya Sharma', handle: '@priyalifestyle', text: "The monetization tracker helped me negotiate a $5K brand deal. The media kit generator is incredibly professional. Game changer.", stars: 5, metric: '$5K brand deal' }
       ].map(t => `
-      <div class="bg-gray-50 rounded-xl p-6 border border-gray-100">
+      <div class="bg-gray-50 rounded-xl p-6 border border-gray-100 card-hover">
         <div class="flex items-center gap-1 mb-3">${'<i class="fas fa-star text-yellow-400 text-sm"></i>'.repeat(t.stars)}</div>
         <p class="text-gray-600 text-sm mb-4 leading-relaxed">"${t.text}"</p>
+        <div class="inline-block px-2 py-1 bg-green-50 text-green-600 text-xs font-bold rounded-full mb-3">${t.metric}</div>
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center">
             <span class="text-brand-600 font-bold text-sm">${t.name.charAt(0)}</span>
@@ -326,6 +344,71 @@ export function landingPage(): string {
           </div>
         </div>
       </div>`).join('')}
+    </div>
+  </div>
+</section>
+
+<!-- ============ CASE STUDIES / RESULTS ============ -->
+<section class="py-20 px-6 bg-gray-50">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">Real Results from <span class="gradient-text">Real Creators</span></h2>
+      <p class="text-gray-500">Before &amp; after using Zynovexa</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      ${[
+        { name: 'Tech Creator', niche: 'Technology', before: '2K followers', after: '45K followers', time: '6 months', stat: '22x growth' },
+        { name: 'Fitness Coach', niche: 'Fitness', before: '500 subscribers', after: '12K subscribers', time: '4 months', stat: '24x growth' },
+        { name: 'Food Blogger', niche: 'Food', before: '$0/mo', after: '$8K/mo', time: '8 months', stat: 'Full-time creator' }
+      ].map(cs => `
+      <div class="bg-white rounded-xl p-6 border border-gray-200 card-hover">
+        <div class="text-xs font-bold text-brand-600 uppercase mb-2">${cs.niche}</div>
+        <h3 class="font-bold text-lg mb-4">${cs.name}</h3>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="bg-red-50 rounded-lg p-3 text-center">
+            <div class="text-xs text-red-400">Before</div>
+            <div class="font-bold text-red-600">${cs.before}</div>
+          </div>
+          <div class="bg-green-50 rounded-lg p-3 text-center">
+            <div class="text-xs text-green-400">After</div>
+            <div class="font-bold text-green-600">${cs.after}</div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between text-xs text-gray-400">
+          <span>⏱️ ${cs.time}</span>
+          <span class="text-green-600 font-bold">${cs.stat}</span>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROADMAP / TRANSPARENCY ============ -->
+<section class="py-20 px-6 bg-white">
+  <div class="max-w-4xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">Public <span class="gradient-text">Roadmap</span></h2>
+      <p class="text-gray-500">See what we're building next. We ship fast.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div>
+        <h3 class="font-bold text-sm uppercase text-gray-400 mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span>Recently Shipped</h3>
+        <div class="space-y-2">
+          ${['AI Growth Coach', 'Content Scoring', 'Pro Analytics', 'Gamification & XP'].map(i => `<div class="bg-green-50 text-green-700 text-sm px-3 py-2 rounded-lg">${i}</div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <h3 class="font-bold text-sm uppercase text-gray-400 mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span>In Progress</h3>
+        <div class="space-y-2">
+          ${['Team Collaboration', 'WhatsApp Integration', 'Advanced AI Templates'].map(i => `<div class="bg-blue-50 text-blue-700 text-sm px-3 py-2 rounded-lg">${i}</div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <h3 class="font-bold text-sm uppercase text-gray-400 mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-gray-300"></span>Planned</h3>
+        <div class="space-y-2">
+          ${['API for Developers', 'White-label Solution', 'Mobile App'].map(i => `<div class="bg-gray-50 text-gray-600 text-sm px-3 py-2 rounded-lg">${i}</div>`).join('')}
+        </div>
+      </div>
     </div>
   </div>
 </section>

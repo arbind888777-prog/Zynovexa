@@ -1,7 +1,8 @@
 // ============================================================
-// Zynovexa - Onboarding Wizard (4 Steps)
+// Zynovexa - Onboarding Wizard (5 Steps)
 // Step 1: Choose niche | Step 2: Connect accounts
-// Step 3: Set goals | Step 4: Choose plan
+// Step 3: Set goals | Step 4: Generate first post with AI
+// Step 5: Choose plan
 // ============================================================
 
 export function onboardingPage(): string {
@@ -34,6 +35,7 @@ export function onboardingPage(): string {
       <div class="h-1.5 rounded-full flex-1 bg-gray-200 transition-all" id="bar-2"></div>
       <div class="h-1.5 rounded-full flex-1 bg-gray-200 transition-all" id="bar-3"></div>
       <div class="h-1.5 rounded-full flex-1 bg-gray-200 transition-all" id="bar-4"></div>
+      <div class="h-1.5 rounded-full flex-1 bg-gray-200 transition-all" id="bar-5"></div>
     </div>
 
     <!-- STEP 1: Choose Niche -->
@@ -80,8 +82,32 @@ export function onboardingPage(): string {
       </div>
     </div>
 
-    <!-- STEP 4: Choose Plan -->
+    <!-- STEP 4: Generate First Post (AI magic moment) -->
     <div class="step-panel" id="step-4">
+      <div class="glass-card p-6 bg-white rounded-xl border border-gray-200" style="border-radius:16px">
+        <div class="text-center mb-6">
+          <div class="text-4xl mb-2">✨</div>
+          <h3 class="font-bold text-lg">Let's create your first post with AI</h3>
+          <p class="text-xs text-gray-400 mt-1">See the power of Zynovexa in action</p>
+        </div>
+        <div class="space-y-3">
+          <textarea id="ob-ai-topic" rows="2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="What do you want to post about? (e.g. 'morning routine tips')"></textarea>
+          <button onclick="generateOnboardingPost()" id="ob-ai-btn" class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-brand-600 text-white text-sm rounded-lg font-semibold">
+            <i class="fas fa-wand-magic-sparkles mr-2"></i>Generate My First Post
+          </button>
+        </div>
+        <div id="ob-ai-result" class="hidden mt-4">
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto" id="ob-ai-content"></div>
+          <div class="flex items-center gap-2 mt-3">
+            <div class="flex-1 text-xs text-gray-400" id="ob-ai-score"></div>
+            <button onclick="copyObPost()" class="text-xs text-brand-600 hover:underline"><i class="fas fa-copy mr-1"></i>Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Choose Plan -->
+    <div class="step-panel" id="step-5">
       <div class="grid md:grid-cols-3 gap-4">
         <div onclick="selectPlan(this,'free')" class="plan-card selected cursor-pointer border-2 border-brand-600 bg-brand-50 rounded-xl p-5 text-center">
           <div class="text-sm font-semibold text-gray-500 mb-1">FREE</div>
@@ -123,25 +149,50 @@ export function onboardingPage(): string {
   <script>
     let currentStep = 1;
     let onboardData = { niche: '', goals: [], plan: 'free' };
-    const titles = ['', 'What type of creator are you?', 'Connect your social accounts', 'What are your goals?', 'Choose your plan'];
-    const descs = ['', 'This helps us personalize your AI recommendations.', 'We\\'ll sync your analytics and enable publishing. Skip any for now.', 'Select all that apply — AI will prioritize these.', 'Start free. Upgrade anytime.'];
+    const titles = ['', 'What type of creator are you?', 'Connect your social accounts', 'What are your goals?', 'Create your first AI post!', 'Choose your plan'];
+    const descs = ['', 'This helps us personalize your AI recommendations.', 'We\\'ll sync your analytics and enable publishing. Skip any for now.', 'Select all that apply — AI will prioritize these.', 'See the magic. Generate a real post in seconds.', 'Start free. Upgrade anytime.'];
 
     function goToStep(n) {
       document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
       document.getElementById('step-'+n).classList.add('active');
       document.getElementById('step-title').textContent=titles[n];
       document.getElementById('step-desc').textContent=descs[n];
-      for(let i=1;i<=4;i++){document.getElementById('bar-'+i).className='h-1.5 rounded-full flex-1 transition-all '+(i<=n?'bg-brand-600':'bg-gray-200');}
+      for(let i=1;i<=5;i++){document.getElementById('bar-'+i).className='h-1.5 rounded-full flex-1 transition-all '+(i<=n?'bg-brand-600':'bg-gray-200');}
       document.getElementById('btn-back').classList.toggle('hidden', n===1);
-      document.getElementById('btn-next').innerHTML = n===4 ? 'Launch Dashboard <i class="fas fa-rocket ml-2"></i>' : 'Continue <i class="fas fa-arrow-right ml-2"></i>';
+      document.getElementById('btn-next').innerHTML = n===5 ? 'Launch Dashboard <i class="fas fa-rocket ml-2"></i>' : 'Continue <i class="fas fa-arrow-right ml-2"></i>';
       currentStep = n;
     }
-    function nextStep(){if(currentStep<4)goToStep(currentStep+1);else completeOnboarding();}
+    function nextStep(){if(currentStep<5)goToStep(currentStep+1);else completeOnboarding();}
     function prevStep(){if(currentStep>1)goToStep(currentStep-1);}
     function selectNiche(el,v){document.querySelectorAll('.niche-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');onboardData.niche=v;}
     function connectPlatform(btn,p){btn.textContent='Connected';btn.className='px-4 py-2 text-sm bg-green-500 text-white rounded-lg font-medium cursor-default';btn.disabled=true;}
     function toggleGoal(el){el.classList.toggle('selected');const t=el.querySelector('span').textContent;if(onboardData.goals.includes(t))onboardData.goals=onboardData.goals.filter(g=>g!==t);else onboardData.goals.push(t);}
     function selectPlan(el,p){document.querySelectorAll('.plan-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');onboardData.plan=p;}
+    
+    async function generateOnboardingPost() {
+      const topic = document.getElementById('ob-ai-topic').value.trim();
+      if (!topic) { alert('Enter a topic first!'); return; }
+      const btn = document.getElementById('ob-ai-btn');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/ai-engine/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ input: topic, type: 'caption', platform: 'instagram', audience: 'general', tone: 'casual', niche: onboardData.niche || 'general' })
+        });
+        const d = (await res.json()).data || {};
+        document.getElementById('ob-ai-result').classList.remove('hidden');
+        document.getElementById('ob-ai-content').textContent = d.content || 'AI is warming up! Try again.';
+        const s = d.score || {};
+        document.getElementById('ob-ai-score').textContent = 'Score: ' + (s.overall || '—') + '/100 | Hook: ' + (s.hook || '—') + ' | Engagement: ' + (s.engagement || '—');
+      } catch(e) {
+        document.getElementById('ob-ai-result').classList.remove('hidden');
+        document.getElementById('ob-ai-content').textContent = 'Could not generate right now. You can try this in the dashboard!';
+      }
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-wand-magic-sparkles mr-2"></i>Regenerate';
+    }
+    function copyObPost() { navigator.clipboard.writeText(document.getElementById('ob-ai-content').textContent); alert('Copied!'); }
     
     async function completeOnboarding() {
       const token = localStorage.getItem('token');
