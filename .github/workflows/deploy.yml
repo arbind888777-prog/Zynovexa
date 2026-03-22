@@ -2,52 +2,25 @@ name: Deploy to Hostinger VPS
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   deploy:
-    name: Deploy to VPS
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
           script: |
-            cd /var/www/zynovexa
-
-            echo "🔄 Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo "🐳 Building and deploying with Docker..."
-            export $(grep -v '^#' .env | xargs) 2>/dev/null || true
-            docker-compose -f docker-compose.prod.yml build --parallel
-
-            if printf ',%s,' "${COMPOSE_PROFILES:-}" | grep -q ',local-db,'; then
-              echo "🗄️ Local database profile detected; starting localdb and redis..."
-              docker-compose -f docker-compose.prod.yml --profile local-db up -d localdb redis
-              sleep 15
-            else
-              echo "🗄️ External database detected; starting redis only..."
-              docker-compose -f docker-compose.prod.yml up -d redis
-            fi
-
-            echo "📦 Running migrations..."
-            docker-compose -f docker-compose.prod.yml run --rm api sh -c 'if [ -n "$DIRECT_URL" ]; then export DATABASE_URL="$DIRECT_URL"; fi; npx prisma migrate deploy' || true
-
-            echo "🚀 Starting all services..."
-            docker-compose -f docker-compose.prod.yml up -d
-
-            echo "⏳ Waiting for health checks..."
-            sleep 30
-            docker-compose -f docker-compose.prod.yml ps
-
-            echo "✅ Deployment complete!"
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            cd /var/www/Zynovexa
+            git reset --hard
+            git pull origin main
+            npm install
+            cd apps/web
+            npm run build
+            pm2 restart zynovexa-frontend || pm2 start npm --name "zynovexa-frontend" -- start
