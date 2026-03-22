@@ -2,25 +2,66 @@ name: Deploy to Hostinger VPS
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
+    name: Deploy Frontend to VPS
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@master
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: SSH connection check
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
+          script_stop: true
+          timeout: 30s
+          command_timeout: 20m
           script: |
+            set -e
             export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            echo "SSH connection established successfully"
+            whoami
+            pwd
+            test -d /var/www/Zynovexa
+            echo "Project directory found: /var/www/Zynovexa"
+
+      - name: Deploy latest frontend build
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script_stop: true
+          timeout: 30s
+          command_timeout: 30m
+          script: |
+            set -e
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
             cd /var/www/Zynovexa
-            git reset --hard
-            git pull origin main
+
+            echo "Pulling latest code"
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "Installing dependencies"
             npm install
+
+            echo "Building frontend"
             cd apps/web
             npm run build
-            pm2 restart zynovexa-frontend || pm2 start npm --name "zynovexa-frontend" -- start
+            cd /var/www/Zynovexa
+
+            echo "Restarting PM2 frontend"
+            pm2 restart zynovexa-web || pm2 start ecosystem.config.cjs --only zynovexa-web --env production
+            pm2 save
+
+            echo "Deployment completed successfully"
