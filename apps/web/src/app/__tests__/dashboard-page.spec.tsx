@@ -42,8 +42,8 @@ describe('Dashboard Page — buttons & links', () => {
 
   // ─── AI Studio link ──────────────────────────────────
   it('"Open AI Studio →" links to /ai', () => {
-    const el = screen.getByText(/Open AI Studio/);
-    expect(el.closest('a')).toHaveAttribute('href', '/ai');
+    const links = screen.getAllByText(/Open AI Studio/);
+    expect(links.some((el) => el.closest('a')?.getAttribute('href') === '/ai')).toBe(true);
   });
 
   // ─── Quick Action links ──────────────────────────────

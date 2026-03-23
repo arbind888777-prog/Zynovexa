@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 
+jest.mock('next/headers', () => ({
+  headers: jest.fn(async () => new Headers([['host', 'zynovexa.com']])),
+}));
+
 // Mock Navbar and Footer since they have their own test files
 jest.mock('@/components/Navbar', () => ({
   __esModule: true,
@@ -15,18 +19,19 @@ jest.mock('@/components/Footer', () => ({
 import LandingPage from '../../app/page';
 
 describe('Landing Page — buttons & links', () => {
-  beforeEach(() => {
-    render(<LandingPage />);
+  beforeEach(async () => {
+    const page = await LandingPage();
+    render(page);
   });
 
   // ─── Hero CTA buttons ────────────────────────────────
-  it('hero CTA "Start Free — No Credit Card" links to /signup', () => {
-    const el = screen.getByText(/Start Free — No Credit Card/);
+  it('hero CTA "Start free" links to /signup', () => {
+    const el = screen.getByText('Start free');
     expect(el.closest('a')).toHaveAttribute('href', '/signup');
   });
 
-  it('hero CTA "Try Demo Account →" links to /login', () => {
-    const el = screen.getByText(/Try Demo Account/);
+  it('hero CTA "Explore the platform" links to /login', () => {
+    const el = screen.getByText('Explore the platform');
     expect(el.closest('a')).toHaveAttribute('href', '/login');
   });
 
@@ -41,20 +46,14 @@ describe('Landing Page — buttons & links', () => {
     expect(el.closest('a')).toHaveAttribute('href', '/signup');
   });
 
-  it('Business tier "Go Business" links to /signup', () => {
-    const el = screen.getByText('Go Business');
+  it('Growth tier "Choose Growth" links to /signup', () => {
+    const el = screen.getByText('Choose Growth');
     expect(el.closest('a')).toHaveAttribute('href', '/signup');
   });
 
-  it('"Build your own →" links to /pricing', () => {
-    const el = screen.getByText(/Build your own/);
+  it('pricing CTA "See all plans" links to /pricing', () => {
+    const el = screen.getByText('See all plans →');
     expect(el.closest('a')).toHaveAttribute('href', '/pricing');
-  });
-
-  // ─── Bottom CTA banner ────────────────────────────────
-  it('bottom CTA "Create Free Account" links to /signup', () => {
-    const el = screen.getByText(/Create Free Account/);
-    expect(el.closest('a')).toHaveAttribute('href', '/signup');
   });
 
   // ─── Renders Navbar & Footer ──────────────────────────

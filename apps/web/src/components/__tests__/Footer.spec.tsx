@@ -2,6 +2,11 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import Footer from '../Footer';
 
+function expectLink(label: string, href: string) {
+  const links = screen.getAllByRole('link', { name: label });
+  expect(links.some((link) => link.getAttribute('href') === href)).toBe(true);
+}
+
 describe('Footer — all links', () => {
   beforeEach(() => {
     render(<Footer />);
@@ -21,8 +26,7 @@ describe('Footer — all links', () => {
     ['Analytics', '/features/analyze'],
     ['Collaborate', '/features/collaborate'],
   ])('Features: "%s" links to %s', (label, href) => {
-    const el = screen.getByText(label);
-    expect(el.closest('a')).toHaveAttribute('href', href);
+    expectLink(label, href);
   });
 
   // ─── Tools column ─────────────────────────────────────
@@ -33,8 +37,7 @@ describe('Footer — all links', () => {
     ['Free Marketing Tools', '/free-marketing-tools'],
     ['Integrations', '/tools/integrations'],
   ])('Tools: "%s" links to %s', (label, href) => {
-    const el = screen.getByText(label);
-    expect(el.closest('a')).toHaveAttribute('href', href);
+    expectLink(label, href);
   });
 
   // ─── Channels column ──────────────────────────────────
@@ -47,8 +50,7 @@ describe('Footer — all links', () => {
     ['Facebook', '/channels/facebook'],
     ['Google Business Profile', '/channels/google-business-profile'],
   ])('Channels: "%s" links to %s', (label, href) => {
-    const el = screen.getByText(label);
-    expect(el.closest('a')).toHaveAttribute('href', href);
+    expectLink(label, href);
   });
 
   // ─── Solutions column ─────────────────────────────────
@@ -59,8 +61,7 @@ describe('Footer — all links', () => {
     ['Nonprofits', '/solutions/nonprofits'],
     ['Higher Education', '/solutions/higher-education'],
   ])('Solutions: "%s" links to %s', (label, href) => {
-    const el = screen.getByText(label);
-    expect(el.closest('a')).toHaveAttribute('href', href);
+    expectLink(label, href);
   });
 
   // ─── Resources column ─────────────────────────────────
@@ -73,22 +74,20 @@ describe('Footer — all links', () => {
     ['Community', '/community'],
     ['Help Center', '/help'],
   ])('Resources: "%s" links to %s', (label, href) => {
-    const el = screen.getByText(label);
-    expect(el.closest('a')).toHaveAttribute('href', href);
+    expectLink(label, href);
   });
 
   // ─── Compare column ───────────────────────────────────
   it.each([
-    ['vs Buffer', '/compare#buffer'],
-    ['vs Hootsuite', '/compare#hootsuite'],
-    ['vs Later', '/compare#later'],
-    ['vs Sprout Social', '/compare#sprout'],
+    ['vs Buffer', '/compare/buffer-alternative'],
+    ['vs Hootsuite', '/compare/hootsuite-alternative'],
+    ['vs Later', '/compare/later-alternative'],
+    ['vs Sprout Social', '/compare/sprout-social-alternative'],
     ['Request a Feature', '/request-feature'],
     ['Changelog', '/changelog'],
     ['Status', '/status'],
   ])('Compare: "%s" links to %s', (label, href) => {
-    const el = screen.getByText(label);
-    expect(el.closest('a')).toHaveAttribute('href', href);
+    expectLink(label, href);
   });
 
   // ─── Company column ───────────────────────────────────
@@ -100,21 +99,20 @@ describe('Footer — all links', () => {
     ['Legal', '/legal'],
     ['Sitemap', '/sitemap-page'],
   ])('Company: "%s" links to %s', (label, href) => {
-    const el = screen.getByText(label);
-    expect(el.closest('a')).toHaveAttribute('href', href);
+    expectLink(label, href);
   });
 
   // ─── Legal column ─────────────────────────────────────
   it.each([
     ['Privacy Policy', '/privacy'],
     ['Terms of Service', '/terms'],
+    ['Refund Policy', '/refund-policy'],
+    ['Return Policy', '/return-policy'],
+    ['Disclaimer', '/disclaimer'],
     ['Cookie Policy', '/legal/cookies'],
-    ['GDPR Notice', '/legal/gdpr'],
-    ['Data Processing Agreement', '/legal/dpa'],
-    ['Copyright Policy', '/legal/copyright'],
+    ['Contact Us', '/contact'],
   ])('Legal: "%s" links to %s', (label, href) => {
-    const el = screen.getByText(label);
-    expect(el.closest('a')).toHaveAttribute('href', href);
+    expectLink(label, href);
   });
 
   // Pricing appears in footer Company column AND potentially in Navbar

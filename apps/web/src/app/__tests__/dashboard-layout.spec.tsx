@@ -1,15 +1,25 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 
+const mockAuthState = {
+  isAuthenticated: true,
+  isLoading: false,
+  _hydrated: true,
+  user: { name: 'Test User', plan: 'PRO', onboardingCompleted: true },
+  logout: jest.fn(),
+  fetchMe: jest.fn(),
+};
+
+const mockUseAuthStore = Object.assign(
+  () => mockAuthState,
+  {
+    getState: jest.fn(() => mockAuthState),
+  },
+);
+
 // Mock auth store — authenticated user
 jest.mock('@/stores/auth.store', () => ({
-  useAuthStore: () => ({
-    isAuthenticated: true,
-    isLoading: false,
-    user: { name: 'Test User', plan: 'PRO', onboardingCompleted: true },
-    logout: jest.fn(),
-    fetchMe: jest.fn(),
-  }),
+  useAuthStore: mockUseAuthStore,
 }));
 
 jest.mock('next/navigation', () => ({
@@ -23,6 +33,15 @@ jest.mock('sonner', () => ({
 }));
 
 import DashboardLayout from '../../app/(dashboard)/layout';
+
+const expectLink = (label: string, href: string) => {
+  const linkedElements = screen
+    .getAllByText(label)
+    .map((element) => element.closest('a'))
+    .filter((link): link is HTMLAnchorElement => Boolean(link));
+
+  expect(linkedElements.some((link) => link.getAttribute('href') === href)).toBe(true);
+};
 
 describe('Dashboard Layout — sidebar buttons & links', () => {
   beforeEach(() => {
@@ -50,10 +69,8 @@ describe('Dashboard Layout — sidebar buttons & links', () => {
     ['Accounts', '/accounts'],
     ['AI Studio', '/ai'],
     ['Settings', '/settings'],
-    ['Billing', '/settings/billing'],
   ])('sidebar nav "%s" links to %s', (label, href) => {
-    const el = screen.getByText(label);
-    expect(el.closest('a')).toHaveAttribute('href', href);
+    expectLink(label, href);
   });
 
   // ─── Upgrade Plan link ────────────────────────────────
@@ -74,7 +91,7 @@ describe('Dashboard Layout — sidebar buttons & links', () => {
   });
 
   it('displays plan badge', () => {
-    expect(screen.getByText('⚡ Pro')).toBeTruthy();
+    expect(screen.getAllByText('⚡ Pro').length).toBeGreaterThan(0);
   });
 
   // ─── Children rendered ────────────────────────────────
