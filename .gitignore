@@ -40,6 +40,8 @@ logs/
 *.bak
 *.tar.gz
 *.zip
+vps_key
+vps_key.pub
 
 # OS files
 .DS_Store
