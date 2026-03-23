@@ -1,4 +1,4 @@
-name: Deploy to Hostinger VPS
+name: SSH Connection Test
 
 on:
   push:
@@ -6,62 +6,38 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy Frontend to VPS
+  ssh-test:
+    name: Test VPS SSH Access
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Debug TCP reachability on port 22
+        env:
+          SSH_HOST: ${{ secrets.HOST }}
+        run: |
+          set -eux
+          echo "Testing raw TCP connectivity to ${SSH_HOST}:22"
+          nc -vz -w 5 "$SSH_HOST" 22
 
-      - name: SSH connection check
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Debug SSH handshake/banner
+        env:
+          SSH_HOST: ${{ secrets.HOST }}
+        run: |
+          set -eux
+          echo "Trying to read SSH banner from ${SSH_HOST}:22"
+          ssh-keyscan -T 10 -p 22 "$SSH_HOST"
+
+      - name: Test SSH login with password
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-          script_stop: true
+          port: 22
           timeout: 30s
-          command_timeout: 20m
+          command_timeout: 2m
+          script_stop: true
           script: |
-            set -e
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-            echo "SSH connection established successfully"
+            echo "SSH login successful"
             whoami
+            hostname
             pwd
-            test -d /var/www/Zynovexa
-            echo "Project directory found: /var/www/Zynovexa"
-
-      - name: Deploy latest frontend build
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          script_stop: true
-          timeout: 30s
-          command_timeout: 30m
-          script: |
-            set -e
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-            cd /var/www/Zynovexa
-
-            echo "Pulling latest code"
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo "Installing dependencies"
-            npm install
-
-            echo "Building frontend"
-            cd apps/web
-            npm run build
-            cd /var/www/Zynovexa
-
-            echo "Restarting PM2 frontend"
-            pm2 restart zynovexa-web || pm2 start ecosystem.config.cjs --only zynovexa-web --env production
-            pm2 save
-
-            echo "Deployment completed successfully"
