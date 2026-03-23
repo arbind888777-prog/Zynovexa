@@ -27,13 +27,16 @@ jobs:
             npm install
 
             cd apps/api
+            test -f .env
+            grep -q '^DATABASE_URL=' .env
+            grep -q '^DIRECT_URL=' .env
             npm install
             npx prisma generate
             npx prisma migrate deploy
             npm run build
             pm2 restart zynovexa-api || pm2 start dist/main.js --name zynovexa-api
 
-            cd apps/web
+            cd ../web
             npm install
             npm run build
             pm2 restart zynovexa-frontend || pm2 start npm --name 'zynovexa-frontend' -- start
