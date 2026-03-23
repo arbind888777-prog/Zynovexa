@@ -1,4 +1,4 @@
-name: SSH Connection Test
+name: Deploy App
 
 on:
   push:
@@ -6,38 +6,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  ssh-test:
-    name: Test VPS SSH Access
+  deploy-app:
+    name: Deploy Frontend And Backend To VPS
     runs-on: ubuntu-latest
     steps:
-      - name: Debug TCP reachability on port 22
-        env:
-          SSH_HOST: ${{ secrets.HOST }}
-        run: |
-          set -eux
-          echo "Testing raw TCP connectivity to ${SSH_HOST}:22"
-          nc -vz -w 5 "$SSH_HOST" 22
-
-      - name: Debug SSH handshake/banner
-        env:
-          SSH_HOST: ${{ secrets.HOST }}
-        run: |
-          set -eux
-          echo "Trying to read SSH banner from ${SSH_HOST}:22"
-          ssh-keyscan -T 10 -p 22 "$SSH_HOST"
-
-      - name: Test SSH login with password
+      - name: Deploy over SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           port: 22
-          timeout: 30s
-          command_timeout: 2m
+          timeout: 60s
+          command_timeout: 30m
           script_stop: true
           script: |
-            echo "SSH login successful"
-            whoami
-            hostname
-            pwd
+            set -eux
+            cd /var/www/Zynovexa
+            git fetch --all
+            git reset --hard origin/main
+            npm install
+
+            cd apps/api
+            npm install
+            npm run build
+            pm2 restart zynovexa-api || pm2 start dist/main.js --name zynovexa-api
+
+            cd apps/web
+            npm install
+            npm run build
+            pm2 restart zynovexa-frontend || pm2 start npm --name 'zynovexa-frontend' -- start
