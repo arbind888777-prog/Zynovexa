@@ -17,21 +17,39 @@ const PLAN_LIMITS = {
 };
 
 type AiJson = Record<string, any>;
+type TextModelResponse = { text: string; tokensUsed: number };
 
 @Injectable()
 export class AiService {
   private openai: OpenAI | null = null;
+  private geminiApiKey = '';
+  private aiProvider: 'openai' | 'gemini' | 'demo' = 'demo';
   private isDemoMode: boolean;
 
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
   ) {
-    const apiKey = this.config.get('OPENAI_API_KEY') || '';
-    this.isDemoMode = !apiKey || apiKey.includes('your-openai') || apiKey === 'sk-your-openai-key-here';
-    if (!this.isDemoMode) {
-      this.openai = new OpenAI({ apiKey });
+    const openAiKey = this.config.get('OPENAI_API_KEY') || '';
+    const geminiKey = this.config.get('GEMINI_API_KEY') || '';
+    const hasOpenAi = !!openAiKey && !openAiKey.includes('your-openai') && openAiKey !== 'sk-your-openai-key-here';
+    const hasGemini = !!geminiKey && !geminiKey.includes('your-gemini');
+
+    if (hasOpenAi) {
+      this.openai = new OpenAI({ apiKey: openAiKey });
+      this.aiProvider = 'openai';
+      this.isDemoMode = false;
+      return;
     }
+
+    if (hasGemini) {
+      this.geminiApiKey = geminiKey;
+      this.aiProvider = 'gemini';
+      this.isDemoMode = false;
+      return;
+    }
+
+    this.isDemoMode = true;
   }
 
   // ─── Caption Generator ────────────────────────────────────────────────────
@@ -60,8 +78,8 @@ ${hashtags}
 
 Return as JSON: { "captions": ["caption1", "caption2", "caption3"], "hashtags": ["#tag1", ...] }`;
 
-    const result = await this.callOpenAI(userId, prompt, 'CAPTION');
-    const parsed = this.safeJsonParse(result, { captions: [result], hashtags: [] });
+    const response = await this.callTextModel(userId, prompt, 'CAPTION', { jsonMode: true, maxTokens: 1500, temperature: 0.8 });
+    const parsed = this.safeJsonParse(response.text, { captions: [response.text], hashtags: [] });
     return { ...parsed, qualityScore: this.scoreCaptionOutput(parsed) };
   }
 
@@ -106,8 +124,8 @@ Return as JSON:
   "bRoll": ["visual suggestion 1", "visual suggestion 2"]
 }`;
 
-    const result = await this.callOpenAI(userId, prompt, 'VIDEO_SCRIPT');
-    const parsed = this.safeJsonParse(result, { script: result });
+    const response = await this.callTextModel(userId, prompt, 'VIDEO_SCRIPT', { jsonMode: true, maxTokens: 1500, temperature: 0.8 });
+    const parsed = this.safeJsonParse(response.text, { script: response.text });
     return { ...parsed, qualityScore: this.scoreScriptOutput(parsed) };
   }
 
@@ -128,8 +146,8 @@ ${platformRules}
 Mix: trending (40%), niche-specific (40%), broad (20%)
 Return as JSON: { "hashtags": ["#tag1", "#tag2", ...], "categories": { "trending": [...], "niche": [...], "broad": [...] } }`;
 
-    const result = await this.callOpenAI(userId, prompt, 'HASHTAGS');
-    const parsed = this.safeJsonParse(result, { hashtags: [] });
+    const response = await this.callTextModel(userId, prompt, 'HASHTAGS', { jsonMode: true, maxTokens: 1200, temperature: 0.7 });
+    const parsed = this.safeJsonParse(response.text, { hashtags: [] });
     return { ...parsed, qualityScore: this.scoreHashtagOutput(parsed, count) };
   }
 
@@ -138,10 +156,10 @@ Return as JSON: { "hashtags": ["#tag1", "#tag2", ...], "categories": { "trending
   async generateImage(userId: string, dto: GenerateImageDto) {
     await this.checkUsageLimit(userId);
     if (this.isDemoMode || !this.openai) {
-      throw new BadRequestException('OpenAI API key nahi hai. .env file mein OPENAI_API_KEY add karo.');
+      throw new BadRequestException('AI image generation ke liye OPENAI_API_KEY required hai. Text AI Gemini se chal sakta hai, image generation nahi.');
     }
     const response = await this.openai.images.generate({
-      model: 'dall-e-3',
+      model: this.config.get('OPENAI_IMAGE_MODEL') || 'dall-e-3',
       prompt: dto.prompt,
       n: 1,
       size: (dto.size as any) || '1024x1024',
@@ -158,8 +176,8 @@ Return as JSON: { "hashtags": ["#tag1", "#tag2", ...], "categories": { "trending
 
   async chat(userId: string, dto: ChatMessageDto) {
     await this.checkUsageLimit(userId);
-    if (this.isDemoMode || !this.openai) {
-      return { reply: '⚠️ OpenAI key nahi hai. .env mein OPENAI_API_KEY add karo: https://platform.openai.com/api-keys', tokensUsed: 0 };
+    if (this.isDemoMode) {
+      return { reply: '⚠️ AI provider configure nahi hai. .env mein OPENAI_API_KEY ya GEMINI_API_KEY add karo.', tokensUsed: 0 };
     }
     const brandVoice = this.buildBrandVoiceInstruction(dto.brandVoice);
     const language = dto.language || 'English';
@@ -174,23 +192,15 @@ ${brandVoice}
 Long-term user memory (recent chat context):
 ${longTermMemory || 'No prior memory available.'}`;
 
-    const messages: any[] = [
-      { role: 'system', content: systemPrompt },
-      ...(dto.history || []).slice(-historyLimit),
-      { role: 'user', content: dto.message },
-    ];
+    const historyText = (dto.history || [])
+      .slice(-historyLimit)
+      .map((message: any) => `${message.role === 'assistant' ? 'Assistant' : 'User'}: ${message.content}`)
+      .join('\n');
 
-    const completion = await this.openai.chat.completions.create({
-      model: this.config.get('OPENAI_MODEL') || 'gpt-4o',
-      messages,
-      max_tokens: 500,
-      temperature: 0.7,
-    });
+    const prompt = `${systemPrompt}\n\nRecent live conversation:\n${historyText || 'No recent conversation.'}\n\nUser: ${dto.message}\nAssistant:`;
+    const response = await this.callTextModel(userId, prompt, 'CHATBOT', { maxTokens: 700, temperature: 0.7 });
 
-    const reply = completion.choices[0]?.message?.content || '';
-    await this.logRequest(userId, dto.message, reply, completion.usage?.total_tokens || 0, 'CHATBOT');
-
-    return { reply, tokensUsed: completion.usage?.total_tokens };
+    return { reply: response.text, tokensUsed: response.tokensUsed };
   }
 
   // ─── Best Time to Post ────────────────────────────────────────────────────
@@ -221,8 +231,8 @@ Return as JSON:
   "topDays": ["Monday", "Wednesday", "Friday"]
 }`;
 
-    const result = await this.callOpenAI(userId, prompt, 'BEST_TIME');
-  return this.safeJsonParse(result, { bestTimes: [], insights: result });
+    const response = await this.callTextModel(userId, prompt, 'BEST_TIME', { jsonMode: true, maxTokens: 1200, temperature: 0.6 });
+    return this.safeJsonParse(response.text, { bestTimes: [], insights: response.text });
   }
 
   // ─── Usage Stats ──────────────────────────────────────────────────────────
@@ -273,10 +283,20 @@ Return as JSON:
 
   // ─── Private Helpers ──────────────────────────────────────────────────────
 
-  private async callOpenAI(userId: string, prompt: string, type: any): Promise<string> {
-    if (this.isDemoMode || !this.openai) {
-      throw new BadRequestException('OpenAI API key nahi hai. .env file mein OPENAI_API_KEY add karo. Get key: https://platform.openai.com/api-keys');
+  private async callTextModel(
+    userId: string,
+    prompt: string,
+    type: any,
+    options?: { jsonMode?: boolean; maxTokens?: number; temperature?: number },
+  ): Promise<TextModelResponse> {
+    if (this.isDemoMode) {
+      throw new BadRequestException('AI provider configure nahi hai. .env file mein OPENAI_API_KEY ya GEMINI_API_KEY add karo.');
     }
+
+    if (this.aiProvider === 'gemini') {
+      return this.callGemini(userId, prompt, type, options);
+    }
+
     const primaryModel = this.config.get('OPENAI_MODEL') || 'gpt-4o';
     const fallbackModel = this.config.get('OPENAI_FALLBACK_MODEL') || 'gpt-4o-mini';
     let lastError: any;
@@ -287,20 +307,61 @@ Return as JSON:
         const completion = await this.openai.chat.completions.create({
           model,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 1500,
-          temperature: 0.8,
-          response_format: { type: 'json_object' },
+          max_tokens: options?.maxTokens || 1500,
+          temperature: options?.temperature ?? 0.8,
+          ...(options?.jsonMode ? { response_format: { type: 'json_object' as const } } : {}),
         });
 
         const result = completion.choices[0]?.message?.content || '';
         await this.logRequest(userId, prompt, result, completion.usage?.total_tokens || 0, type);
-        return result;
+        return { text: result, tokensUsed: completion.usage?.total_tokens || 0 };
       } catch (err: any) {
         lastError = err;
       }
     }
 
     throw new BadRequestException(lastError?.message || 'AI request failed. Please try again.');
+  }
+
+  private async callGemini(
+    userId: string,
+    prompt: string,
+    type: any,
+    options?: { jsonMode?: boolean; maxTokens?: number; temperature?: number },
+  ): Promise<TextModelResponse> {
+    const model = this.config.get('GEMINI_MODEL') || 'gemini-2.0-flash';
+    const finalPrompt = options?.jsonMode
+      ? `${prompt}\n\nReturn valid JSON only. Do not wrap it in markdown code fences.`
+      : prompt;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: finalPrompt }] }],
+        generationConfig: {
+          temperature: options?.temperature ?? 0.8,
+          maxOutputTokens: options?.maxTokens || 1500,
+          responseMimeType: options?.jsonMode ? 'application/json' : 'text/plain',
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new BadRequestException(`Gemini request failed: ${errorText}`);
+    }
+
+    const data = await response.json() as any;
+    const text = (data?.candidates || [])
+      .flatMap((candidate: any) => candidate?.content?.parts || [])
+      .map((part: any) => part?.text || '')
+      .join('')
+      .trim();
+
+    const tokensUsed = data?.usageMetadata?.totalTokenCount || 0;
+    await this.logRequest(userId, prompt, text, tokensUsed, type);
+    return { text, tokensUsed };
   }
 
   private async logRequest(userId: string, prompt: string, result: string, tokens: number, type: any) {

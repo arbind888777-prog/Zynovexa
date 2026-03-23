@@ -21,7 +21,7 @@ const PLATFORM_META: Record<Platform, PlatformMeta> = {
   YOUTUBE:   { icon: '▶️',  color: '#ff0000', label: 'YouTube',    oauthSupported: true },
   INSTAGRAM: { icon: '📸',  color: '#e1306c', label: 'Instagram',  oauthSupported: false, comingSoon: true },
   TIKTOK:    { icon: '🎵',  color: '#69c9d0', label: 'TikTok',     oauthSupported: false, comingSoon: true },
-  TWITTER:   { icon: '𝕏',  color: '#1da1f2', label: 'X / Twitter', oauthSupported: false, comingSoon: true },
+  TWITTER:   { icon: '𝕏',  color: '#1da1f2', label: 'X / Twitter', oauthSupported: true },
   LINKEDIN:  { icon: '💼',  color: '#0077b5', label: 'LinkedIn',   oauthSupported: false, comingSoon: true },
   FACEBOOK:  { icon: '👤',  color: '#1877f2', label: 'Facebook',   oauthSupported: false, comingSoon: true },
   SNAPCHAT:  { icon: '👻',  color: '#fffc00', label: 'Snapchat',   oauthSupported: false, comingSoon: true },
@@ -34,6 +34,7 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   youtube_denied:  'YouTube access was denied. Please try again and approve the permissions.',
   youtube_invalid: 'Invalid OAuth state. Please try connecting again.',
   youtube_failed:  'YouTube connection failed. Check your Google account permissions and retry.',
+  twitter_failed:  'X / Twitter connection failed. Verify app settings and callback URL, then try again.',
 };
 
 // ── Main Page ──────────────────────────────────────────────────
@@ -46,6 +47,7 @@ export default function AccountsPage() {
     id: string; platform: string; handle: string;
   } | null>(null);
   const [ytConnecting, setYtConnecting] = useState(false);
+  const [oauthConnectingPlatform, setOauthConnectingPlatform] = useState<Platform | null>(null);
   const [activeTab, setActiveTab] = useState<'accounts' | 'queue'>('accounts');
 
   // ── Handle OAuth redirect result from URL params ──
@@ -53,8 +55,10 @@ export default function AccountsPage() {
     const connected = searchParams.get('connected');
     const error     = searchParams.get('error');
 
-    if (connected === 'youtube') {
-      toast.success('✅ YouTube account connected successfully!');
+    if (connected) {
+      const platformKey = connected.toUpperCase() as Platform;
+      const label = PLATFORM_META[platformKey]?.label || connected;
+      toast.success(`✅ ${label} account connected successfully!`);
       qc.invalidateQueries({ queryKey: ['accounts'] });
       qc.invalidateQueries({ queryKey: ['account-stats'] });
       router.replace('/accounts'); // clean URL
@@ -119,10 +123,25 @@ export default function AccountsPage() {
     }
   };
 
+  const handleConnectOAuthPlatform = async (platform: Platform) => {
+    setOauthConnectingPlatform(platform);
+    try {
+      const res = await integrationsApi.getOAuthUrl(platform.toLowerCase());
+      const { authUrl } = res.data?.data ?? res.data;
+      if (!authUrl) throw new Error('No OAuth URL returned');
+      window.location.href = authUrl;
+    } catch {
+      toast.error(`Could not initiate ${PLATFORM_META[platform].label} connection. Please verify API keys and retry.`);
+      setOauthConnectingPlatform(null);
+    }
+  };
+
   // ── Reconnect handler ──
   const handleReconnect = (platform: Platform) => {
     if (platform === 'YOUTUBE') {
       handleConnectYoutube();
+    } else if (PLATFORM_META[platform].oauthSupported) {
+      handleConnectOAuthPlatform(platform);
     } else {
       toast.info(`${PLATFORM_META[platform].label} reconnect coming soon.`);
     }
@@ -133,6 +152,8 @@ export default function AccountsPage() {
     const meta = PLATFORM_META[platform];
     if (platform === 'YOUTUBE') {
       handleConnectYoutube();
+    } else if (meta.oauthSupported) {
+      handleConnectOAuthPlatform(platform);
     } else if (meta.comingSoon) {
       toast.info(`${meta.label} OAuth connect is coming soon! Stay tuned.`);
     }
@@ -444,6 +465,21 @@ export default function AccountsPage() {
                         </span>
                       ) : (
                         '▶️ Connect YouTube'
+                      )}
+                    </button>
+                  ) : meta.oauthSupported ? (
+                    <button
+                      onClick={() => handleConnect(p)}
+                      disabled={oauthConnectingPlatform === p}
+                      className="flex-1 py-2 rounded-lg text-xs font-semibold text-white transition-all"
+                      style={{ background: `linear-gradient(135deg, ${meta.color}, ${meta.color}cc)` }}>
+                      {oauthConnectingPlatform === p ? (
+                        <span className="flex items-center justify-center gap-1.5">
+                          <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Connecting…
+                        </span>
+                      ) : (
+                        `Connect ${meta.label}`
                       )}
                     </button>
                   ) : (

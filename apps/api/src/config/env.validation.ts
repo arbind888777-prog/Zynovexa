@@ -59,6 +59,20 @@ export const envValidationSchema = Joi.object({
     then: Joi.required(),
     otherwise: Joi.optional(),
   }),
+  OPENAI_MODEL: Joi.string().optional(),
+  OPENAI_FALLBACK_MODEL: Joi.string().optional(),
+  OPENAI_IMAGE_MODEL: Joi.string().optional(),
+
+  // ── Gemini (optional fallback for text AI) ──────────────────
+  GEMINI_API_KEY: Joi.string().optional(),
+  GEMINI_MODEL: Joi.string().optional(),
+
+  // ── Social platform integrations ────────────────────────────
+  TWITTER_CLIENT_ID: Joi.string().optional(),
+  TWITTER_CLIENT_SECRET: Joi.string().optional(),
+  TWITTER_BEARER_TOKEN: Joi.string().optional(),
+  PINTEREST_APP_ID: Joi.string().optional(),
+  PINTEREST_APP_SECRET: Joi.string().optional(),
 
   // ── Stripe (optional in dev) ────────────────────────────────
   STRIPE_SECRET_KEY: Joi.string().optional(),

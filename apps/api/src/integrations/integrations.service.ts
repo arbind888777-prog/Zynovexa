@@ -10,6 +10,8 @@ interface PlatformConfig {
   tokenUrl: string;
   scopes: string[];
   apiBase: string;
+  clientIdEnv: string;
+  clientSecretEnv?: string;
 }
 
 const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
@@ -19,6 +21,7 @@ const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
     tokenUrl: 'https://api.instagram.com/oauth/access_token',
     scopes: ['instagram_basic', 'instagram_content_publish', 'instagram_manage_insights'],
     apiBase: 'https://graph.instagram.com/v18.0',
+    clientIdEnv: 'INSTAGRAM_CLIENT_ID',
   },
   YOUTUBE: {
     name: 'YouTube',
@@ -26,6 +29,8 @@ const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
     tokenUrl: 'https://oauth2.googleapis.com/token',
     scopes: ['https://www.googleapis.com/auth/youtube', 'https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/yt-analytics.readonly'],
     apiBase: 'https://www.googleapis.com/youtube/v3',
+    clientIdEnv: 'GOOGLE_CLIENT_ID',
+    clientSecretEnv: 'GOOGLE_CLIENT_SECRET',
   },
   TIKTOK: {
     name: 'TikTok',
@@ -33,6 +38,8 @@ const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
     tokenUrl: 'https://open.tiktokapis.com/v2/oauth/token/',
     scopes: ['user.info.basic', 'video.publish', 'video.list'],
     apiBase: 'https://open.tiktokapis.com/v2',
+    clientIdEnv: 'TIKTOK_CLIENT_ID',
+    clientSecretEnv: 'TIKTOK_CLIENT_SECRET',
   },
   LINKEDIN: {
     name: 'LinkedIn',
@@ -40,6 +47,8 @@ const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
     tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
     scopes: ['r_liteprofile', 'w_member_social'],
     apiBase: 'https://api.linkedin.com/v2',
+    clientIdEnv: 'LINKEDIN_CLIENT_ID',
+    clientSecretEnv: 'LINKEDIN_CLIENT_SECRET',
   },
   TWITTER: {
     name: 'Twitter / X',
@@ -47,6 +56,8 @@ const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
     tokenUrl: 'https://api.twitter.com/2/oauth2/token',
     scopes: ['tweet.read', 'tweet.write', 'users.read'],
     apiBase: 'https://api.twitter.com/2',
+    clientIdEnv: 'TWITTER_CLIENT_ID',
+    clientSecretEnv: 'TWITTER_CLIENT_SECRET',
   },
 };
 
@@ -75,6 +86,7 @@ export class IntegrationsService {
       connected: connectedMap.has(key as Platform),
       active: connectedMap.get(key as Platform) ?? false,
       scopes: config.scopes,
+      oauthSupported: this.isPlatformConfigured(config),
     }));
   }
 
@@ -82,10 +94,13 @@ export class IntegrationsService {
     const platKey = platform.toUpperCase();
     const config = PLATFORM_CONFIGS[platKey];
     if (!config) throw new BadRequestException(`Unsupported platform: ${platform}`);
+    if (!this.isPlatformConfigured(config)) {
+      throw new BadRequestException(`${config.name} OAuth is not configured yet. Add ${config.clientIdEnv}${config.clientSecretEnv ? ` and ${config.clientSecretEnv}` : ''} in the API env.`);
+    }
 
-    const state = crypto.randomBytes(32).toString('hex');
-    const clientId = this.config.get(`${platKey}_CLIENT_ID`) || `ZYNOVEXA_${platKey}_CLIENT_ID`;
-    const redirectUri = `${this.config.get('APP_URL') || 'http://localhost:4000'}/api/integrations/callback/${platform.toLowerCase()}`;
+    const state = this.createSignedState(userId, platKey);
+    const clientId = this.config.get(config.clientIdEnv) || `ZYNOVEXA_${platKey}_CLIENT_ID`;
+    const redirectUri = `${this.getApiBaseUrl()}/api/integrations/callback/${platform.toLowerCase()}`;
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -95,6 +110,13 @@ export class IntegrationsService {
       state,
     });
 
+    if (platKey === 'TWITTER') {
+      const verifier = crypto.randomBytes(32).toString('base64url');
+      const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+      params.set('code_challenge', challenge);
+      params.set('code_challenge_method', 'S256');
+    }
+
     return {
       authUrl: `${config.authUrl}?${params.toString()}`,
       state,
@@ -102,8 +124,10 @@ export class IntegrationsService {
     };
   }
 
-  async handleOAuthCallback(platform: string, code: string, userId: string) {
+  async handleOAuthCallback(platform: string, code: string, state: string) {
     if (!code) throw new BadRequestException('Authorization code missing');
+    const oauthState = this.parseSignedState(state, platform);
+    const userId = oauthState.userId;
 
     // In production: exchange code for tokens via the platform's token endpoint
     // For now, simulate token storage
@@ -135,7 +159,11 @@ export class IntegrationsService {
       });
     }
 
-    return { message: `${platform} connected successfully` };
+    const frontendUrl = this.config.get('FRONTEND_URL') || 'http://localhost:3001';
+    return {
+      message: `${platform} connected successfully`,
+      redirectUrl: `${frontendUrl.replace(/\/$/, '')}/accounts?connected=${platform.toLowerCase()}`,
+    };
   }
 
   async refreshToken(userId: string, platform: string) {
@@ -215,5 +243,64 @@ export class IntegrationsService {
     } catch {
       return '';
     }
+  }
+
+  private isPlatformConfigured(config: PlatformConfig) {
+    const clientId = this.config.get(config.clientIdEnv);
+    const clientSecret = config.clientSecretEnv ? this.config.get(config.clientSecretEnv) : 'configured';
+    return Boolean(clientId && clientSecret);
+  }
+
+  private createSignedState(userId: string, platform: string) {
+    const payload = JSON.stringify({
+      userId,
+      platform,
+      nonce: crypto.randomBytes(12).toString('hex'),
+      issuedAt: Date.now(),
+    });
+    const encodedPayload = Buffer.from(payload, 'utf8').toString('base64url');
+    const signature = crypto
+      .createHmac('sha256', this.config.get('JWT_ACCESS_SECRET') || this.encryptionKey)
+      .update(encodedPayload)
+      .digest('base64url');
+
+    return `${encodedPayload}.${signature}`;
+  }
+
+  private parseSignedState(state: string, platform: string) {
+    const [encodedPayload, signature] = (state || '').split('.');
+    if (!encodedPayload || !signature) {
+      throw new BadRequestException('OAuth state missing or invalid');
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', this.config.get('JWT_ACCESS_SECRET') || this.encryptionKey)
+      .update(encodedPayload)
+      .digest('base64url');
+
+    if (signature !== expectedSignature) {
+      throw new BadRequestException('OAuth state verification failed');
+    }
+
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as {
+      userId: string;
+      platform: string;
+      issuedAt: number;
+    };
+
+    if (payload.platform !== platform.toUpperCase()) {
+      throw new BadRequestException('OAuth state platform mismatch');
+    }
+
+    if (Date.now() - payload.issuedAt > 15 * 60 * 1000) {
+      throw new BadRequestException('OAuth session expired. Please reconnect and try again.');
+    }
+
+    return payload;
+  }
+
+  private getApiBaseUrl() {
+    const raw = (this.config.get('API_URL') || this.config.get('BACKEND_URL') || 'http://localhost:4000').replace(/\/$/, '');
+    return raw.endsWith('/api') ? raw.slice(0, -4) : raw;
   }
 }

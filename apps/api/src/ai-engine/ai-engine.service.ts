@@ -6,17 +6,34 @@ import OpenAI from 'openai';
 @Injectable()
 export class AiEngineService {
   private openai: OpenAI | null = null;
+  private geminiApiKey = '';
+  private aiProvider: 'openai' | 'gemini' | 'demo' = 'demo';
   private isDemoMode: boolean;
 
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
   ) {
-    const apiKey = this.config.get('OPENAI_API_KEY') || '';
-    this.isDemoMode = !apiKey || apiKey.includes('your-openai') || apiKey === 'sk-your-openai-key-here';
-    if (!this.isDemoMode) {
-      this.openai = new OpenAI({ apiKey });
+    const openAiKey = this.config.get('OPENAI_API_KEY') || '';
+    const geminiKey = this.config.get('GEMINI_API_KEY') || '';
+    const hasOpenAi = !!openAiKey && !openAiKey.includes('your-openai') && openAiKey !== 'sk-your-openai-key-here';
+    const hasGemini = !!geminiKey && !geminiKey.includes('your-gemini');
+
+    if (hasOpenAi) {
+      this.openai = new OpenAI({ apiKey: openAiKey });
+      this.aiProvider = 'openai';
+      this.isDemoMode = false;
+      return;
     }
+
+    if (hasGemini) {
+      this.geminiApiKey = geminiKey;
+      this.aiProvider = 'gemini';
+      this.isDemoMode = false;
+      return;
+    }
+
+    this.isDemoMode = true;
   }
 
   async generate(userId: string, dto: { niche: string; platform: string; tone: string; audience: string; contentType: string; topic?: string }) {
@@ -59,18 +76,11 @@ export class AiEngineService {
     // Real OpenAI call
     const prompt = this.buildPrompt(contentType, topic || niche, platform, tone, audience, niche);
     try {
-      const completion = await this.openai!.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1000,
-        temperature: 0.8,
-      });
-
-      const content = completion.choices[0]?.message?.content || '';
+      const content = await this.generateWithProvider(prompt);
       const score = this.scoreContent(content, platform);
 
       await this.prisma.aiRequest.create({
-        data: { userId, requestType: 'CAPTION', prompt: topic || niche, result: content, tokensUsed: completion.usage?.total_tokens || 0 },
+        data: { userId, requestType: 'CAPTION', prompt: topic || niche, result: content, tokensUsed: 0 },
       });
 
       return { content, score, usage: { used: usageCount + 1, limit } };
@@ -78,6 +88,44 @@ export class AiEngineService {
       const content = this.generateDemoContent(contentType, topic || niche, platform, tone, audience);
       return { content, score: this.scoreContent(content, platform), usage: { used: usageCount, limit } };
     }
+  }
+
+  private async generateWithProvider(prompt: string) {
+    if (this.aiProvider === 'openai' && this.openai) {
+      const completion = await this.openai.chat.completions.create({
+        model: this.config.get('OPENAI_MODEL') || 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1000,
+        temperature: 0.8,
+      });
+
+      return completion.choices[0]?.message?.content || '';
+    }
+
+    if (this.aiProvider === 'gemini') {
+      const model = this.config.get('GEMINI_MODEL') || 'gemini-2.0-flash';
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.8, maxOutputTokens: 1000 },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json() as any;
+      return (data?.candidates || [])
+        .flatMap((candidate: any) => candidate?.content?.parts || [])
+        .map((part: any) => part?.text || '')
+        .join('')
+        .trim();
+    }
+
+    throw new Error('AI provider not configured');
   }
 
   async scoreContentEndpoint(userId: string, dto: { content: string; platform: string }) {

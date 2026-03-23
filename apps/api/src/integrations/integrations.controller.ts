@@ -1,18 +1,19 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, UseGuards, Req, Res } from '@nestjs/common';
 import { IntegrationsService } from './integrations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('integrations')
-@UseGuards(JwtAuthGuard)
 export class IntegrationsController {
   constructor(private readonly integrationsService: IntegrationsService) {}
 
   @Get('platforms')
+  @UseGuards(JwtAuthGuard)
   async getAvailablePlatforms(@Req() req: any) {
     return this.integrationsService.getAvailablePlatforms(req.user.id);
   }
 
   @Get('oauth/:platform')
+  @UseGuards(JwtAuthGuard)
   async getOAuthUrl(@Req() req: any, @Param('platform') platform: string) {
     return this.integrationsService.getOAuthUrl(req.user.id, platform);
   }
@@ -21,17 +22,26 @@ export class IntegrationsController {
   async handleCallback(
     @Param('platform') platform: string,
     @Query('code') code: string,
-    @Req() req: any,
+    @Query('state') state: string,
+    @Res() res: any,
   ) {
-    return this.integrationsService.handleOAuthCallback(platform, code, req.user.id);
+    try {
+      const result = await this.integrationsService.handleOAuthCallback(platform, code, state);
+      return res.redirect(result.redirectUrl);
+    } catch {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      return res.redirect(`${frontendUrl.replace(/\/$/, '')}/accounts?error=${platform.toLowerCase()}_failed`);
+    }
   }
 
   @Post('refresh/:platform')
+  @UseGuards(JwtAuthGuard)
   async refreshToken(@Req() req: any, @Param('platform') platform: string) {
     return this.integrationsService.refreshToken(req.user.id, platform);
   }
 
   @Post('schedule')
+  @UseGuards(JwtAuthGuard)
   async schedulePost(
     @Req() req: any,
     @Body() body: { postId: string; platforms: string[]; scheduledAt: string },
@@ -45,6 +55,7 @@ export class IntegrationsController {
   }
 
   @Get('queue')
+  @UseGuards(JwtAuthGuard)
   async getScheduledQueue(@Req() req: any) {
     return this.integrationsService.getScheduledQueue(req.user.id);
   }
