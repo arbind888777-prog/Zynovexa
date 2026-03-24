@@ -24,7 +24,6 @@ const NAV: Array<{
     label: 'Channels',
     children: [
       { label: '📸 Instagram', href: '/channels/instagram' },
-      { label: '🎵 TikTok', href: '/channels/tiktok' },
       { label: '▶️ YouTube', href: '/channels/youtube' },
       { label: '𝕏 Twitter / X', href: '/channels/twitter' },
       { label: '💼 LinkedIn', href: '/channels/linkedin' },

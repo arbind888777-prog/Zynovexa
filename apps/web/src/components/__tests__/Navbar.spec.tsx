@@ -99,7 +99,6 @@ describe('Navbar — buttons & links', () => {
 
     const expected: Record<string, string> = {
       '📸 Instagram': '/channels/instagram',
-      '🎵 TikTok': '/channels/tiktok',
       '▶️ YouTube': '/channels/youtube',
       '𝕏 Twitter / X': '/channels/twitter',
       '💼 LinkedIn': '/channels/linkedin',

@@ -43,7 +43,6 @@ describe('Footer — all links', () => {
   // ─── Channels column ──────────────────────────────────
   it.each([
     ['Instagram', '/channels/instagram'],
-    ['TikTok', '/channels/tiktok'],
     ['YouTube', '/channels/youtube'],
     ['Twitter / X', '/channels/twitter'],
     ['LinkedIn', '/channels/linkedin'],
