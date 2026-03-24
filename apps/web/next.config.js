@@ -1,5 +1,15 @@
 const path = require('path');
 
+const defaultApiOrigin = process.env.NODE_ENV === 'production'
+  ? 'http://127.0.0.1:3000/api'
+  : 'http://localhost:4000/api';
+
+const apiDestination =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.BACKEND_URL ||
+  process.env.INTERNAL_API_URL ||
+  defaultApiOrigin;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -32,12 +42,8 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    if (process.env.NODE_ENV === 'production') {
-      return [];
-    }
-
     return [
-      { source: '/api/:path*', destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/:path*` },
+      { source: '/api/:path*', destination: `${apiDestination}/:path*` },
     ];
   },
 };
