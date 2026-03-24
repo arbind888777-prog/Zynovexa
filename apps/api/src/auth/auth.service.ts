@@ -1,8 +1,9 @@
 import {
-  Injectable, UnauthorizedException, ConflictException, BadRequestException,
+  Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -30,6 +31,8 @@ export interface GoogleUser {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
@@ -71,6 +74,8 @@ export class AuthService {
       },
     });
 
+    await this.ensureUserProvisioned(user.id);
+
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
@@ -105,6 +110,8 @@ export class AuthService {
 
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    await this.ensureUserProvisioned(user.id);
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
@@ -171,12 +178,16 @@ export class AuthService {
       });
     }
 
+    await this.ensureUserProvisioned(user.id);
+
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
   async getMe(userId: string) {
+    await this.ensureUserProvisioned(userId);
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { subscription: true, socialAccounts: { select: { platform: true, isActive: true, followersCount: true } } },
@@ -247,6 +258,8 @@ export class AuthService {
       });
     }
 
+    await this.ensureUserProvisioned(user.id);
+
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
@@ -302,6 +315,8 @@ export class AuthService {
       });
     }
 
+    await this.ensureUserProvisioned(user.id);
+
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
@@ -330,6 +345,171 @@ export class AuthService {
   private async saveRefreshToken(userId: string, token: string) {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.prisma.refreshToken.create({ data: { token, userId, expiresAt } });
+  }
+
+  private async ensureUserProvisioned(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        handle: true,
+        avatarUrl: true,
+        bio: true,
+        website: true,
+        niche: true,
+        timezone: true,
+        onboardingCompleted: true,
+        isVerified: true,
+        plan: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.subscription.upsert({
+        where: { userId },
+        update: {},
+        create: {
+          userId,
+          plan: user.plan,
+          status: 'ACTIVE',
+        },
+      }),
+      this.prisma.userStreak.upsert({
+        where: { userId },
+        update: {},
+        create: { userId },
+      }),
+    ]);
+
+    await this.syncLegacyProfileRow(user);
+    await this.syncResendAudience(user);
+  }
+
+  private async syncLegacyProfileRow(user: {
+    id: string;
+    email: string;
+    name: string;
+    handle: string | null;
+    avatarUrl: string | null;
+    bio: string | null;
+    website: string | null;
+    niche: string | null;
+    timezone: string;
+    onboardingCompleted: boolean;
+    isVerified: boolean;
+  }) {
+    try {
+      const [result] = await this.prisma.$queryRaw<Array<{ profileTable: string | null }>>(
+        Prisma.sql`SELECT to_regclass('public.profiles')::text AS "profileTable"`,
+      );
+
+      if (!result?.profileTable) {
+        return;
+      }
+
+      await this.prisma.$executeRaw(
+        Prisma.sql`
+          INSERT INTO "profiles" (
+            "id",
+            "userId",
+            "email",
+            "name",
+            "handle",
+            "avatarUrl",
+            "bio",
+            "website",
+            "niche",
+            "timezone",
+            "onboardingCompleted",
+            "isVerified",
+            "createdAt",
+            "updatedAt"
+          )
+          VALUES (
+            ${user.id},
+            ${user.id},
+            ${user.email},
+            ${user.name},
+            ${user.handle},
+            ${user.avatarUrl},
+            ${user.bio},
+            ${user.website},
+            ${user.niche},
+            ${user.timezone},
+            ${user.onboardingCompleted},
+            ${user.isVerified},
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT ("userId") DO UPDATE SET
+            "email" = EXCLUDED."email",
+            "name" = EXCLUDED."name",
+            "handle" = EXCLUDED."handle",
+            "avatarUrl" = EXCLUDED."avatarUrl",
+            "bio" = EXCLUDED."bio",
+            "website" = EXCLUDED."website",
+            "niche" = EXCLUDED."niche",
+            "timezone" = EXCLUDED."timezone",
+            "onboardingCompleted" = EXCLUDED."onboardingCompleted",
+            "isVerified" = EXCLUDED."isVerified",
+            "updatedAt" = NOW()
+        `,
+      );
+    } catch (error: any) {
+      this.logger.warn(`Legacy profiles sync skipped: ${error?.message || 'unknown error'}`);
+    }
+  }
+
+  private async syncResendAudience(user: { email: string; name: string }) {
+    const resendApiKey = this.config.get<string>('RESEND_API_KEY');
+    const resendAudienceId = this.config.get<string>('RESEND_AUDIENCE_ID');
+
+    if (!resendApiKey || !resendAudienceId) {
+      return;
+    }
+
+    const [firstName, ...lastNameParts] = user.name.trim().split(/\s+/).filter(Boolean);
+
+    try {
+      const response = await fetch(
+        `https://api.resend.com/audiences/${encodeURIComponent(resendAudienceId)}/contacts`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: user.email,
+            first_name: firstName || user.name,
+            last_name: lastNameParts.join(' ') || undefined,
+            unsubscribed: false,
+          }),
+        },
+      );
+
+      if (response.ok || response.status === 409) {
+        return;
+      }
+
+      const body = await response.text();
+      const normalizedBody = body.toLowerCase();
+      if (response.status === 422 && normalizedBody.includes('already')) {
+        return;
+      }
+
+      this.logger.warn(
+        `Resend audience sync failed for ${user.email}: ${response.status} ${body}`,
+      );
+    } catch (error: any) {
+      this.logger.warn(`Resend audience sync error for ${user.email}: ${error?.message || 'unknown error'}`);
+    }
   }
 
   private sanitizeUser(user: any) {

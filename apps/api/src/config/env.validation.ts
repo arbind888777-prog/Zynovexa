@@ -86,6 +86,10 @@ export const envValidationSchema = Joi.object({
   EMAIL_FROM: Joi.string().optional(),
   MAIL_FROM: Joi.string().optional(),
 
+  // ── Resend Audience Sync (optional) ────────────────────────
+  RESEND_API_KEY: Joi.string().optional(),
+  RESEND_AUDIENCE_ID: Joi.string().optional(),
+
   // ── Uploads ────────────────────────────────────────────────
   UPLOAD_DIR: Joi.string().optional(),
 

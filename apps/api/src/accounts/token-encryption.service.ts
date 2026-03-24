@@ -29,16 +29,38 @@ export class TokenEncryptionService {
       this.key = Buffer.alloc(32, 0); // zero key — noop for dev
       this.enabled = false;
     } else {
-      const buf = Buffer.from(keyBase64, 'base64');
-      if (buf.length !== 32) {
-        throw new Error(
-          `TOKEN_ENCRYPTION_KEY must encode exactly 32 bytes. Got ${buf.length}. ` +
-          `Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`,
-        );
-      }
-      this.key = buf;
+      this.key = this.normalizeKey(keyBase64);
       this.enabled = true;
     }
+  }
+
+  private normalizeKey(rawKey: string): Buffer {
+    const trimmed = rawKey.trim();
+
+    const utf8 = Buffer.from(trimmed, 'utf8');
+    if (utf8.length === 32) {
+      this.logger.log('TOKEN_ENCRYPTION_KEY loaded as a raw 32-byte string');
+      return utf8;
+    }
+
+    if (/^[A-Fa-f0-9]{64}$/.test(trimmed)) {
+      const hex = Buffer.from(trimmed, 'hex');
+      if (hex.length === 32) {
+        this.logger.log('TOKEN_ENCRYPTION_KEY loaded as a 64-char hex key');
+        return hex;
+      }
+    }
+
+    const base64 = Buffer.from(trimmed, 'base64');
+    if (base64.length === 32) {
+      this.logger.log('TOKEN_ENCRYPTION_KEY loaded as a base64-encoded 32-byte key');
+      return base64;
+    }
+
+    this.logger.warn(
+      'TOKEN_ENCRYPTION_KEY is not an exact 32-byte raw/base64/hex key. Falling back to a SHA-256 derived key for compatibility.',
+    );
+    return crypto.createHash('sha256').update(trimmed, 'utf8').digest();
   }
 
   /**

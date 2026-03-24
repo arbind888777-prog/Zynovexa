@@ -160,8 +160,30 @@ model User {
   productAccesses ProductAccess[]
   courseEnrollments CourseEnrollment[]
   streak            UserStreak?
+  profile           Profile?
 
   @@map("users")
+}
+
+model Profile {
+  id                  String   @id
+  userId              String   @unique
+  email               String   @unique
+  name                String
+  handle              String?
+  avatarUrl           String?
+  bio                 String?
+  website             String?
+  niche               String?
+  timezone            String   @default("UTC")
+  onboardingCompleted Boolean  @default(false)
+  isVerified          Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
 }
 
 model RefreshToken {
