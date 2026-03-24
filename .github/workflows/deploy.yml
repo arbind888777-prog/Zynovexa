@@ -41,4 +41,4 @@ jobs:
             cd ../web
             npm install
             npm run build
-            pm2 restart zynovexa-frontend || pm2 start npm --name 'zynovexa-frontend' -- start
+            pm2 restart zynovexa-web || pm2 start .next/standalone/server.js --name zynovexa-web

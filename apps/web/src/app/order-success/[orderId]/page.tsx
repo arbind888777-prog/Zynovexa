@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation';
 import { api, commerceApi } from '@/lib/api';
 import Link from 'next/link';
 
+const PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:4000/api');
+
 interface OrderDetails {
   id: string;
   status: string;
@@ -42,7 +44,7 @@ export default function OrderSuccessPage() {
       }
     } catch {
       // Fallback: direct download endpoint
-      window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/commerce/buyer/products/${productId}/download`, '_blank');
+      window.open(`${PUBLIC_API_BASE}/commerce/buyer/products/${productId}/download`, '_blank');
     }
   };
 
