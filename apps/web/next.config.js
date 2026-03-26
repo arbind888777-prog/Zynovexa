@@ -1,7 +1,8 @@
 const path = require('path');
 
+// Production mein API port 4000 par hai, isliye ise update kiya hai
 const defaultApiOrigin = process.env.NODE_ENV === 'production'
-  ? 'http://127.0.0.1:3000/api'
+  ? 'http://127.0.0.1:4000/api' 
   : 'http://localhost:4000/api';
 
 const apiDestination =
@@ -14,11 +15,8 @@ const apiDestination =
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  output: 'standalone',
+  output: 'standalone', // Ye line zaroori hai deployment ke liye
   outputFileTracingRoot: path.join(__dirname, '../..'),
-  turbopack: {
-    root: path.join(__dirname, '../..'),
-  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'oaidalleapiprodscus.blob.core.windows.net' },
