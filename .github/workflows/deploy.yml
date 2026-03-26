@@ -38,4 +38,4 @@ jobs:
             cd ../web
             npm install
             npm run build
-            /usr/local/bin/pm2 restart zynovexa-web || /usr/local/bin/pm2 start .next/standalone/server.js --name zynovexa-web
+           /usr/local/bin/pm2 restart zynovexa-web || PORT=3001 /usr/local/bin/pm2 start .next/standalone/server.js --name zynovexa-web
