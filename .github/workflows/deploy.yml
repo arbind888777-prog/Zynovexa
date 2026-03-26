@@ -31,11 +31,10 @@ jobs:
             npx prisma generate
             npx prisma migrate deploy
             npm run build
-            # Fixed Path: dist/src/main.js use kiya hai nestjs build ke liye
             /usr/local/bin/pm2 restart zynovexa-api || /usr/local/bin/pm2 start dist/src/main.js --name zynovexa-api
 
             # Web Setup
             cd ../web
             npm install
             npm run build
-           /usr/local/bin/pm2 restart zynovexa-web || PORT=3001 /usr/local/bin/pm2 start .next/standalone/server.js --name zynovexa-web
+            /usr/local/bin/pm2 restart zynovexa-web || PORT=3001 /usr/local/bin/pm2 start .next/standalone/server.js --name zynovexa-web
