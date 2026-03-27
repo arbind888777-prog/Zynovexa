@@ -154,6 +154,7 @@ export const aiApi = {
   generateHashtags: (data: any) => api.post('/ai/hashtags', data),
   generateImage: (data: any) => api.post('/ai/image', data),
   chat: (data: any) => api.post('/ai/chat', data),
+  publicChat: (data: any) => api.post('/ai/public-chat', data),
   getBestTimes: (data: any) => api.post('/ai/best-time', data),
   getUsage: () => api.get('/ai/usage'),
   getChatMemory: () => api.get('/ai/chat-memory'),

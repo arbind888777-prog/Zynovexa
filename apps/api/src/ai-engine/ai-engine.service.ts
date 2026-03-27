@@ -103,7 +103,7 @@ export class AiEngineService {
     }
 
     if (this.aiProvider === 'gemini') {
-      const model = this.config.get('GEMINI_MODEL') || 'gemini-2.0-flash';
+      const model = this.config.get('GEMINI_MODEL') || 'gemini-2.5-flash';
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,7 +128,7 @@ export class AiEngineService {
     throw new Error('AI provider not configured');
   }
 
-  async scoreContentEndpoint(userId: string, dto: { content: string; platform: string }) {
+  async scoreContentEndpoint(dto: { content: string; platform: string }) {
     const score = this.scoreContent(dto.content, dto.platform);
     return { score };
   }

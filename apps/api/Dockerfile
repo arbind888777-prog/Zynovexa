@@ -33,9 +33,9 @@ RUN mkdir -p uploads/images uploads/videos uploads/audio uploads/documents && \
 
 USER nestjs
 
-EXPOSE 3000
+EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD wget -qO- http://localhost:3000/api/health || exit 1
+  CMD wget -qO- http://localhost:4000/api/health || exit 1
 
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]

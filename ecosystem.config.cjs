@@ -11,7 +11,7 @@ const path = require('path');
 module.exports = {
   apps: [
     // ──────────────────────────────────────────────────────────
-    // NestJS API  (port 3000)
+    // NestJS API  (port 4000)
     // ──────────────────────────────────────────────────────────
     {
       name: 'zynovexa-api',
@@ -28,7 +28,7 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       env_production: {
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 4000
       }
     },
 

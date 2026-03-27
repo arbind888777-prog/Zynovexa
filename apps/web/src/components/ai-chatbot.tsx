@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { aiApi } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth.store';
 
 interface Message {
   id: string;
@@ -16,7 +17,29 @@ const SUGGESTIONS = [
   'How to grow followers on LinkedIn?',
 ];
 
+const DEMO_TOKEN = 'demo-token-zynovexa';
+
+function getChatErrorMessage(error: any) {
+  const status = error?.response?.status;
+  const message = error?.response?.data?.message;
+
+  if (status === 401 || status === 403) {
+    return 'AI chat abhi sirf logged-in account ke liye available hai. Login karke phir try karo.';
+  }
+
+  if (Array.isArray(message)) {
+    return message.join(' ');
+  }
+
+  if (typeof message === 'string' && message.trim()) {
+    return message;
+  }
+
+  return "I'm having trouble connecting right now. Please try again in a moment!";
+}
+
 export default function AiChatbot() {
+  const { isAuthenticated, accessToken, _hydrated } = useAuthStore();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -30,6 +53,8 @@ export default function AiChatbot() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isDemoSession = accessToken === DEMO_TOKEN;
+  const useGuestMode = _hydrated && (!isAuthenticated || isDemoSession);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,6 +71,8 @@ export default function AiChatbot() {
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isTyping) return;
 
+    if (!_hydrated) return;
+
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -57,26 +84,29 @@ export default function AiChatbot() {
     setIsTyping(true);
 
     try {
-      const res = await aiApi.chat({ message: text.trim() });
+      const res = await (useGuestMode
+        ? aiApi.publicChat({ message: text.trim() })
+        : aiApi.chat({ message: text.trim() }));
       const reply = res.data?.reply || res.data?.message || "Sorry, I couldn't process that. Try again!";
       setMessages(prev => [
         ...prev,
         { id: (Date.now() + 1).toString(), role: 'assistant', content: reply, timestamp: new Date() },
       ]);
-    } catch {
+    } catch (error) {
+      const errorMessage = getChatErrorMessage(error);
       setMessages(prev => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: "I'm having trouble connecting right now. Please try again in a moment! 🔄",
+          content: errorMessage,
           timestamp: new Date(),
         },
       ]);
     } finally {
       setIsTyping(false);
     }
-  }, [isTyping]);
+  }, [_hydrated, isTyping, useGuestMode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,9 +117,10 @@ export default function AiChatbot() {
     <>
       {/* Floating Button */}
       <button
+        type="button"
         onClick={() => setOpen(v => !v)}
         aria-label={open ? 'Close AI assistant' : 'Open AI assistant'}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-white transition-all duration-300 hover:scale-110 active:scale-95"
+        className="fixed bottom-6 right-6 z-[120] pointer-events-auto touch-manipulation w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-white transition-all duration-300 hover:scale-110 active:scale-95"
         style={{
           background: 'linear-gradient(135deg, #6366f1, #a855f7)',
           boxShadow: '0 8px 32px rgba(99,102,241,0.4)',
@@ -113,7 +144,7 @@ export default function AiChatbot() {
       {/* Chat Window */}
       {open && (
         <div
-          className="fixed bottom-24 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
+          className="fixed bottom-24 right-6 z-[120] isolate pointer-events-auto w-[380px] max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
           style={{
             background: 'var(--surface, #0e0e28)',
             border: '1px solid var(--border, rgba(99,102,241,0.15))',
@@ -132,10 +163,10 @@ export default function AiChatbot() {
               <h3 className="text-sm font-bold" style={{ color: 'var(--text, #e2e8f0)' }}>Zyx AI Assistant</h3>
               <p className="text-xs" style={{ color: 'var(--text3, #64748b)' }}>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-1" />
-                Always online
+                {useGuestMode ? 'Guest mode' : 'Always online'}
               </p>
             </div>
-            <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg transition-colors hover:bg-white/10" style={{ color: 'var(--text3)' }} aria-label="Close chat">
+            <button type="button" onClick={() => setOpen(false)} className="p-1.5 rounded-lg transition-colors hover:bg-white/10 touch-manipulation" style={{ color: 'var(--text3)' }} aria-label="Close chat">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -183,8 +214,8 @@ export default function AiChatbot() {
           {messages.length <= 2 && !isTyping && (
             <div className="px-4 pb-2 flex flex-wrap gap-1.5">
               {SUGGESTIONS.map(s => (
-                <button key={s} onClick={() => sendMessage(s)}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-[1.03]"
+                <button key={s} type="button" onClick={() => sendMessage(s)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-[1.03] touch-manipulation"
                   style={{ background: 'rgba(99,102,241,0.1)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.2)' }}>
                   {s}
                 </button>
@@ -198,8 +229,8 @@ export default function AiChatbot() {
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Ask Zyx anything..."
-              className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
+              placeholder={useGuestMode ? 'Ask Zyx anything as guest...' : 'Ask Zyx anything...'}
+              className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none transition-all pointer-events-auto"
               style={{
                 background: 'var(--bg, #06061a)',
                 color: 'var(--text, #e2e8f0)',

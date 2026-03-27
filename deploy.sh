@@ -70,7 +70,8 @@ if [ "$SKIP_BUILD" = false ]; then
   export $(grep -v '^#' .env | xargs) 2>/dev/null || true
 
   docker-compose -f "$COMPOSE_FILE" build \
-    --build-arg NEXT_PUBLIC_API_URL="https://${DOMAIN:-localhost}" \
+    --build-arg NEXT_PUBLIC_API_URL="https://${DOMAIN:-localhost}/api" \
+    --build-arg NEXT_PUBLIC_APP_URL="https://${DOMAIN:-localhost}" \
     --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-}" \
     --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" \
     --parallel

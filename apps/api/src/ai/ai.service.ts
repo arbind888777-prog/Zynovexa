@@ -18,6 +18,7 @@ const PLAN_LIMITS = {
 
 type AiJson = Record<string, any>;
 type TextModelResponse = { text: string; tokensUsed: number };
+type ChatOptions = { includeLongTermMemory: boolean };
 
 @Injectable()
 export class AiService {
@@ -179,28 +180,21 @@ Return as JSON: { "hashtags": ["#tag1", "#tag2", ...], "categories": { "trending
     if (this.isDemoMode) {
       return { reply: '⚠️ AI provider configure nahi hai. .env mein OPENAI_API_KEY ya GEMINI_API_KEY add karo.', tokensUsed: 0 };
     }
-    const brandVoice = this.buildBrandVoiceInstruction(dto.brandVoice);
-    const language = dto.language || 'English';
-    const historyLimit = Number(this.config.get('AI_CHAT_MEMORY_MESSAGES') || 30);
-    const longTermMemory = await this.getRecentChatMemory(userId, Number(this.config.get('AI_CHAT_MEMORY_DB') || 20));
-    const systemPrompt = `You are Zyx, an AI assistant for Zynovexa creator platform.
-You help content creators grow their audience, create better content, understand analytics, and manage their social media presence.
-Be concise (max 3 paragraphs), practical, and encouraging. Always give actionable advice.
-Respond in: ${language}
-${brandVoice}
-
-Long-term user memory (recent chat context):
-${longTermMemory || 'No prior memory available.'}`;
-
-    const historyText = (dto.history || [])
-      .slice(-historyLimit)
-      .map((message: any) => `${message.role === 'assistant' ? 'Assistant' : 'User'}: ${message.content}`)
-      .join('\n');
-
-    const prompt = `${systemPrompt}\n\nRecent live conversation:\n${historyText || 'No recent conversation.'}\n\nUser: ${dto.message}\nAssistant:`;
+    const prompt = await this.buildChatPrompt(userId, dto, { includeLongTermMemory: true });
     const response = await this.callTextModel(userId, prompt, 'CHATBOT', { maxTokens: 700, temperature: 0.7 });
 
     return { reply: response.text, tokensUsed: response.tokensUsed };
+  }
+
+  async publicChat(dto: ChatMessageDto) {
+    if (this.isDemoMode) {
+      return { reply: '⚠️ AI provider configure nahi hai. .env mein OPENAI_API_KEY ya GEMINI_API_KEY add karo.', tokensUsed: 0 };
+    }
+
+    const prompt = await this.buildChatPrompt(null, dto, { includeLongTermMemory: false });
+    const response = await this.callTextModel(null, prompt, 'CHATBOT', { maxTokens: 500, temperature: 0.7 });
+
+    return { reply: response.text, tokensUsed: response.tokensUsed, mode: 'guest' };
   }
 
   // ─── Best Time to Post ────────────────────────────────────────────────────
@@ -284,7 +278,7 @@ Return as JSON:
   // ─── Private Helpers ──────────────────────────────────────────────────────
 
   private async callTextModel(
-    userId: string,
+    userId: string | null,
     prompt: string,
     type: any,
     options?: { jsonMode?: boolean; maxTokens?: number; temperature?: number },
@@ -324,12 +318,12 @@ Return as JSON:
   }
 
   private async callGemini(
-    userId: string,
+    userId: string | null,
     prompt: string,
     type: any,
     options?: { jsonMode?: boolean; maxTokens?: number; temperature?: number },
   ): Promise<TextModelResponse> {
-    const model = this.config.get('GEMINI_MODEL') || 'gemini-2.0-flash';
+    const model = this.config.get('GEMINI_MODEL') || 'gemini-2.5-flash';
     const finalPrompt = options?.jsonMode
       ? `${prompt}\n\nReturn valid JSON only. Do not wrap it in markdown code fences.`
       : prompt;
@@ -364,10 +358,40 @@ Return as JSON:
     return { text, tokensUsed };
   }
 
-  private async logRequest(userId: string, prompt: string, result: string, tokens: number, type: any) {
+  private async logRequest(userId: string | null, prompt: string, result: string, tokens: number, type: any) {
+    if (!userId) return;
+
     await this.prisma.aiRequest.create({
       data: { userId, requestType: type, prompt: prompt.substring(0, 500), result: result.substring(0, 2000), tokensUsed: tokens },
     });
+  }
+
+  private async buildChatPrompt(userId: string | null, dto: ChatMessageDto, options: ChatOptions) {
+    const brandVoice = this.buildBrandVoiceInstruction(dto.brandVoice);
+    const language = dto.language || 'English';
+    const historyLimit = Number(this.config.get('AI_CHAT_MEMORY_MESSAGES') || 30);
+    const longTermMemory = options.includeLongTermMemory && userId
+      ? await this.getRecentChatMemory(userId, Number(this.config.get('AI_CHAT_MEMORY_DB') || 20))
+      : '';
+    const memoryText = options.includeLongTermMemory
+      ? (longTermMemory || 'No prior memory available.')
+      : 'Guest session only. No long-term memory available.';
+
+    const systemPrompt = `You are Zyx, an AI assistant for Zynovexa creator platform.
+You help content creators grow their audience, create better content, understand analytics, and manage their social media presence.
+Be concise (max 3 paragraphs), practical, and encouraging. Always give actionable advice.
+Respond in: ${language}
+${brandVoice}
+
+Long-term user memory (recent chat context):
+${memoryText}`;
+
+    const historyText = (dto.history || [])
+      .slice(-historyLimit)
+      .map((message: any) => `${message.role === 'assistant' ? 'Assistant' : 'User'}: ${message.content}`)
+      .join('\n');
+
+    return `${systemPrompt}\n\nRecent live conversation:\n${historyText || 'No recent conversation.'}\n\nUser: ${dto.message}\nAssistant:`;
   }
 
   private async checkUsageLimit(userId: string) {

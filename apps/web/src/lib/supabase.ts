@@ -11,6 +11,8 @@ export const supabase = isSupabaseEnabled
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
+        // Use PKCE for more secure server-side code exchange
+        flowType: 'pkce',
       },
     })
   : null;

@@ -5,9 +5,30 @@ import { aiApi, aiEngineApi, unwrapApiResponse } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth.store';
 
 type Tool = 'caption' | 'hashtags' | 'script' | 'image' | 'chat' | 'besttime' | 'hook' | 'scorer';
 const AI_STUDIO_TRANSFER_KEY = 'zynovexa.aiStudioDraft';
+const DEMO_TOKEN = 'demo-token-zynovexa';
+
+function getApiErrorMessage(error: any, fallback: string) {
+  const status = error?.response?.status;
+  const message = error?.response?.data?.message;
+
+  if (status === 401 || status === 403) {
+    return 'AI tools use karne ke liye valid logged-in account chahiye. Demo session backend se authorize nahi hoti.';
+  }
+
+  if (Array.isArray(message) && message.length) {
+    return message.join(' ');
+  }
+
+  if (typeof message === 'string' && message.trim()) {
+    return message;
+  }
+
+  return fallback;
+}
 
 const TOOLS = [
   { id: 'caption', icon: '✍️', name: 'Caption Writer', desc: 'Generate viral captions for any platform' },
@@ -62,6 +83,7 @@ function nextDateForDayTime(day: string, time: string) {
 
 export default function AIStudioPage() {
   const router = useRouter();
+  const { accessToken } = useAuthStore();
   const [activeTool, setActiveTool] = useState<Tool>('caption');
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -112,7 +134,7 @@ export default function AIStudioPage() {
         res = await aiEngineApi.scoreContent({ content: fields.content, platform: fields.platform || 'instagram' });
       }
       setResult(unwrapApiResponse(res));
-    } catch (e: any) { toast.error(e?.response?.data?.message || 'AI failed'); }
+    } catch (e: any) { toast.error(getApiErrorMessage(e, 'AI failed')); }
     finally { setLoading(false); }
   };
 
@@ -124,10 +146,12 @@ export default function AIStudioPage() {
     setChatHistory(newHistory);
     setLoading(true);
     try {
-      const res = await aiApi.chat({ message: msg, history: chatHistory, language: fields.language, brandVoice: fields.brandVoice });
+      const res = await (accessToken === DEMO_TOKEN
+        ? aiApi.publicChat({ message: msg, history: chatHistory, language: fields.language, brandVoice: fields.brandVoice })
+        : aiApi.chat({ message: msg, history: chatHistory, language: fields.language, brandVoice: fields.brandVoice }));
       const payload = unwrapApiResponse<{ reply: string }>(res);
       setChatHistory([...newHistory, { role: 'assistant', content: payload.reply }]);
-    } catch (e: any) { toast.error('Chat failed'); }
+    } catch (e: any) { toast.error(getApiErrorMessage(e, 'Chat failed')); }
     finally { setLoading(false); }
   };
 
@@ -191,7 +215,7 @@ export default function AIStudioPage() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Creator Intelligence</p>
           <h1 className="mt-2 text-2xl font-bold text-white">🤖 AI Studio</h1>
-          <p className="mt-2 text-sm text-gray-400">Powered by GPT-4o & DALL-E 3 for captions, scripts, scheduling signals aur creator support.</p>
+          <p className="mt-2 text-sm text-gray-400">Powered by Gemini AI for captions, scripts, hashtags, scheduling signals aur creator support.</p>
         </div>
         {usage && (
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">

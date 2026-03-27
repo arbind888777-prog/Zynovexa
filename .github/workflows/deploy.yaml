@@ -1,0 +1,42 @@
+name: Deploy App
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-app:
+    name: Deploy Frontend And Backend To VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: 22
+          timeout: 60s
+          command_timeout: 30m
+          script: |
+            set -eux
+            cd /var/www/Zynovexa
+            git fetch --all
+            git reset --hard origin/main
+            npm install
+
+            cd apps/api
+            test -f .env
+            grep -q '^DATABASE_URL=' .env
+            grep -q '^DIRECT_URL=' .env
+            npm install
+            npx prisma generate
+            npx prisma migrate deploy
+            npm run build
+            pm2 restart zynovexa-api || pm2 start dist/main.js --name zynovexa-api
+
+            cd ../web
+            npm install
+            npm run build
+            pm2 restart zynovexa-frontend || pm2 start npm --name 'zynovexa-frontend' -- start

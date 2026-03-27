@@ -82,15 +82,15 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
-          throw error;
-        }
+          await login(email, password);
+        } else {
+          const accessToken = data.session?.access_token || (await getSupabaseAccessToken());
+          if (!accessToken) {
+            throw new Error('Supabase session was created but no access token was returned.');
+          }
 
-        const accessToken = data.session?.access_token || (await getSupabaseAccessToken());
-        if (!accessToken) {
-          throw new Error('Supabase session was created but no access token was returned.');
+          await exchangeSupabaseToken(accessToken);
         }
-
-        await exchangeSupabaseToken(accessToken);
       } else {
         await login(email, password);
       }
