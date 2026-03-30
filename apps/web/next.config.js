@@ -1,13 +1,8 @@
 const path = require('path');
 
-const defaultApiOrigin = process.env.NODE_ENV === 'production'
-  ? 'http://127.0.0.1:4000/api'
-  : 'http://localhost:4000/api';
+const defaultApiOrigin = process.env.NEXT_PUBLIC_API_URL || process.env.INTERNAL_API_URL || 'https://zynovexa.com/api';
 
 const apiDestination =
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.BACKEND_URL ||
-  process.env.INTERNAL_API_URL ||
   defaultApiOrigin;
 
 /** @type {import('next').NextConfig} */

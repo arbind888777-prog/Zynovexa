@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/zynovexa}"
 APP_USER="${APP_USER:-$USER}"
-INSTALL_NODE="${INSTALL_NODE:-false}"
+INSTALL_NODE="${INSTALL_NODE:-true}"
 
 log() {
   printf '\033[0;34m[%s]\033[0m %s\n' "$(date '+%H:%M:%S')" "$1"
@@ -25,21 +25,7 @@ apt-get update -y
 apt-get upgrade -y
 
 log "Installing base packages"
-apt-get install -y ca-certificates curl git ufw gettext-base apt-transport-https software-properties-common
-
-if ! command -v docker >/dev/null 2>&1; then
-  log "Installing Docker"
-  curl -fsSL https://get.docker.com | sh
-fi
-
-log "Enabling Docker"
-systemctl enable docker
-systemctl start docker
-
-if ! docker compose version >/dev/null 2>&1; then
-  log "Installing Docker Compose plugin"
-  apt-get install -y docker-compose-plugin
-fi
+apt-get install -y ca-certificates curl git ufw nginx redis-server certbot python3-certbot-nginx
 
 if [[ "$INSTALL_NODE" == "true" ]] && ! command -v node >/dev/null 2>&1; then
   log "Installing Node.js 20"
@@ -47,9 +33,15 @@ if [[ "$INSTALL_NODE" == "true" ]] && ! command -v node >/dev/null 2>&1; then
   apt-get install -y nodejs
 fi
 
-if id "$APP_USER" >/dev/null 2>&1; then
-  usermod -aG docker "$APP_USER" || true
+if ! command -v pm2 >/dev/null 2>&1; then
+  log "Installing PM2"
+  npm install -g pm2
 fi
+
+systemctl enable nginx
+systemctl enable redis-server
+systemctl start nginx
+systemctl start redis-server
 
 log "Creating app directories"
 mkdir -p "$APP_DIR"
@@ -65,6 +57,9 @@ ufw --force enable || true
 log "Bootstrap complete"
 log "Next steps:"
 log "1. git clone <repo> $APP_DIR"
-log "2. cp .env.example .env"
-log "3. cp apps/api/.env.example apps/api/.env"
-log "4. ./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com"
+log "2. create apps/api/.env and apps/web/.env"
+log "3. sudo cp nginx/hostinger-pm2-zynovexa.conf /etc/nginx/sites-available/zynovexa.conf"
+log "4. sudo ln -sf /etc/nginx/sites-available/zynovexa.conf /etc/nginx/sites-enabled/zynovexa.conf"
+log "5. sudo nginx -t && sudo systemctl reload nginx"
+log "6. ./deploy.sh"
+log "7. sudo bash scripts/setup-pm2-startup.sh"

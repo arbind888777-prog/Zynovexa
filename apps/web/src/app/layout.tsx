@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Providers from '@/components/providers';
+import { getPublicSiteUrl } from '@/lib/public-env';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://zynovexa.com';
+const APP_URL = getPublicSiteUrl();
 
 export const viewport: Viewport = {
   themeColor: '#6366f1',

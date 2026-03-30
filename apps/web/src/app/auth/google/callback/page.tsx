@@ -3,6 +3,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { unwrapApiData } from '@/lib/api';
+import { getPublicApiBaseUrl } from '@/lib/public-env';
 import { toast } from 'sonner';
 import { getSupabaseAccessToken, isSupabaseEnabled, supabase } from '@/lib/supabase';
 
@@ -15,11 +16,7 @@ function setAuthCookie(loggedIn: boolean) {
 }
 
 function getApiBaseUrl() {
-  if (typeof window === 'undefined') {
-    return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/$/, '');
-  }
-
-  return (process.env.NEXT_PUBLIC_API_URL || `${window.location.origin}/api`).replace(/\/$/, '');
+  return getPublicApiBaseUrl();
 }
 
 /**

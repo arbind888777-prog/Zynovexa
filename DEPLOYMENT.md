@@ -1,30 +1,31 @@
 # Zynovexa Hostinger VPS Deployment Guide
 
-This repository is prepared for Docker-based deployment on a Hostinger VPS.
+This repository is prepared for PM2-based deployment on a Hostinger VPS.
+
+For a ready-to-use reverse proxy file, use [nginx/hostinger-pm2-zynovexa.conf](nginx/hostinger-pm2-zynovexa.conf).
 
 Recommended flow:
 
 1. Clone the repo on the VPS.
-2. Create `.env` and `apps/api/.env`.
-3. Run `./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com`.
+2. Create `apps/api/.env` and `apps/web/.env`.
+3. Run `./deploy.sh`.
 
 The deployment script now:
 
-1. Validates required files and tools.
-2. Renders `nginx/nginx.conf` from `nginx/nginx.conf.template`.
-3. Obtains a Let's Encrypt SSL certificate when needed.
-4. Builds the API and web containers.
-5. Starts Redis, API, web, Nginx, and Certbot renewal.
-6. Runs Prisma migrations.
-7. Prints service health.
+1. Optionally pulls the latest code.
+2. Installs workspace dependencies.
+3. Runs Prisma generate and migrations.
+4. Builds the API and web apps.
+5. Starts or reloads PM2 using `ecosystem.config.cjs`.
+6. Runs local health checks for the API and web app.
 
 ## Architecture
 
 ```text
-Internet -> Nginx (80/443) -> Next.js web (3001)
-                         -> NestJS API (4000)
-                         -> Redis (internal)
-                         -> Supabase Postgres (external)
+Internet -> Nginx (80/443) -> PM2 Next.js web (3001)
+                         -> PM2 NestJS API (4000)
+                         -> Redis
+                         -> Supabase Postgres
 ```
 
 ## Prerequisites
@@ -50,10 +51,12 @@ Manual install path:
 ```bash
 apt-get update -y
 apt-get upgrade -y
-apt-get install -y ca-certificates curl git ufw gettext-base docker-compose-plugin
-curl -fsSL https://get.docker.com | sh
-systemctl enable docker
-systemctl start docker
+apt-get install -y ca-certificates curl git nginx redis-server
+npm install -g pm2
+systemctl enable nginx
+systemctl enable redis-server
+systemctl start nginx
+systemctl start redis-server
 ufw allow OpenSSH
 ufw allow 80/tcp
 ufw allow 443/tcp
@@ -81,29 +84,7 @@ git clone https://github.com/arbind888777-prog/Zynovexa.git /var/www/zynovexa
 cd /var/www/zynovexa
 ```
 
-## Step 3: Create the root `.env`
-
-```bash
-cp .env.example .env
-```
-
-Minimum recommended values:
-
-```env
-DOMAIN=yourdomain.com
-SSL_EMAIL=admin@yourdomain.com
-ENABLE_WWW_DOMAIN=false
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_public_anon_key
-COMPOSE_PROFILES=
-```
-
-Notes:
-
-1. Keep `COMPOSE_PROFILES=` empty if you are using Supabase.
-2. Set `ENABLE_WWW_DOMAIN=true` only if you want both `yourdomain.com` and `www.yourdomain.com` on the same cert.
-
-## Step 4: Create `apps/api/.env`
+## Step 3: Create `apps/api/.env`
 
 ```bash
 cp apps/api/.env.example apps/api/.env
@@ -159,6 +140,16 @@ EMAIL_FROM="Zynovexa <noreply@yourdomain.com>"
 TOKEN_ENCRYPTION_KEY=base64-encoded-32-byte-key
 ```
 
+## Step 4: Create `apps/web/.env`
+
+```bash
+cat > apps/web/.env <<'EOF'
+NEXT_PUBLIC_API_URL=https://yourdomain.com/api
+NEXT_PUBLIC_SITE_URL=https://yourdomain.com
+NEXT_PUBLIC_APP_URL=https://yourdomain.com
+EOF
+```
+
 Generate secrets with:
 
 ```bash
@@ -188,29 +179,67 @@ Without the YouTube callback, YouTube connect will fail with `redirect_uri_misma
 ## Step 6: Deploy on Hostinger
 
 ```bash
-chmod +x deploy.sh scripts/hostinger-bootstrap.sh
-./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com
+chmod +x deploy.sh
+./deploy.sh
 ```
 
-If you want the certificate to include `www` too:
+## Step 6A: Configure Nginx reverse proxy
+
+Copy the ready config:
 
 ```bash
-./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com --enable-www
+sudo cp nginx/hostinger-pm2-zynovexa.conf /etc/nginx/sites-available/zynovexa.conf
+sudo ln -sf /etc/nginx/sites-available/zynovexa.conf /etc/nginx/sites-enabled/zynovexa.conf
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-If the certificate already exists and you only want to re-render config and deploy:
+Issue SSL if not already present:
 
 ```bash
-./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com --skip-ssl
+sudo certbot --nginx -d zynovexa.com -d www.zynovexa.com
+```
+
+This proxy routes:
+
+1. `https://zynovexa.com/` -> `127.0.0.1:3001`
+2. `https://zynovexa.com/api/` -> `127.0.0.1:4000/api/`
+3. `https://zynovexa.com/ws/` -> `127.0.0.1:4000/ws/`
+
+## Step 6B: Make PM2 survive reboot
+
+Use the helper script:
+
+```bash
+sudo bash scripts/setup-pm2-startup.sh
+```
+
+Or manually:
+
+```bash
+pm2 save
+sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u $USER --hp $HOME
+pm2 save
+```
+
+Useful flags:
+
+```bash
+./deploy.sh --skip-pull
+./deploy.sh --skip-migrate
+./deploy.sh --skip-build
+./deploy.sh --branch=main
 ```
 
 ## Step 7: Verify deployment
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
-curl https://yourdomain.com/api/health
-curl -I https://yourdomain.com
-docker compose -f docker-compose.prod.yml logs -f
+pm2 status
+pm2 logs zynovexa-api
+pm2 logs zynovexa-web
+curl http://127.0.0.1:4000/api/health
+curl -I http://127.0.0.1:3001
 ```
 
 ## Daily operations
@@ -220,27 +249,28 @@ Redeploy after pushing new code:
 ```bash
 cd /var/www/zynovexa
 git pull origin main
-./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com --skip-ssl
+./deploy.sh --skip-pull
 ```
 
 View logs:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f api
-docker compose -f docker-compose.prod.yml logs -f web
-docker compose -f docker-compose.prod.yml logs -f nginx
+pm2 logs zynovexa-api
+pm2 logs zynovexa-web
 ```
 
 Restart one service:
 
 ```bash
-docker compose -f docker-compose.prod.yml restart api
+pm2 restart zynovexa-api
+pm2 restart zynovexa-web
 ```
 
 Run migrations manually:
 
 ```bash
-docker exec zynovexa-api npx prisma migrate deploy
+cd /var/www/zynovexa/apps/api
+npx prisma migrate deploy
 ```
 
 ## Optional GitHub Actions deploy
@@ -260,11 +290,12 @@ If you do not want GitHub Actions deployment, you can ignore that workflow and d
 ## Important files
 
 1. [deploy.sh](deploy.sh)
-2. [docker-compose.prod.yml](docker-compose.prod.yml)
-3. [nginx/nginx.conf.template](nginx/nginx.conf.template)
+2. [ecosystem.config.cjs](ecosystem.config.cjs)
+3. [nginx/hostinger-pm2-zynovexa.conf](nginx/hostinger-pm2-zynovexa.conf)
 4. [scripts/hostinger-bootstrap.sh](scripts/hostinger-bootstrap.sh)
-5. [apps/api/.env.example](apps/api/.env.example)
-6. [.env.example](.env.example)
+5. [scripts/setup-pm2-startup.sh](scripts/setup-pm2-startup.sh)
+6. [apps/api/.env](apps/api/.env)
+7. [apps/web/.env](apps/web/.env)
 
 ## Troubleshooting
 
@@ -272,13 +303,16 @@ If you do not want GitHub Actions deployment, you can ignore that workflow and d
 Add the YouTube callback URI to Google Cloud Console.
 
 `502 Bad Gateway` from Nginx:
-Check `docker compose -f docker-compose.prod.yml ps` and `docker logs zynovexa-api`.
+Check `pm2 status`, `pm2 logs zynovexa-api`, and `pm2 logs zynovexa-web`.
+
+PM2 app not starting after reboot:
+Run [scripts/setup-pm2-startup.sh](scripts/setup-pm2-startup.sh) again and confirm `systemctl status pm2-$USER`.
 
 SSL certificate failure:
 Make sure DNS is already pointing to the VPS before the first deploy.
 
-API container unhealthy:
+API process unhealthy:
 Check `apps/api/.env`, especially `DATABASE_URL`, `DIRECT_URL`, and `TOKEN_ENCRYPTION_KEY`.
 
 Frontend cannot reach API:
-Confirm `NEXT_PUBLIC_API_URL` builds as `https://yourdomain.com/api` through `.env` and `docker-compose.prod.yml`.
+Confirm `NEXT_PUBLIC_API_URL` builds as `https://yourdomain.com/api` through [apps/web/.env](apps/web/.env) and rebuild with [deploy.sh](deploy.sh).

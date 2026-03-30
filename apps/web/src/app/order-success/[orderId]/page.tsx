@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api, commerceApi } from '@/lib/api';
+import { getPublicApiBaseUrl } from '@/lib/public-env';
 import Link from 'next/link';
 
-const PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:4000/api');
+const PUBLIC_API_BASE = getPublicApiBaseUrl();
 
 interface OrderDetails {
   id: string;

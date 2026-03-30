@@ -1,262 +1,134 @@
 #!/bin/bash
-# =============================================================================
-# deploy.sh — Zynovexa VPS Deployment Script
-# Kills ports 3001 & 4000, rebuilds, runs migrations
-#
-# Usage:
-#   chmod +x deploy.sh
-#   ./deploy.sh                  # Full deploy
-#   ./deploy.sh --skip-migrate   # Skip Prisma migrations
-#   ./deploy.sh --no-build       # Skip Docker build
-# =============================================================================
 
-set -e
+set -euo pipefail
 
-# ── Colors ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# ── Config ───────────────────────────────────────────────────────────────────
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")" && pwd)}"
-COMPOSE_FILE="docker-compose.prod.yml"
-SKIP_BUILD=false
+BRANCH="${BRANCH:-main}"
+SKIP_PULL=false
+SKIP_INSTALL=false
+SKIP_GENERATE=false
 SKIP_MIGRATE=false
-SKIP_SSL=false
-
-DOMAIN=""
-LETSENCRYPT_EMAIL=""
-ENABLE_WWW=false
-CLI_DOMAIN=""
-CLI_EMAIL=""
+SKIP_BUILD=false
 
 for arg in "$@"; do
-  case $arg in
-    --no-build)     SKIP_BUILD=true ;;
+  case "$arg" in
+    --skip-pull) SKIP_PULL=true ;;
+    --skip-install) SKIP_INSTALL=true ;;
+    --skip-generate) SKIP_GENERATE=true ;;
     --skip-migrate) SKIP_MIGRATE=true ;;
-    --skip-ssl)     SKIP_SSL=true ;;
-    --enable-www)   ENABLE_WWW=true ;;
-    --domain=*)     CLI_DOMAIN="${arg#*=}"; DOMAIN="$CLI_DOMAIN" ;;
-    --email=*)      CLI_EMAIL="${arg#*=}"; LETSENCRYPT_EMAIL="$CLI_EMAIL" ;;
+    --skip-build) SKIP_BUILD=true ;;
+    --branch=*) BRANCH="${arg#*=}" ;;
+    *) echo "Unknown argument: $arg"; exit 1 ;;
   esac
 done
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
 log()  { echo -e "${BLUE}[$(date '+%H:%M:%S')]${NC} $1"; }
 ok()   { echo -e "${GREEN}✔ $1${NC}"; }
 warn() { echo -e "${YELLOW}⚠ $1${NC}"; }
 err()  { echo -e "${RED}✘ $1${NC}"; exit 1; }
 
-require_env_var() {
-  local NAME=$1
-  local VALUE=$2
-  [[ -n "$VALUE" ]] || err "$NAME is required"
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || err "$1 is required but not installed"
 }
 
-render_nginx_config() {
-  local domain=$1
-  local cert_domain=$2
-  local aliases=$3
-  local server_names=$domain
-
-  if [[ -n "$aliases" ]]; then
-    server_names="$server_names $aliases"
-  fi
-
-  export ZYNOVEXA_DOMAIN="$domain"
-  export ZYNOVEXA_SERVER_NAMES="$server_names"
-  export ZYNOVEXA_CERT_DOMAIN="$cert_domain"
-
-  envsubst '${ZYNOVEXA_DOMAIN} ${ZYNOVEXA_SERVER_NAMES} ${ZYNOVEXA_CERT_DOMAIN}' \
-    < nginx/nginx.conf.template \
-    > nginx/nginx.conf
+run_step() {
+  local label=$1
+  shift
+  log "$label"
+  "$@"
 }
 
-render_http_only_nginx_config() {
-  local domain=$1
-  local aliases=$2
-  local server_names=$domain
-
-  if [[ -n "$aliases" ]]; then
-    server_names="$server_names $aliases"
-  fi
-
-  export ZYNOVEXA_SERVER_NAMES="$server_names"
-
-  envsubst '${ZYNOVEXA_SERVER_NAMES}' \
-    < nginx/nginx.http-only.conf.template \
-    > nginx/nginx.conf
-}
-
-ensure_ssl_certificate() {
-  local domain=$1
-  local email=$2
-  local www_flag=$3
-  local cert_domain=$domain
-  local aliases=""
-
-  if [[ "$www_flag" == "true" ]]; then
-    aliases="www.$domain"
-  fi
-
-  if [[ -f "/etc/letsencrypt/live/$cert_domain/fullchain.pem" && -f "/etc/letsencrypt/live/$cert_domain/privkey.pem" ]]; then
-    ok "SSL certificate already exists for $cert_domain"
-    render_nginx_config "$domain" "$cert_domain" "$aliases"
-    return
-  fi
-
-  require_env_var "LETSENCRYPT_EMAIL" "$email"
-
-  render_http_only_nginx_config "$domain" "$aliases"
-  log "Starting nginx temporarily for ACME challenge..."
-  docker compose -f "$COMPOSE_FILE" up -d --no-deps nginx
-
-  local certbot_args=(certbot certonly --webroot -w /var/www/certbot -d "$domain" --email "$email" --agree-tos --no-eff-email)
-  if [[ "$www_flag" == "true" ]]; then
-    certbot_args+=( -d "www.$domain" )
-  fi
-
-  log "Requesting Let's Encrypt certificate for $domain..."
-  docker run --rm \
-    -v /etc/letsencrypt:/etc/letsencrypt \
-    -v "$APP_DIR/nginx/certbot-webroot:/var/www/certbot" \
-    certbot/certbot "${certbot_args[@]}"
-
-  ok "SSL certificate created"
-  docker compose -f "$COMPOSE_FILE" stop nginx >/dev/null 2>&1 || true
-  render_nginx_config "$domain" "$cert_domain" "$aliases"
-}
-
-# ── Kill processes on a given port ───────────────────────────────────────────
-kill_port() {
-  local PORT=$1
-  local PID
-  PID=$(lsof -ti :$PORT 2>/dev/null || true)
-  if [ -n "$PID" ]; then
-    log "Killing process(es) on port $PORT (PID: $PID)..."
-    echo "$PID" | xargs kill -9 2>/dev/null || true
-    sleep 1
-    ok "Port $PORT freed"
+health_check() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsS http://127.0.0.1:4000/api/health >/dev/null && ok "API health check passed" || warn "API health check failed"
+    curl -fsS http://127.0.0.1:3001 >/dev/null && ok "Web health check passed" || warn "Web health check failed"
   else
-    ok "Port $PORT is already free"
+    warn "curl not found, skipping HTTP health checks"
   fi
 }
 
-log "═══════════════════════════════════════════════════"
-log "  Zynovexa Deployment — Starting"
-log "═══════════════════════════════════════════════════"
+log "==============================================="
+log "Zynovexa PM2 deployment starting"
+log "==============================================="
 
-# ── Step 1: Free up ports ────────────────────────────────────────────────────
-log "Step 1: Freeing ports 3001 and 4000..."
-kill_port 3001
-kill_port 4000
-
-# ── Step 2: Pre-flight checks ───────────────────────────────────────────────
-log "Step 2: Pre-flight checks..."
 cd "$APP_DIR" || err "Directory $APP_DIR not found"
 
-command -v docker >/dev/null 2>&1 || err "Docker is not installed"
-docker compose version >/dev/null 2>&1 || err "Docker Compose (v2) is not installed"
-command -v envsubst >/dev/null 2>&1 || err "envsubst is not installed (package: gettext-base)"
+require_command git
+require_command node
+require_command npm
+require_command pm2
 
-[[ -f ".env" ]]            || err ".env file not found at $APP_DIR/.env"
-[[ -f "$COMPOSE_FILE" ]]   || err "$COMPOSE_FILE not found"
-[[ -f "apps/api/.env" ]]   || err "apps/api/.env not found"
-[[ -f "nginx/nginx.conf.template" ]] || err "nginx/nginx.conf.template not found"
-[[ -f "nginx/nginx.http-only.conf.template" ]] || err "nginx/nginx.http-only.conf.template not found"
+[[ -f "package.json" ]] || err "package.json not found in $APP_DIR"
+[[ -f "apps/api/.env" ]] || err "apps/api/.env not found"
+[[ -f "apps/web/.env" || -f "apps/web/.env.local" ]] || err "apps/web/.env or apps/web/.env.local not found"
+[[ -f "ecosystem.config.cjs" ]] || err "ecosystem.config.cjs not found"
 
-export $(grep -v '^#' .env | xargs) 2>/dev/null || true
+mkdir -p logs
 
-ROOT_DOMAIN="${DOMAIN:-}"
-
-if [[ -z "$DOMAIN" ]]; then
-  DOMAIN="$ROOT_DOMAIN"
-fi
-if [[ -z "$LETSENCRYPT_EMAIL" ]]; then
-  LETSENCRYPT_EMAIL="${SSL_EMAIL:-}"
-fi
-
-if [[ -n "$CLI_DOMAIN" ]]; then
-  DOMAIN="$CLI_DOMAIN"
-fi
-if [[ -n "$CLI_EMAIL" ]]; then
-  LETSENCRYPT_EMAIL="$CLI_EMAIL"
-fi
-
-require_env_var "DOMAIN" "$DOMAIN"
-
-if [[ -z "$ENABLE_WWW" || "$ENABLE_WWW" == "false" ]]; then
-  if [[ "${ENABLE_WWW_DOMAIN:-false}" == "true" ]]; then
-    ENABLE_WWW=true
+if [[ "$SKIP_PULL" == "false" ]]; then
+  run_step "Fetching latest code from $BRANCH" git fetch origin "$BRANCH"
+  if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+    run_step "Pulling latest commit" git pull --ff-only origin "$BRANCH"
+  else
+    run_step "Checking out deployment branch" git checkout -B "$BRANCH" "origin/$BRANCH"
   fi
-fi
-
-mkdir -p nginx/certbot-webroot
-
-if [[ "$SKIP_SSL" == "false" ]]; then
-  ensure_ssl_certificate "$DOMAIN" "$LETSENCRYPT_EMAIL" "$ENABLE_WWW"
+  ok "Repository updated"
 else
-  render_nginx_config "$DOMAIN" "$DOMAIN" "$([[ "$ENABLE_WWW" == "true" ]] && echo "www.$DOMAIN")"
+  warn "Skipping git pull"
 fi
 
-ok "Pre-flight checks passed"
+export NPM_CONFIG_PRODUCTION=false
 
-# ── Step 3: Pull latest code ────────────────────────────────────────────────
-log "Step 3: Pulling latest code..."
-git fetch origin
-git pull origin main || warn "git pull failed — continuing with current code"
-ok "Code updated"
-
-# ── Step 4: Stop old containers ─────────────────────────────────────────────
-log "Step 4: Stopping old containers..."
-docker compose -f "$COMPOSE_FILE" down --timeout 30 2>/dev/null || true
-ok "Old containers stopped"
-
-# ── Step 5: Build and start ─────────────────────────────────────────────────
-if [ "$SKIP_BUILD" = false ]; then
-  log "Step 5: Building and starting containers..."
-  docker compose -f "$COMPOSE_FILE" up -d --build
-  ok "Containers built and started"
+if [[ "$SKIP_INSTALL" == "false" ]]; then
+  run_step "Installing workspace dependencies" npm install
+  ok "Dependencies installed"
 else
-  log "Step 5: Starting containers (no build)..."
-  docker compose -f "$COMPOSE_FILE" up -d
-  ok "Containers started"
+  warn "Skipping npm install"
 fi
 
-# ── Step 6: Run Prisma migrations ───────────────────────────────────────────
-if [ "$SKIP_MIGRATE" = false ]; then
-  log "Step 6: Waiting 15s for API container to initialize..."
-  sleep 15
-  log "Running Prisma migrations inside zynovexa-api..."
-  docker exec zynovexa-api npx prisma migrate deploy || \
-    warn "Migration failed — check: docker logs zynovexa-api"
-  ok "Migrations applied"
+if [[ "$SKIP_GENERATE" == "false" ]]; then
+  run_step "Generating Prisma client" npm run db:generate --workspace=@zynovexa/api
+  ok "Prisma client generated"
 else
-  warn "Step 6: Skipping migrations (--skip-migrate flag)"
+  warn "Skipping Prisma generate"
 fi
 
-# ── Step 7: Health check ────────────────────────────────────────────────────
-log "Step 7: Waiting 20s for services to stabilize..."
-sleep 20
+if [[ "$SKIP_MIGRATE" == "false" ]]; then
+  run_step "Applying production Prisma migrations" npm run db:migrate:prod --workspace=@zynovexa/api
+  ok "Prisma migrations applied"
+else
+  warn "Skipping Prisma migrations"
+fi
 
-log "Health check..."
-docker compose -f "$COMPOSE_FILE" ps
+if [[ "$SKIP_BUILD" == "false" ]]; then
+  run_step "Building NestJS API" npm run build --workspace=@zynovexa/api
+  run_step "Building Next.js web" npm run build --workspace=@zynovexa/web
+  ok "Application builds completed"
+else
+  warn "Skipping application builds"
+fi
 
-API_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' zynovexa-api 2>/dev/null || echo "unknown")
-WEB_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' zynovexa-web 2>/dev/null || echo "unknown")
+if pm2 describe zynovexa-api >/dev/null 2>&1; then
+  run_step "Reloading PM2 processes" pm2 reload ecosystem.config.cjs --env production
+else
+  run_step "Starting PM2 processes" pm2 start ecosystem.config.cjs --env production
+fi
 
-[[ "$API_HEALTH" == "healthy" ]] && ok "API: healthy" || warn "API: $API_HEALTH (check: docker logs zynovexa-api)"
-[[ "$WEB_HEALTH" == "healthy" ]] && ok "Web: healthy" || warn "Web: $WEB_HEALTH (check: docker logs zynovexa-web)"
+run_step "Saving PM2 process list" pm2 save
+run_step "Current PM2 status" pm2 status
 
-# ── Summary ──────────────────────────────────────────────────────────────────
-DOMAIN_VAL=$(grep '^DOMAIN=' .env 2>/dev/null | cut -d'=' -f2 || echo "localhost")
-echo ""
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}  ✅ Zynovexa deployed successfully!${NC}"
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "  Site:  ${BLUE}https://${DOMAIN_VAL}${NC}"
-echo -e "  API:   ${BLUE}https://${DOMAIN_VAL}/api${NC}"
-echo -e "  Logs:  ${YELLOW}docker compose -f $COMPOSE_FILE logs -f${NC}"
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+health_check
+
+log "==============================================="
+ok "Deployment finished"
+log "App directory: $APP_DIR"
+log "API: https://zynovexa.com/api"
+log "Web: https://zynovexa.com"
+log "Logs: pm2 logs zynovexa-api | pm2 logs zynovexa-web"
+log "==============================================="

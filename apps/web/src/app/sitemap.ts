@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
+import { getPublicSiteUrl } from '@/lib/public-env';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://zynovexa.com';
+const APP_URL = getPublicSiteUrl();
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

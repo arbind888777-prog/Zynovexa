@@ -53,6 +53,7 @@ out/
 
 # API build
 apps/api/dist/
+*.tsbuildinfo
 
 # Python venv
 .venv/
