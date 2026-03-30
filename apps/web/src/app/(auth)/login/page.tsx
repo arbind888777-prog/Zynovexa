@@ -6,6 +6,14 @@ import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 import { getSupabaseAccessToken, isSupabaseEnabled, supabase } from '@/lib/supabase';
 
+function getErrorMessage(err: any, fallback: string) {
+  const apiMessage = err?.response?.data?.message;
+  if (Array.isArray(apiMessage)) return apiMessage.join(' ');
+  if (typeof apiMessage === 'string' && apiMessage.trim()) return apiMessage;
+  if (typeof err?.message === 'string' && err.message.trim()) return err.message;
+  return fallback;
+}
+
 const LEFT_FEATURES = [
   { icon: '🤖', text: 'AI-powered content generation' },
   { icon: '📅', text: 'Smart scheduling across 7 platforms' },
@@ -78,54 +86,21 @@ export default function LoginPage() {
       return;
     }
     try {
-      if (isSupabaseEnabled && supabase) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-        if (error) {
-          await login(email, password);
-        } else {
-          const accessToken = data.session?.access_token || (await getSupabaseAccessToken());
-          if (!accessToken) {
-            throw new Error('Supabase session was created but no access token was returned.');
-          }
-
-          await exchangeSupabaseToken(accessToken);
-        }
-      } else {
-        await login(email, password);
-      }
+      await login(email, password);
 
       toast.success('Welcome back! 🚀');
       routeAfterAuth();
     } catch (err: any) {
-      toast.error(err?.message || err?.response?.data?.message || 'Login failed. Check your credentials.');
+      toast.error(getErrorMessage(err, 'Login failed. Check your credentials.'));
     }
   };
 
   const fillDemo = () => { setEmail('demo@zynovexa.com'); setPassword('demo123'); };
 
   const handleGoogleLogin = async () => {
-    if (isSupabaseEnabled && supabase) {
-      const callbackUrl = new URL('/auth/google/callback', window.location.origin);
-      if (redirectTarget) {
-        callbackUrl.searchParams.set('redirect', redirectTarget);
-      }
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: callbackUrl.toString(),
-        },
-      });
-
-      if (error) {
-        toast.error(error.message || 'Google sign-in could not be started.');
-      }
-      return;
-    }
-
     const frontend = encodeURIComponent(window.location.origin);
-    window.location.href = `/api/auth/google?frontend=${frontend}`;
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL || `${window.location.origin}/api`).replace(/\/$/, '');
+    window.location.href = `${apiBase}/auth/google?frontend=${frontend}`;
   };
 
   return (
@@ -189,9 +164,6 @@ export default function LoginPage() {
           <div className="mb-7">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Sign in</h1>
             <p className="text-slate-400 text-sm mt-1">Enter your credentials to continue</p>
-            {isSupabaseEnabled && (
-              <p className="text-xs text-slate-500 mt-2">Email sign-in is powered by Supabase.</p>
-            )}
           </div>
 
           {/* Google */}
@@ -205,9 +177,6 @@ export default function LoginPage() {
             </svg>
             Continue with Google
           </button>
-          {isSupabaseEnabled && (
-            <p className="text-[11px] text-slate-500 mb-5">Google sign-in requires the Google provider to be enabled in Supabase Auth.</p>
-          )}
 
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />

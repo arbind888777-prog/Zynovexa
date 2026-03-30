@@ -3,6 +3,15 @@ import axios from 'axios';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:4000/api');
 const DEMO_TOKEN = 'demo-token-zynovexa';
 
+function setAuthCookie(loggedIn: boolean) {
+  if (typeof document === 'undefined') return;
+  if (loggedIn) {
+    document.cookie = 'zy_logged_in=1; path=/; max-age=604800; SameSite=Lax';
+  } else {
+    document.cookie = 'zy_logged_in=; path=/; max-age=0';
+  }
+}
+
 type ApiEnvelope<T> = {
   success?: boolean;
   data: T;
@@ -57,12 +66,14 @@ api.interceptors.response.use(
         const tokens = unwrapApiData<{ accessToken: string; refreshToken: string }>(data);
         localStorage.setItem('access_token', tokens.accessToken);
         localStorage.setItem('refresh_token', tokens.refreshToken);
+        setAuthCookie(true);
         original.headers = original.headers || {};
         original.headers.Authorization = `Bearer ${tokens.accessToken}`;
         return api(original);
       } catch {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        setAuthCookie(false);
         if (typeof window !== 'undefined') window.location.href = '/login';
       }
     }
@@ -133,6 +144,8 @@ export const accountsApi = {
   getStats: () => api.get('/accounts/stats'),
   getYoutubeInsights: () => api.get('/accounts/youtube/insights'),
   connect: (data: any) => api.post('/accounts/connect', data),
+  connectFacebookWithConfiguredToken: () => api.post('/accounts/connect/facebook/configured-token'),
+  connectInstagramWithConfiguredToken: () => api.post('/accounts/connect/instagram/configured-token'),
   disconnect: (id: string) => api.delete(`/accounts/${id}`),
   update: (id: string, data: any) => api.put(`/accounts/${id}`, data),
   // YouTube OAuth connect flow
@@ -205,7 +218,7 @@ export const aiEngineApi = {
 // ─── Integrations API ──────────────────────────────────────────────────────
 export const integrationsApi = {
   getPlatforms: () => api.get('/integrations/platforms'),
-  getOAuthUrl: (platform: string) => api.get(`/integrations/oauth/${platform}`),
+  getOAuthUrl: (platform: string, frontend?: string) => api.get(`/integrations/oauth/${platform}`, { params: frontend ? { frontend } : undefined }),
   refreshToken: (platform: string) => api.post(`/integrations/refresh/${platform}`),
   schedulePost: (data: { postId: string; platforms: string[]; scheduledAt: string }) =>
     api.post('/integrations/schedule', data),

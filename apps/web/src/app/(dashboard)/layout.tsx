@@ -123,48 +123,74 @@ function LoadingSplash() {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, user, logout, fetchMe } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [ready, setReady] = useState(false);
 
-  // Wait for Zustand persist hydration, then check auth
+  // Wait for persisted auth to hydrate, then restore the user session before redirecting.
   useEffect(() => {
     let cancelled = false;
 
-    const tryAuth = () => {
-      const s = useAuthStore.getState();
-      if (s.isAuthenticated) { if (!cancelled) setReady(true); return true; }
-      return false;
+    const restoreAuth = async () => {
+      const state = useAuthStore.getState();
+      if (state.isAuthenticated) {
+        if (!cancelled) setReady(true);
+        return;
+      }
+
+      const hasTokens = Boolean(state.accessToken && state.refreshToken);
+      if (!hasTokens) {
+        if (!cancelled) router.replace('/login');
+        return;
+      }
+
+      try {
+        await fetchMe();
+      } catch {}
+
+      if (cancelled) return;
+
+      if (useAuthStore.getState().isAuthenticated) {
+        setReady(true);
+        return;
+      }
+
+      router.replace('/login');
     };
 
-    // Immediate check — works for client-side nav right after demoLogin()
-    if (tryAuth()) return;
+    if (useAuthStore.getState()._hydrated) {
+      void restoreAuth();
+      return () => {
+        cancelled = true;
+      };
+    }
 
-    // Poll every 50ms until hydration completes (never call fetchMe prematurely)
     const interval = setInterval(() => {
-      if (tryAuth()) { clearInterval(interval); return; }
-      // Once hydrated, if still not authenticated → go to login
-      if (useAuthStore.getState()._hydrated) {
-        clearInterval(interval);
-        if (!cancelled) router.push('/login');
-      }
+      if (!useAuthStore.getState()._hydrated) return;
+      clearInterval(interval);
+      void restoreAuth();
     }, 50);
 
-    // Safety: max 3s wait then redirect
     const timeout = setTimeout(() => {
       clearInterval(interval);
-      if (!cancelled && !useAuthStore.getState().isAuthenticated) router.push('/login');
+      if (!cancelled) {
+        void restoreAuth();
+      }
     }, 3000);
 
-    return () => { cancelled = true; clearInterval(interval); clearTimeout(timeout); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [fetchMe, router]);
 
   // Watch for logout while on dashboard
   useEffect(() => {
     if (ready && !isAuthenticated) {
-      router.push('/login');
+      router.replace('/login');
     }
-  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, ready, router]);
 
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [pathname]);

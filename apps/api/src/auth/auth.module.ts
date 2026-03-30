@@ -5,6 +5,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
+import { GoogleCallbackGuard } from './guards/google-callback.guard';
 import { MailModule } from '../mail/mail.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 
@@ -15,7 +17,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
     MailModule,
     SupabaseModule,
   ],
-  providers: [AuthService, JwtStrategy, GoogleStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, GoogleAuthGuard, GoogleCallbackGuard],
   controllers: [AuthController],
   exports: [AuthService, JwtModule],
 })

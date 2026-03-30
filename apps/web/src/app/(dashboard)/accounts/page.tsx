@@ -19,11 +19,11 @@ type PlatformMeta = {
 
 const PLATFORM_META: Record<Platform, PlatformMeta> = {
   YOUTUBE:   { icon: '▶️',  color: '#ff0000', label: 'YouTube',    oauthSupported: true },
-  INSTAGRAM: { icon: '📸',  color: '#e1306c', label: 'Instagram',  oauthSupported: false, comingSoon: true },
+  INSTAGRAM: { icon: '📸',  color: '#e1306c', label: 'Instagram',  oauthSupported: true },
   TIKTOK:    { icon: '🎵',  color: '#69c9d0', label: 'TikTok',     oauthSupported: false, comingSoon: true },
   TWITTER:   { icon: '𝕏',  color: '#1da1f2', label: 'X / Twitter', oauthSupported: true },
   LINKEDIN:  { icon: '💼',  color: '#0077b5', label: 'LinkedIn',   oauthSupported: false, comingSoon: true },
-  FACEBOOK:  { icon: '👤',  color: '#1877f2', label: 'Facebook',   oauthSupported: false, comingSoon: true },
+  FACEBOOK:  { icon: '👤',  color: '#1877f2', label: 'Facebook',   oauthSupported: true },
   SNAPCHAT:  { icon: '👻',  color: '#fffc00', label: 'Snapchat',   oauthSupported: false, comingSoon: true },
 };
 
@@ -33,6 +33,7 @@ const ALL_PLATFORMS = Object.keys(PLATFORM_META) as Platform[];
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   youtube_denied:  'YouTube access was denied. Please try again and approve the permissions.',
   youtube_invalid: 'Invalid OAuth state. Please try connecting again.',
+  youtube_no_channel: 'This Google account does not have a YouTube channel yet. Open YouTube once with this account, create a channel, then reconnect.',
   youtube_failed:  'YouTube connection failed. Check your Google account permissions and retry.',
   twitter_failed:  'X / Twitter connection failed. Verify app settings and callback URL, then try again.',
 };
@@ -126,7 +127,7 @@ export default function AccountsPage() {
   const handleConnectOAuthPlatform = async (platform: Platform) => {
     setOauthConnectingPlatform(platform);
     try {
-      const res = await integrationsApi.getOAuthUrl(platform.toLowerCase());
+      const res = await integrationsApi.getOAuthUrl(platform.toLowerCase(), window.location.origin);
       const { authUrl } = res.data?.data ?? res.data;
       if (!authUrl) throw new Error('No OAuth URL returned');
       window.location.href = authUrl;
@@ -136,10 +137,48 @@ export default function AccountsPage() {
     }
   };
 
+  const handleConnectInstagram = async () => {
+    setOauthConnectingPlatform('INSTAGRAM');
+    try {
+      const res = await accountsApi.connectInstagramWithConfiguredToken();
+      const payload = res.data?.data ?? res.data;
+      const username = payload?.profile?.username;
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['account-stats'] });
+      toast.success(username ? `Instagram connected: @${String(username).replace(/^@/, '')}` : 'Instagram account connected successfully!');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Could not verify the configured Instagram token.';
+      toast.error(Array.isArray(message) ? message.join(' ') : message);
+    } finally {
+      setOauthConnectingPlatform(null);
+    }
+  };
+
+  const handleConnectFacebook = async () => {
+    setOauthConnectingPlatform('FACEBOOK');
+    try {
+      const res = await accountsApi.connectFacebookWithConfiguredToken();
+      const payload = res.data?.data ?? res.data;
+      const pageName = payload?.page?.name;
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['account-stats'] });
+      toast.success(pageName ? `Facebook connected: ${pageName}` : 'Facebook page connected successfully!');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Could not verify the configured Facebook token.';
+      toast.error(Array.isArray(message) ? message.join(' ') : message);
+    } finally {
+      setOauthConnectingPlatform(null);
+    }
+  };
+
   // ── Reconnect handler ──
   const handleReconnect = (platform: Platform) => {
     if (platform === 'YOUTUBE') {
       handleConnectYoutube();
+    } else if (platform === 'INSTAGRAM') {
+      handleConnectInstagram();
+    } else if (platform === 'FACEBOOK') {
+      handleConnectFacebook();
     } else if (PLATFORM_META[platform].oauthSupported) {
       handleConnectOAuthPlatform(platform);
     } else {
@@ -152,6 +191,10 @@ export default function AccountsPage() {
     const meta = PLATFORM_META[platform];
     if (platform === 'YOUTUBE') {
       handleConnectYoutube();
+    } else if (platform === 'INSTAGRAM') {
+      handleConnectInstagram();
+    } else if (platform === 'FACEBOOK') {
+      handleConnectFacebook();
     } else if (meta.oauthSupported) {
       handleConnectOAuthPlatform(platform);
     } else if (meta.comingSoon) {

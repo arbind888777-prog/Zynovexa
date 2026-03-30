@@ -9,6 +9,14 @@ import { AccountsService } from './accounts.service';
 import { ConnectAccountDto, UpdateAccountDto } from './dto/account.dto';
 import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
 
+function buildAccountsRedirect(frontendUrl: string, params: Record<string, string>) {
+  const redirectUrl = new URL('/accounts', frontendUrl);
+  for (const [key, value] of Object.entries(params)) {
+    redirectUrl.searchParams.set(key, value);
+  }
+  return redirectUrl.toString();
+}
+
 @ApiTags('Accounts')
 @ApiBearerAuth()
 @Controller('accounts')
@@ -37,6 +45,20 @@ export class AccountsController {
   @ApiOperation({ summary: 'Manually connect a social account (with access token)' })
   connect(@Request() req, @Body() dto: ConnectAccountDto) {
     return this.accountsService.connect(req.user.id, dto);
+  }
+
+  @Post('connect/instagram/configured-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Connect Instagram using the server-configured Graph API token' })
+  connectInstagramWithConfiguredToken(@Request() req) {
+    return this.accountsService.connectInstagramWithConfiguredToken(req.user.id);
+  }
+
+  @Post('connect/facebook/configured-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Connect Facebook using the server-configured Graph API token' })
+  connectFacebookWithConfiguredToken(@Request() req) {
+    return this.accountsService.connectFacebookWithConfiguredToken(req.user.id);
   }
 
   @Put(':id')
@@ -77,17 +99,21 @@ export class AccountsController {
     const fallbackFrontendUrl = sanitizeFrontendUrl(process.env.FRONTEND_URL);
 
     if (error) {
-      return res.redirect(`${fallbackFrontendUrl}/accounts?error=youtube_denied`);
+      return res.redirect(buildAccountsRedirect(fallbackFrontendUrl, { error: 'youtube_denied' }));
     }
     if (!code || !state) {
-      return res.redirect(`${fallbackFrontendUrl}/accounts?error=youtube_invalid`);
+      return res.redirect(buildAccountsRedirect(fallbackFrontendUrl, { error: 'youtube_invalid' }));
     }
 
     try {
       const result = await this.accountsService.handleYoutubeCallback(code, state);
-      return res.redirect(`${result.frontendUrl}/accounts?connected=youtube`);
+      return res.redirect(buildAccountsRedirect(result.frontendUrl, { connected: 'youtube' }));
     } catch (err: any) {
-      return res.redirect(`${fallbackFrontendUrl}/accounts?error=youtube_failed`);
+      const message = String(err?.message || '').toLowerCase();
+      const errorCode = message.includes('no youtube channel')
+        ? 'youtube_no_channel'
+        : 'youtube_failed';
+      return res.redirect(buildAccountsRedirect(fallbackFrontendUrl, { error: errorCode }));
     }
   }
 }

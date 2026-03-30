@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import { SignupDto, LoginDto, RefreshTokenDto, MagicLinkDto, MagicLinkVerifyDto, SupabaseExchangeDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
+import { GoogleCallbackGuard } from './guards/google-callback.guard';
 import { decodeFrontendState, sanitizeFrontendUrl } from '../common/utils/frontend-url';
 
 @ApiTags('Auth')
@@ -90,7 +91,7 @@ export class AuthController {
 
   @Get('google/callback')
   @ApiExcludeEndpoint()
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleCallbackGuard)
   async googleCallback(@Request() req, @Res() res: Response) {
     const fallbackFrontendUrl = sanitizeFrontendUrl(process.env.FRONTEND_URL);
     const frontendUrl = decodeFrontendState(req.query?.state) || fallbackFrontendUrl;

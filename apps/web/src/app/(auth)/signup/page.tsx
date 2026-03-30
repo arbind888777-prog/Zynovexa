@@ -4,7 +4,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
-import { isSupabaseEnabled, supabase } from '@/lib/supabase';
+
+function getErrorMessage(err: any, fallback: string) {
+  const apiMessage = err?.response?.data?.message;
+  if (Array.isArray(apiMessage)) return apiMessage.join(' ');
+  if (typeof apiMessage === 'string' && apiMessage.trim()) return apiMessage;
+  if (typeof err?.message === 'string' && err.message.trim()) return err.message;
+  return fallback;
+}
 
 const PERKS = [
   { icon: '🎁', text: 'Free forever — no credit card needed' },
@@ -15,7 +22,7 @@ const PERKS = [
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup, exchangeSupabaseToken, isLoading } = useAuthStore();
+  const { signup, isLoading } = useAuthStore();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [showPass, setShowPass] = useState(false);
 
@@ -24,38 +31,11 @@ export default function SignupPage() {
     if (form.password !== form.confirmPassword) return toast.error('Passwords do not match');
     if (form.password.length < 6) return toast.error('Password must be at least 6 characters');
     try {
-      if (isSupabaseEnabled && supabase) {
-        const { data, error } = await supabase.auth.signUp({
-          email: form.email,
-          password: form.password,
-          options: {
-            data: { name: form.name },
-            emailRedirectTo: `${window.location.origin}/auth/confirm`,
-          },
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        const accessToken = data.session?.access_token || null;
-        if (accessToken) {
-          await exchangeSupabaseToken(accessToken);
-          toast.success('Welcome to Zynovexa! 🎉');
-          router.push('/onboarding');
-          return;
-        }
-
-        toast.success('Check your inbox to confirm your account.');
-        router.push('/auth/confirm?pending=1');
-        return;
-      }
-
       await signup(form.name, form.email, form.password);
       toast.success('Welcome to Zynovexa! 🎉');
       router.push('/onboarding');
     } catch (err: any) {
-      toast.error(err?.message || err?.response?.data?.message || 'Signup failed. Try again.');
+      toast.error(getErrorMessage(err, 'Signup failed. Try again.'));
     }
   };
 
@@ -78,25 +58,9 @@ export default function SignupPage() {
   const strength = form.password ? getStrength(form.password) : null;
 
   const handleGoogleSignup = async () => {
-    if (isSupabaseEnabled && supabase) {
-      const callbackUrl = new URL('/auth/google/callback', window.location.origin);
-      callbackUrl.searchParams.set('source', 'signup');
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: callbackUrl.toString(),
-        },
-      });
-
-      if (error) {
-        toast.error(error.message || 'Google sign-up could not be started.');
-      }
-      return;
-    }
-
     const frontend = encodeURIComponent(window.location.origin);
-    window.location.href = `/api/auth/google?frontend=${frontend}`;
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL || `${window.location.origin}/api`).replace(/\/$/, '');
+    window.location.href = `${apiBase}/auth/google?frontend=${frontend}`;
   };
 
   return (
@@ -164,9 +128,6 @@ export default function SignupPage() {
           <div className="mb-7">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Create account</h1>
             <p className="text-slate-400 text-sm mt-1">Free forever. Upgrade anytime.</p>
-            {isSupabaseEnabled && (
-              <p className="text-xs text-slate-500 mt-2">Email signup is powered by Supabase.</p>
-            )}
           </div>
 
           {/* Google */}
@@ -180,9 +141,6 @@ export default function SignupPage() {
             </svg>
             Sign up with Google
           </button>
-          {isSupabaseEnabled && (
-            <p className="text-[11px] text-slate-500 mb-5">Google sign-up requires the Google provider to be enabled in Supabase Auth.</p>
-          )}
 
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />

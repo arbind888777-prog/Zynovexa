@@ -11,7 +11,7 @@ import { TokenEncryptionService } from './token-encryption.service';
 import { ConnectAccountDto, UpdateAccountDto } from './dto/account.dto';
 import { YoutubeService } from '../video-analytics/youtube.service';
 import * as jwt from 'jsonwebtoken';
-import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
+import { buildApiCallbackUrl, sanitizeFrontendUrl } from '../common/utils/frontend-url';
 
 function normalizeYoutubeHandle(handle?: string | null) {
   if (!handle) return '';
@@ -25,6 +25,25 @@ function safeAccount(a: any) {
   const { accessToken, refreshToken, ...safe } = a;
   return safe;
 }
+
+type InstagramGraphProfile = {
+  id: string;
+  username?: string;
+  account_type?: string;
+  media_count?: number;
+};
+
+type FacebookGraphPage = {
+  id: string;
+  name?: string;
+  access_token?: string;
+  category?: string;
+  instagram_business_account?: {
+    id: string;
+    username?: string;
+    profile_picture_url?: string;
+  };
+};
 
 @Injectable()
 export class AccountsService {
@@ -204,6 +223,83 @@ export class AccountsService {
     };
   }
 
+  async connectInstagramWithConfiguredToken(userId: string) {
+    const configuredToken = this.getConfiguredMetaGraphToken();
+
+    if (!configuredToken) {
+      throw new NotFoundException('INSTAGRAM_GRAPH_API_TOKEN is not configured on the API server');
+    }
+
+    const profile = await this.fetchInstagramGraphProfile(configuredToken);
+    const hasFacebookPages = !profile ? await this.hasFacebookPages(configuredToken) : false;
+    const fallbackPage = !profile ? await this.fetchInstagramBusinessPage(configuredToken) : null;
+
+    if (!profile && !fallbackPage) {
+      throw new NotFoundException(hasFacebookPages
+        ? 'Configured token is valid for Facebook Pages, but no linked Instagram business account was found.'
+        : 'Configured Instagram token could not fetch an Instagram profile. Verify token scopes and account access.');
+    }
+
+    const username = profile?.username || fallbackPage?.instagram_business_account?.username || fallbackPage?.name;
+    const handle = username ? `@${username.replace(/^@/, '')}` : '@instagram';
+
+    const connectedAccount = await this.connect(userId, {
+      platform: 'INSTAGRAM' as Platform,
+      accessToken: fallbackPage?.access_token || configuredToken,
+      handle,
+      displayName: username || 'Instagram Account',
+      avatarUrl: fallbackPage?.instagram_business_account?.profile_picture_url,
+      followersCount: 0,
+      platformUserId: profile?.id || fallbackPage?.instagram_business_account?.id || fallbackPage?.id,
+      scopes: profile ? ['instagram_basic'] : ['pages_show_list', 'instagram_basic'],
+    });
+
+    return {
+      account: connectedAccount,
+      source: profile ? 'instagram-graph' : 'facebook-graph',
+      profile: profile || {
+        id: fallbackPage?.instagram_business_account?.id || fallbackPage?.id,
+        username,
+      },
+    };
+  }
+
+  async connectFacebookWithConfiguredToken(userId: string) {
+    const configuredToken = this.getConfiguredMetaGraphToken();
+
+    if (!configuredToken) {
+      throw new NotFoundException('FACEBOOK_GRAPH_API_TOKEN or INSTAGRAM_GRAPH_API_TOKEN is not configured on the API server');
+    }
+
+    const pages = await this.fetchFacebookPages(configuredToken);
+    const page = pages.find((item) => item.access_token) || pages[0];
+
+    if (!page) {
+      throw new NotFoundException('Configured token could not fetch any Facebook Pages');
+    }
+
+    const connectedAccount = await this.connect(userId, {
+      platform: 'FACEBOOK' as Platform,
+      accessToken: page.access_token || configuredToken,
+      handle: page.name || 'Facebook Page',
+      displayName: page.name || 'Facebook Page',
+      avatarUrl: `https://graph.facebook.com/v18.0/${page.id}/picture?type=large`,
+      followersCount: 0,
+      platformUserId: page.id,
+      scopes: ['pages_show_list'],
+    });
+
+    return {
+      account: connectedAccount,
+      page: {
+        id: page.id,
+        name: page.name,
+        category: page.category,
+      },
+      source: 'facebook-graph',
+    };
+  }
+
   private async getValidYoutubeAccessToken(account: {
     id: string;
     accessToken: string | null;
@@ -286,9 +382,12 @@ export class AccountsService {
   generateYoutubeConnectUrl(userId: string, frontendUrl?: string): { url: string } {
     const secret   = this.config.get<string>('JWT_ACCESS_SECRET')!;
     const safeFrontendUrl = sanitizeFrontendUrl(frontendUrl, this.config.get<string>('FRONTEND_URL'));
-    const state    = jwt.sign({ userId, purpose: 'yt-connect', frontendUrl: safeFrontendUrl }, secret, { expiresIn: '5m' });
-    const callback = this.config.get('YOUTUBE_CONNECT_CALLBACK_URL')
-      || 'http://localhost:4000/api/accounts/connect/youtube/callback';
+    const callback = buildApiCallbackUrl(
+      safeFrontendUrl,
+      '/api/accounts/connect/youtube/callback',
+      this.config.get<string>('API_URL') || this.config.get<string>('BACKEND_URL') || this.config.get<string>('YOUTUBE_CONNECT_CALLBACK_URL') || undefined,
+    );
+    const state = jwt.sign({ userId, purpose: 'yt-connect', frontendUrl: safeFrontendUrl, callbackUrl: callback }, secret, { expiresIn: '5m' });
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id',     this.config.get('GOOGLE_CLIENT_ID') || '');
@@ -308,6 +407,90 @@ export class AccountsService {
     return { url: url.toString() };
   }
 
+  private getConfiguredMetaGraphToken() {
+    return this.config.get<string>('FACEBOOK_GRAPH_API_TOKEN')?.trim()
+      || this.config.get<string>('INSTAGRAM_GRAPH_API_TOKEN')?.trim()
+      || '';
+  }
+
+  private async fetchInstagramGraphProfile(accessToken: string): Promise<InstagramGraphProfile | null> {
+    const response = await fetch(
+      `https://graph.instagram.com/me?${new URLSearchParams({
+        fields: 'id,username,account_type,media_count',
+        access_token: accessToken,
+      }).toString()}`,
+    );
+
+    const payload: any = await response.json().catch(() => null);
+    if (!response.ok || payload?.error || !payload?.id) {
+      this.logger.warn(
+        `Instagram Graph profile lookup failed: ${payload?.error?.message || response.statusText || 'unknown error'}`,
+      );
+      return null;
+    }
+
+    return payload as InstagramGraphProfile;
+  }
+
+  private async hasFacebookPages(accessToken: string): Promise<boolean> {
+    const pages = await this.fetchFacebookPages(accessToken);
+    return pages.length > 0;
+  }
+
+  private async fetchFacebookPages(accessToken: string): Promise<FacebookGraphPage[]> {
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/me/accounts?${new URLSearchParams({
+        fields: 'id,name,category,access_token',
+        access_token: accessToken,
+      }).toString()}`,
+    );
+
+    const payload: any = await response.json().catch(() => null);
+    if (!response.ok || payload?.error || !Array.isArray(payload?.data)) {
+      this.logger.warn(
+        `Facebook page list lookup failed: ${payload?.error?.message || response.statusText || 'unknown error'}`,
+      );
+      return [];
+    }
+
+    return payload.data as FacebookGraphPage[];
+  }
+
+  private async fetchInstagramBusinessPage(accessToken: string): Promise<FacebookGraphPage | null> {
+    const pages = await this.fetchFacebookPages(accessToken);
+
+    if (pages.length === 0) {
+      this.logger.warn(
+        'Facebook page lookup for Instagram fallback failed: no Facebook pages found',
+      );
+      return null;
+    }
+
+    for (const page of pages) {
+      if (!page.access_token) {
+        continue;
+      }
+
+      const pageResponse = await fetch(
+        `https://graph.facebook.com/v18.0/${page.id}?${new URLSearchParams({
+          fields: 'instagram_business_account{id,username,profile_picture_url}',
+          access_token: page.access_token,
+        }).toString()}`,
+      );
+      const pagePayload: any = await pageResponse.json().catch(() => null);
+
+      if (pageResponse.ok && pagePayload?.instagram_business_account?.id) {
+        return {
+          ...page,
+          instagram_business_account: pagePayload.instagram_business_account,
+        };
+      }
+    }
+
+    this.logger.warn('Facebook pages found, but none expose a linked Instagram business account');
+    return null;
+  }
+
   /**
    * Step 2: Handle Google OAuth callback.
    * Validates state → exchanges code → fetches YouTube channel → saves SocialAccount.
@@ -324,9 +507,13 @@ export class AccountsService {
     if (payload.purpose !== 'yt-connect') throw new Error('Invalid state purpose');
     const userId = payload.userId as string;
     const frontendUrl = sanitizeFrontendUrl(payload.frontendUrl, this.config.get<string>('FRONTEND_URL'));
-
-    const callback = this.config.get('YOUTUBE_CONNECT_CALLBACK_URL')
-      || 'http://localhost:4000/api/accounts/connect/youtube/callback';
+    const callback = typeof payload.callbackUrl === 'string' && payload.callbackUrl.trim()
+      ? payload.callbackUrl
+      : buildApiCallbackUrl(
+          frontendUrl,
+          '/api/accounts/connect/youtube/callback',
+          this.config.get<string>('API_URL') || this.config.get<string>('BACKEND_URL') || this.config.get<string>('YOUTUBE_CONNECT_CALLBACK_URL') || undefined,
+        );
 
     // Exchange auth code for access + refresh tokens
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {

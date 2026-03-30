@@ -95,6 +95,10 @@ export class AuthService {
         throw new BadRequestException('This account uses magic link login. Use email link sign-in.');
       }
 
+      if (user.provider === 'supabase') {
+        throw new BadRequestException('This account is managed by Supabase. Confirm your email and sign in from the email form again.');
+      }
+
       throw new BadRequestException('This account does not have a password yet.');
     }
 

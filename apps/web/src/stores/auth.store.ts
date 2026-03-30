@@ -18,6 +18,11 @@ function isValidStoredToken(token: string | null | undefined) {
   return Boolean(token && token !== 'undefined' && token !== 'null');
 }
 
+function isAuthFailure(error: any) {
+  const status = error?.response?.status;
+  return status === 401 || status === 403;
+}
+
 interface AuthState {
   user: User | null;
   accessToken: string | null;
@@ -121,8 +126,20 @@ export const useAuthStore = create<AuthState>()(
           const response = await authApi.me();
           const data = unwrapApiResponse<User>(response);
           set({ user: data, isAuthenticated: true });
-        } catch {
-          get().clear();
+        } catch (error: any) {
+          if (isAuthFailure(error)) {
+            get().clear();
+            return;
+          }
+
+          const currentState = get();
+          if (isValidStoredToken(currentState.accessToken) && isValidStoredToken(currentState.refreshToken)) {
+            setAuthCookie(true);
+            set({ isAuthenticated: true });
+            return;
+          }
+
+          throw error;
         } finally {
           set({ isLoading: false });
         }
@@ -162,7 +179,7 @@ export const useAuthStore = create<AuthState>()(
         localStorage.setItem('access_token', accessToken!);
         localStorage.setItem('refresh_token', refreshToken!);
         setAuthCookie(true);
-        useAuthStore.setState({ _hydrated: true });
+        useAuthStore.setState({ isAuthenticated: true, _hydrated: true });
       },
     },
   ),

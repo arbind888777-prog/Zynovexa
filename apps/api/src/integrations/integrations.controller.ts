@@ -14,8 +14,8 @@ export class IntegrationsController {
 
   @Get('oauth/:platform')
   @UseGuards(JwtAuthGuard)
-  async getOAuthUrl(@Req() req: any, @Param('platform') platform: string) {
-    return this.integrationsService.getOAuthUrl(req.user.id, platform);
+  async getOAuthUrl(@Req() req: any, @Param('platform') platform: string, @Query('frontend') frontend?: string) {
+    return this.integrationsService.getOAuthUrl(req.user.id, platform, frontend);
   }
 
   @Get('callback/:platform')

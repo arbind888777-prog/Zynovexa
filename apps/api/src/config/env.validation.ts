@@ -73,6 +73,8 @@ export const envValidationSchema = Joi.object({
   TWITTER_BEARER_TOKEN: Joi.string().optional(),
   PINTEREST_APP_ID: Joi.string().optional(),
   PINTEREST_APP_SECRET: Joi.string().optional(),
+  FACEBOOK_GRAPH_API_TOKEN: Joi.string().optional(),
+  INSTAGRAM_GRAPH_API_TOKEN: Joi.string().optional(),
 
   // ── Stripe (optional in dev) ────────────────────────────────
   STRIPE_SECRET_KEY: Joi.string().optional(),

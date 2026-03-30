@@ -40,6 +40,25 @@ export function sanitizeFrontendUrl(candidate?: string | null, fallback = DEFAUL
   return toOrigin(candidate || '') || toOrigin(fallback) || DEFAULT_FRONTEND_URL;
 }
 
+export function buildApiCallbackUrl(
+  frontendUrl: string | null | undefined,
+  callbackPath: string,
+  configuredApiUrl?: string | null,
+): string {
+  const configuredBase = (configuredApiUrl || '').replace(/\/api\/?$/, '');
+  const configuredOrigin = toOrigin(configuredBase);
+  if (configuredOrigin) {
+    return `${configuredOrigin}${callbackPath.startsWith('/') ? callbackPath : `/${callbackPath}`}`;
+  }
+
+  const safeFrontendOrigin = frontendUrl ? sanitizeFrontendUrl(frontendUrl) : null;
+  if (safeFrontendOrigin) {
+    return `${safeFrontendOrigin}${callbackPath.startsWith('/') ? callbackPath : `/${callbackPath}`}`;
+  }
+
+  return `${DEFAULT_FRONTEND_URL}${callbackPath.startsWith('/') ? callbackPath : `/${callbackPath}`}`;
+}
+
 export function getAllowedFrontendOrigins(configuredFrontendUrl?: string | null): string[] {
   const origins = new Set<string>(DEFAULT_ALLOWED_FRONTEND_ORIGINS);
   const configuredOrigin = toOrigin(configuredFrontendUrl || '');

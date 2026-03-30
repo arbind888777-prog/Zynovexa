@@ -14,6 +14,14 @@ function setAuthCookie(loggedIn: boolean) {
   }
 }
 
+function getApiBaseUrl() {
+  if (typeof window === 'undefined') {
+    return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/$/, '');
+  }
+
+  return (process.env.NEXT_PUBLIC_API_URL || `${window.location.origin}/api`).replace(/\/$/, '');
+}
+
 /**
  * Wait for Supabase to exchange the OAuth code / implicit token and return
  * an access token.  Works for both PKCE (?code=…) and implicit (#access_token=…).
@@ -82,6 +90,30 @@ function GoogleCallbackContent() {
 
     (async () => {
       try {
+        const success = params.get('success');
+
+        // ── Legacy backend OAuth cookie exchange ────────────────────
+        if (success) {
+          const res = await fetch(`${getApiBaseUrl()}/auth/google/exchange`, {
+            credentials: 'include',
+          });
+
+          if (!res.ok) throw new Error('Token exchange failed');
+
+          const payload = unwrapApiData<{ accessToken: string; refreshToken: string }>(await res.json());
+          const { accessToken, refreshToken } = payload;
+
+          localStorage.setItem('access_token', accessToken);
+          localStorage.setItem('refresh_token', refreshToken);
+          setAuthCookie(true);
+          useAuthStore.setState({ accessToken, refreshToken, isAuthenticated: true });
+
+          await fetchMe();
+          toast.success('Welcome! Signed in with Google 🎉');
+          routeAfterAuth();
+          return;
+        }
+
         // ── Supabase OAuth path (PKCE or implicit) ──────────────────
         if (isSupabaseEnabled && supabase) {
           const accessToken = await waitForSupabaseAccessToken(8000);
@@ -96,29 +128,7 @@ function GoogleCallbackContent() {
           return;
         }
 
-        // ── Legacy backend OAuth cookie exchange ────────────────────
-        const success = params.get('success');
-        if (!success) {
-          throw new Error('Google callback did not return a success flag.');
-        }
-
-        const res = await fetch('/api/auth/google/exchange', {
-          credentials: 'include',
-        });
-
-        if (!res.ok) throw new Error('Token exchange failed');
-
-        const payload = unwrapApiData<{ accessToken: string; refreshToken: string }>(await res.json());
-        const { accessToken, refreshToken } = payload;
-
-        localStorage.setItem('access_token', accessToken);
-        localStorage.setItem('refresh_token', refreshToken);
-        setAuthCookie(true);
-        useAuthStore.setState({ accessToken, refreshToken, isAuthenticated: true });
-
-        await fetchMe();
-        toast.success('Welcome! Signed in with Google 🎉');
-        routeAfterAuth();
+        throw new Error('Google callback did not return a usable auth session.');
       } catch (err: any) {
         setStatus('error');
         toast.error(err?.message || 'Failed to sign in with Google. Please try again.');

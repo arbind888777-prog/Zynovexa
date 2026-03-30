@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { Platform } from '@prisma/client';
 import * as crypto from 'crypto';
+import { buildApiCallbackUrl, sanitizeFrontendUrl } from '../common/utils/frontend-url';
 
 interface PlatformConfig {
   name: string;
@@ -90,7 +91,7 @@ export class IntegrationsService {
     }));
   }
 
-  async getOAuthUrl(userId: string, platform: string) {
+  async getOAuthUrl(userId: string, platform: string, frontendUrl?: string) {
     const platKey = platform.toUpperCase();
     const config = PLATFORM_CONFIGS[platKey];
     if (!config) throw new BadRequestException(`Unsupported platform: ${platform}`);
@@ -98,9 +99,14 @@ export class IntegrationsService {
       throw new BadRequestException(`${config.name} OAuth is not configured yet. Add ${config.clientIdEnv}${config.clientSecretEnv ? ` and ${config.clientSecretEnv}` : ''} in the API env.`);
     }
 
-    const state = this.createSignedState(userId, platKey);
+    const safeFrontendUrl = sanitizeFrontendUrl(frontendUrl, this.config.get<string>('FRONTEND_URL'));
+    const state = this.createSignedState(userId, platKey, safeFrontendUrl);
     const clientId = this.config.get(config.clientIdEnv) || `ZYNOVEXA_${platKey}_CLIENT_ID`;
-    const redirectUri = `${this.getApiBaseUrl()}/api/integrations/callback/${platform.toLowerCase()}`;
+    const redirectUri = buildApiCallbackUrl(
+      safeFrontendUrl,
+      `/api/integrations/callback/${platform.toLowerCase()}`,
+      this.config.get<string>('API_URL') || this.config.get<string>('BACKEND_URL') || undefined,
+    );
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -159,7 +165,7 @@ export class IntegrationsService {
       });
     }
 
-    const frontendUrl = this.config.get('FRONTEND_URL') || 'http://localhost:3001';
+    const frontendUrl = sanitizeFrontendUrl(oauthState.frontendUrl, this.config.get<string>('FRONTEND_URL'));
     return {
       message: `${platform} connected successfully`,
       redirectUrl: `${frontendUrl.replace(/\/$/, '')}/accounts?connected=${platform.toLowerCase()}`,
@@ -251,10 +257,11 @@ export class IntegrationsService {
     return Boolean(clientId && clientSecret);
   }
 
-  private createSignedState(userId: string, platform: string) {
+  private createSignedState(userId: string, platform: string, frontendUrl?: string) {
     const payload = JSON.stringify({
       userId,
       platform,
+      frontendUrl,
       nonce: crypto.randomBytes(12).toString('hex'),
       issuedAt: Date.now(),
     });
@@ -285,6 +292,7 @@ export class IntegrationsService {
     const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as {
       userId: string;
       platform: string;
+      frontendUrl?: string;
       issuedAt: number;
     };
 
@@ -297,10 +305,5 @@ export class IntegrationsService {
     }
 
     return payload;
-  }
-
-  private getApiBaseUrl() {
-    const raw = (this.config.get('API_URL') || this.config.get('BACKEND_URL') || 'http://localhost:4000').replace(/\/$/, '');
-    return raw.endsWith('/api') ? raw.slice(0, -4) : raw;
   }
 }
