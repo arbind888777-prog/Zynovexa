@@ -1,0 +1,55 @@
+##############################################################################
+# Temporary HTTP-only Nginx config for Let's Encrypt challenge.
+# Rendered by deploy.sh before the first certificate is issued.
+##############################################################################
+
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    sendfile on;
+    keepalive_timeout 65;
+
+    upstream nestjs_api {
+        server api:4000;
+    }
+
+    upstream nextjs_web {
+        server web:3001;
+    }
+
+    server {
+        listen 80;
+        server_name ${ZYNOVEXA_SERVER_NAMES};
+
+        location /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+        }
+
+        location /api/ {
+            proxy_pass http://nestjs_api;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location / {
+            proxy_pass http://nextjs_web;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}

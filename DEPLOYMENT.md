@@ -1,336 +1,284 @@
-# Zynovexa — Hostinger VPS Deployment Guide
+# Zynovexa Hostinger VPS Deployment Guide
 
-## Architecture Overview
+This repository is prepared for Docker-based deployment on a Hostinger VPS.
 
+Recommended flow:
+
+1. Clone the repo on the VPS.
+2. Create `.env` and `apps/api/.env`.
+3. Run `./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com`.
+
+The deployment script now:
+
+1. Validates required files and tools.
+2. Renders `nginx/nginx.conf` from `nginx/nginx.conf.template`.
+3. Obtains a Let's Encrypt SSL certificate when needed.
+4. Builds the API and web containers.
+5. Starts Redis, API, web, Nginx, and Certbot renewal.
+6. Runs Prisma migrations.
+7. Prints service health.
+
+## Architecture
+
+```text
+Internet -> Nginx (80/443) -> Next.js web (3001)
+                         -> NestJS API (4000)
+                         -> Redis (internal)
+                         -> Supabase Postgres (external)
 ```
-Internet → Nginx (80/443) → Next.js Web  (port 3001)
-                          → NestJS API   (port 3000)
-                          → Supabase DB  (external)
-                          → Redis        (internal)
-```
-
-App and Redis services run in Docker containers on the VPS. Nginx acts as a reverse proxy and handles SSL termination. Database access is expected to come from Supabase or another external database provider supported by the app.
-
----
 
 ## Prerequisites
 
-| Requirement | Version |
-|-------------|---------|
-| Ubuntu / Debian VPS | 20.04 LTS or 22.04 LTS |
-| Docker Engine | 24+ |
-| Docker Compose | v2+ |
-| Domain Name | Pointed to VPS IP (A record) |
-| Open Ports | 22 (SSH), 80 (HTTP), 443 (HTTPS) |
+You need:
 
----
+1. A Hostinger VPS running Ubuntu or Debian.
+2. A domain whose A record points to the VPS IP.
+3. Supabase project credentials.
+4. Google OAuth credentials if using Google login / YouTube connect.
+5. SMTP credentials if using email features.
 
-## Step 1 — VPS Initial Setup
+## Step 1: Prepare the VPS
+
+SSH into the server:
 
 ```bash
-# SSH into Hostinger VPS
 ssh root@YOUR_VPS_IP
-
-# Update system
-apt update && apt upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-systemctl enable docker && systemctl start docker
-
-# Install Docker Compose plugin
-apt install -y docker-compose-plugin
-
-# (Optional) Create non-root user
-adduser zynovexa
-usermod -aG docker zynovexa
-su - zynovexa
 ```
 
----
-
-## Step 2 — Clone the Project
+Manual install path:
 
 ```bash
-cd /var/www   # or your preferred directory
-git clone https://github.com/YOUR_USERNAME/zynovexa.git
-cd zynovexa
+apt-get update -y
+apt-get upgrade -y
+apt-get install -y ca-certificates curl git ufw gettext-base docker-compose-plugin
+curl -fsSL https://get.docker.com | sh
+systemctl enable docker
+systemctl start docker
+ufw allow OpenSSH
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable
 ```
 
----
+Bootstrap helper:
 
-## Step 3 — Configure Environment Variables
+[scripts/hostinger-bootstrap.sh](scripts/hostinger-bootstrap.sh)
 
-### Root `.env` (Docker Compose variables)
+Example:
+
+```bash
+git clone https://github.com/arbind888777-prog/Zynovexa.git /var/www/zynovexa
+cd /var/www/zynovexa
+chmod +x scripts/hostinger-bootstrap.sh deploy.sh
+sudo APP_DIR=/var/www/zynovexa APP_USER=root bash scripts/hostinger-bootstrap.sh
+```
+
+## Step 2: Clone the repo on Hostinger
+
+```bash
+mkdir -p /var/www
+git clone https://github.com/arbind888777-prog/Zynovexa.git /var/www/zynovexa
+cd /var/www/zynovexa
+```
+
+## Step 3: Create the root `.env`
 
 ```bash
 cp .env.example .env
-nano .env
 ```
 
-Minimum required values:
+Minimum recommended values:
 
 ```env
 DOMAIN=yourdomain.com
-COMPOSE_PROFILES=
+SSL_EMAIL=admin@yourdomain.com
+ENABLE_WWW_DOMAIN=false
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_public_anon_key
+COMPOSE_PROFILES=
 ```
 
-### API `.env` (NestJS configuration)
+Notes:
+
+1. Keep `COMPOSE_PROFILES=` empty if you are using Supabase.
+2. Set `ENABLE_WWW_DOMAIN=true` only if you want both `yourdomain.com` and `www.yourdomain.com` on the same cert.
+
+## Step 4: Create `apps/api/.env`
 
 ```bash
-cp apps/api/.env.example apps/api/.env   # if .env.example exists
-nano apps/api/.env
+cp apps/api/.env.example apps/api/.env
 ```
 
-Fill in all required values (see `.env.example` at root for reference):
+Production example:
 
 ```env
 NODE_ENV=production
-PORT=3000
+PORT=4000
 
-DATABASE_URL=postgresql://postgres:YOUR_SUPABASE_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require
-DIRECT_URL=postgresql://postgres:YOUR_SUPABASE_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require
+DIRECT_URL=postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require
+
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_ANON_KEY=your_public_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 SUPABASE_STORAGE_BUCKET=media
+
 REDIS_URL=redis://redis:6379
+REDIS_HOST=redis
+REDIS_PORT=6379
 
-JWT_ACCESS_SECRET=generate_a_64_char_random_string_here
-JWT_REFRESH_SECRET=generate_another_64_char_random_string_here
-
-OPENAI_API_KEY=sk-...
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your@gmail.com
-SMTP_PASS=your_app_password
-EMAIL_FROM="Zynovexa <noreply@yourdomain.com>"
+JWT_ACCESS_SECRET=generate_a_long_random_secret
+JWT_REFRESH_SECRET=generate_a_different_long_random_secret
+JWT_ACCESS_EXPIRES=15m
+JWT_REFRESH_EXPIRES=7d
 
 FRONTEND_URL=https://yourdomain.com
 BACKEND_URL=https://yourdomain.com
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
+API_URL=https://yourdomain.com/api
+
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_CALLBACK_URL=https://yourdomain.com/api/auth/google/callback
+YOUTUBE_CONNECT_CALLBACK_URL=https://yourdomain.com/api/accounts/connect/youtube/callback
+
+YOUTUBE_DATA_API_KEY=your-youtube-api-key
+
+TWITTER_CLIENT_ID=your-twitter-client-id
+TWITTER_CLIENT_SECRET=your-twitter-client-secret
+TWITTER_BEARER_TOKEN=your-twitter-bearer-token
+
+FACEBOOK_GRAPH_API_TOKEN=optional-facebook-token
+INSTAGRAM_GRAPH_API_TOKEN=optional-instagram-token
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@email.com
+SMTP_PASS=your-app-password
+EMAIL_FROM="Zynovexa <noreply@yourdomain.com>"
+
+TOKEN_ENCRYPTION_KEY=base64-encoded-32-byte-key
 ```
 
-For local non-Docker web development, create `apps/web/.env.local` with the same public Supabase values.
-
-> **Tip:** Generate secure secrets with: `openssl rand -base64 48`
-
----
-
-## Step 4 — Configure Nginx Domain
-
-Edit `nginx/nginx.conf` and replace **all** instances of `YOURDOMAIN` with your actual domain:
+Generate secrets with:
 
 ```bash
-sed -i 's/YOURDOMAIN/yourdomain.com/g' nginx/nginx.conf
+openssl rand -base64 48
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
----
+## Step 5: Configure Google OAuth properly
 
-## Step 5 — Obtain SSL Certificate (Let's Encrypt)
+If you use Google login or YouTube connect, the Google Cloud Console must include these redirect URIs.
 
-First, start only Nginx on port 80 (before SSL is configured) to get the certificate:
+Required for login:
+
+1. `https://yourdomain.com/api/auth/google/callback`
+
+Required for YouTube connect:
+
+1. `https://yourdomain.com/api/accounts/connect/youtube/callback`
+
+Required for local development if you still test locally:
+
+1. `http://localhost:4000/api/auth/google/callback`
+2. `http://localhost:4000/api/accounts/connect/youtube/callback`
+
+Without the YouTube callback, YouTube connect will fail with `redirect_uri_mismatch` even if Google login works.
+
+## Step 6: Deploy on Hostinger
 
 ```bash
-# Temporarily use HTTP-only nginx config to pass ACME challenge
-docker-compose -f docker-compose.prod.yml up -d nginx
-
-# Get SSL certificate
-docker run --rm \
-  -v /etc/letsencrypt:/etc/letsencrypt \
-  -v $(pwd)/nginx/certbot-webroot:/var/www/certbot \
-  -p 80:80 \
-  certbot/certbot certonly \
-  --webroot -w /var/www/certbot \
-  -d yourdomain.com -d www.yourdomain.com \
-  --email admin@yourdomain.com \
-  --agree-tos --no-eff-email
+chmod +x deploy.sh scripts/hostinger-bootstrap.sh
+./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com
 ```
 
-> **Note:** Your domain's DNS A record must point to the VPS IP **before** running certbot.
-
----
-
-## Step 6 — Deploy
+If you want the certificate to include `www` too:
 
 ```bash
-# Make deploy script executable
-chmod +x deploy.sh
-
-# Run deployment
-./deploy.sh
+./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com --enable-www
 ```
 
-The script will:
-1. Pull latest code from git
-2. Build Docker images for API and Web
-3. Start Redis and connect to your external database
-4. Run Prisma database migrations using `DIRECT_URL` when available
-5. Start API, Web, and Nginx services
-6. Perform health checks
-
----
-
-## Step 7 — Verify Deployment
+If the certificate already exists and you only want to re-render config and deploy:
 
 ```bash
-# Check all containers are running
-docker-compose -f docker-compose.prod.yml ps
+./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com --skip-ssl
+```
 
-# Check API health
+## Step 7: Verify deployment
+
+```bash
+docker compose -f docker-compose.prod.yml ps
 curl https://yourdomain.com/api/health
-
-# Check Web
 curl -I https://yourdomain.com
-
-# Follow live logs
-npm run docker:prod:logs
+docker compose -f docker-compose.prod.yml logs -f
 ```
 
----
+## Daily operations
 
-## Daily Operations
+Redeploy after pushing new code:
 
-### View logs
 ```bash
-npm run docker:prod:logs
-# or specific service:
-docker logs zynovexa-api -f
-docker logs zynovexa-web -f
-docker logs zynovexa-nginx -f
-```
-
-### Redeploy after code change
-```bash
+cd /var/www/zynovexa
 git pull origin main
-./deploy.sh
+./deploy.sh --domain=yourdomain.com --email=admin@yourdomain.com --skip-ssl
 ```
 
-### Redeploy without rebuilding images
-```bash
-./deploy.sh --no-build
-```
-
-### Restart specific service
-```bash
-docker-compose -f docker-compose.prod.yml restart api
-```
-
-### Database management
-```bash
-# Run migrations manually
-npm run db:migrate:prod
-
-# Open Prisma Studio (runs on localhost — use SSH tunnel)
-# ssh -L 5555:localhost:5555 user@YOUR_VPS_IP
-# then on VPS:
-docker exec -it zynovexa-api npx prisma studio
-```
-
-### Backup database
-```bash
-PGPASSWORD=YOUR_SUPABASE_PASSWORD pg_dump \
-  --dbname="postgresql://postgres@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require" \
-  > backup_$(date +%Y%m%d).sql
-```
-
-### Stop all services
-```bash
-npm run docker:prod:down
-```
-
----
-
-## Alternative: PM2 Deployment (without Docker)
-
-If you prefer running apps directly with PM2 (Node.js only, no Docker for app code):
-
-### Prerequisites
-- Node.js 20 LTS installed
-- Supabase or another supported external database provider, plus Redis 7 available
-- PM2 installed globally: `npm install -g pm2`
-
-### Steps
+View logs:
 
 ```bash
-# Install dependencies
-npm ci --workspaces
-
-# Build apps
-npm run build
-
-# Run DB migrations
-cd apps/api && npx prisma migrate deploy && cd ../..
-
-# Create logs directory
-mkdir -p logs
-
-# Start with PM2
-npm run pm2:start
-
-# Save PM2 process list (auto-start on reboot)
-pm2 save
-pm2 startup systemd -u $USER --hp $HOME
+docker compose -f docker-compose.prod.yml logs -f api
+docker compose -f docker-compose.prod.yml logs -f web
+docker compose -f docker-compose.prod.yml logs -f nginx
 ```
 
-### PM2 commands
-```bash
-npm run pm2:status    # List processes
-npm run pm2:logs      # Follow logs
-npm run pm2:restart   # Restart all
-npm run pm2:stop      # Stop all
-```
-
----
-
-## Project Structure (Deployment Relevant Files)
-
-```
-zynovexa/
-├── apps/
-│   ├── api/                  ← NestJS API (port 3000)
-│   │   ├── Dockerfile        ← Multi-stage Docker build
-│   │   ├── .env              ← API secrets (create from .env.example)
-│   │   └── prisma/           ← Database schema & migrations
-│   └── web/                  ← Next.js Web App (port 3001)
-│       └── Dockerfile        ← Multi-stage Docker build
-├── nginx/
-│   └── nginx.conf            ← Reverse proxy config (edit YOURDOMAIN)
-├── docker-compose.yml        ← Development only
-├── docker-compose.prod.yml   ← PRODUCTION deployment ← USE THIS
-├── ecosystem.config.cjs      ← PM2 config (alternative to Docker)
-├── deploy.sh                 ← Automated deployment script
-├── .env                      ← Root env (DOMAIN, optional COMPOSE_PROFILES)
-└── .env.example              ← Template for environment variables
-```
-
----
-
-## Firewall Configuration (UFW)
+Restart one service:
 
 ```bash
-ufw allow OpenSSH
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw enable
+docker compose -f docker-compose.prod.yml restart api
 ```
 
----
+Run migrations manually:
+
+```bash
+docker exec zynovexa-api npx prisma migrate deploy
+```
+
+## Optional GitHub Actions deploy
+
+The workflow [deploy.yml](.github/workflows/deploy.yml) expects these repository secrets:
+
+1. `HOST`
+2. `USERNAME`
+3. `PASSWORD`
+4. `APP_DIR`
+5. `DOMAIN`
+6. `SSL_EMAIL`
+7. `ENABLE_WWW`
+
+If you do not want GitHub Actions deployment, you can ignore that workflow and deploy only through SSH.
+
+## Important files
+
+1. [deploy.sh](deploy.sh)
+2. [docker-compose.prod.yml](docker-compose.prod.yml)
+3. [nginx/nginx.conf.template](nginx/nginx.conf.template)
+4. [scripts/hostinger-bootstrap.sh](scripts/hostinger-bootstrap.sh)
+5. [apps/api/.env.example](apps/api/.env.example)
+6. [.env.example](.env.example)
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Container won't start | `docker logs zynovexa-api` or `docker logs zynovexa-web` |
-| SSL cert error | Verify DNS points to VPS, rerun certbot step |
-| Database connection refused | Check `apps/api/.env` DATABASE_URL / DIRECT_URL and verify Supabase network access |
-| Port 80/443 in use | `ss -tlnp \| grep :80` — stop conflicting service |
-| API 502 from Nginx | API container not healthy yet — wait 60s and check `docker ps` |
-| Next.js build fails | Ensure `NEXT_PUBLIC_API_URL` is set in `docker-compose.prod.yml` |
+`redirect_uri_mismatch` on YouTube connect:
+Add the YouTube callback URI to Google Cloud Console.
+
+`502 Bad Gateway` from Nginx:
+Check `docker compose -f docker-compose.prod.yml ps` and `docker logs zynovexa-api`.
+
+SSL certificate failure:
+Make sure DNS is already pointing to the VPS before the first deploy.
+
+API container unhealthy:
+Check `apps/api/.env`, especially `DATABASE_URL`, `DIRECT_URL`, and `TOKEN_ENCRYPTION_KEY`.
+
+Frontend cannot reach API:
+Confirm `NEXT_PUBLIC_API_URL` builds as `https://yourdomain.com/api` through `.env` and `docker-compose.prod.yml`.

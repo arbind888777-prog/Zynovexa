@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy-app:
-    name: Deploy Frontend And Backend To VPS
+    name: Deploy Docker Stack To VPS
     runs-on: ubuntu-latest
     steps:
       - name: Deploy over SSH
@@ -21,21 +21,18 @@ jobs:
           command_timeout: 30m
           script: |
             set -eux
-            cd /var/www/Zynovexa
-            git fetch --all
-            git reset --hard origin/main
-            
-            # API Setup
-            cd apps/api
-            npm install
-            npx prisma generate
-            npx prisma migrate deploy
-            npm run build
-            /usr/local/bin/pm2 restart zynovexa-api || /usr/local/bin/pm2 start dist/src/main.js --name zynovexa-api
+            APP_DIR="${{ secrets.APP_DIR }}"
+            DOMAIN="${{ secrets.DOMAIN }}"
+            SSL_EMAIL="${{ secrets.SSL_EMAIL }}"
+            ENABLE_WWW="${{ secrets.ENABLE_WWW }}"
 
-            # Web Setup
-            cd ../web
-            npm install
-            npm run build
-           /usr/local/bin/pm2 delete zynovexa-web || true
-PORT=3001 /usr/local/bin/pm2 start .next/standalone/server.js --name zynovexa-web
+            cd "$APP_DIR"
+            git fetch origin
+            git checkout main
+            git pull origin main
+
+            if [ "$ENABLE_WWW" = "true" ]; then
+              ./deploy.sh --domain="$DOMAIN" --email="$SSL_EMAIL" --enable-www
+            else
+              ./deploy.sh --domain="$DOMAIN" --email="$SSL_EMAIL"
+            fi

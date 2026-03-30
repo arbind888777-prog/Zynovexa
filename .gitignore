@@ -60,6 +60,7 @@ apps/api/dist/
 # SSL certificates (managed by certbot on server)
 nginx/ssl/*.pem
 nginx/ssl/*.key
+nginx/nginx.conf
 
 # Coverage reports
 coverage/
