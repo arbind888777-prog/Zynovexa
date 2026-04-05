@@ -18,12 +18,15 @@ SKIP_BUILD=false
 
 for arg in "$@"; do
   case "$arg" in
-    --skip-pull) SKIP_PULL=true ;;
-    --skip-install) SKIP_INSTALL=true ;;
-    --skip-generate) SKIP_GENERATE=true ;;
-    --skip-migrate) SKIP_MIGRATE=true ;;
-    --skip-build) SKIP_BUILD=true ;;
-    --branch=*) BRANCH="${arg#*=}" ;;
+    --skip-pull)      SKIP_PULL=true ;;
+    --skip-install)   SKIP_INSTALL=true ;;
+    --skip-generate)  SKIP_GENERATE=true ;;
+    --skip-migrate)   SKIP_MIGRATE=true ;;
+    --skip-build)     SKIP_BUILD=true ;;
+    --branch=*)       BRANCH="${arg#*=}" ;;
+    --domain=*)       ;; # accepted but not used (PM2 deployment)
+    --email=*)        ;; # accepted but not used (PM2 deployment)
+    --enable-www)     ;; # accepted but not used (PM2 deployment)
     *) echo "Unknown argument: $arg"; exit 1 ;;
   esac
 done

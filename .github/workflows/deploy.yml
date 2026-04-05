@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy-app:
-    name: Deploy Docker Stack To VPS
+    name: Deploy to VPS
     runs-on: ubuntu-latest
     steps:
       - name: Deploy over SSH
@@ -22,17 +22,9 @@ jobs:
           script: |
             set -eux
             APP_DIR="${{ secrets.APP_DIR }}"
-            DOMAIN="${{ secrets.DOMAIN }}"
-            SSL_EMAIL="${{ secrets.SSL_EMAIL }}"
-            ENABLE_WWW="${{ secrets.ENABLE_WWW }}"
 
             cd "$APP_DIR"
             git fetch origin
             git checkout main
             git pull origin main
-
-            if [ "$ENABLE_WWW" = "true" ]; then
-              ./deploy.sh --domain="$DOMAIN" --email="$SSL_EMAIL" --enable-www
-            else
-              ./deploy.sh --domain="$DOMAIN" --email="$SSL_EMAIL"
-            fi
+            bash deploy.sh
