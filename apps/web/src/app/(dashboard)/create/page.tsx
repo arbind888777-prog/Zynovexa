@@ -7,11 +7,71 @@ import TagsInput, { formatTagsAsInput, parseTagValue } from '@/components/TagsIn
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Platform, MediaType } from '@/types';
+import { useAuthStore } from '@/stores/auth.store';
 
 const PLATFORMS: Platform[] = ['INSTAGRAM', 'YOUTUBE', 'TIKTOK', 'TWITTER', 'LINKEDIN', 'FACEBOOK', 'SNAPCHAT'];
 const MEDIA_TYPES: MediaType[] = ['TEXT', 'IMAGE', 'VIDEO'];
 const VIDEO_STUDIO_TRANSFER_KEY = 'zynovexa.videoStudioDraft';
 const AI_STUDIO_TRANSFER_KEY = 'zynovexa.aiStudioDraft';
+const DEMO_TOKEN = 'demo-token-zynovexa';
+const CREATE_AI_PROVIDER_BADGES = [
+  { label: 'Text', tone: 'text-cyan-200 border-cyan-500/30 bg-cyan-500/10' },
+  { label: 'Images', tone: 'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-500/10' },
+] as const;
+
+function countWords(value: string) {
+  return value.trim() ? value.trim().split(/\s+/).length : 0;
+}
+
+function toPlainTags(tags: string[]) {
+  return tags.map((tag) => tag.replace(/^#/, '').trim()).filter(Boolean);
+}
+
+function buildCreateDemoPrompt(aiTab: 'caption' | 'hashtags' | 'tags' | 'image' | null, aiInput: string, platforms: Platform[]) {
+  const normalizedPlatforms = platforms.length ? platforms.join(', ') : 'social media';
+
+  if (aiTab === 'caption') {
+    return `Generate 3 engaging social captions for ${normalizedPlatforms}. Post description: ${aiInput}. Include hashtags and emojis.`;
+  }
+
+  if (aiTab === 'hashtags') {
+    return `Generate 20 relevant hashtags for ${normalizedPlatforms} based on this content: ${aiInput}. Return hashtags only.`;
+  }
+
+  if (aiTab === 'tags') {
+    return `Generate 20 clean plain tags for ${normalizedPlatforms} based on this content: ${aiInput}. Return only short tags without # symbols.`;
+  }
+
+  return '';
+}
+
+function normalizeCreateDemoResult(aiTab: 'caption' | 'hashtags' | 'tags' | 'image' | null, reply: string) {
+  if (aiTab === 'caption') {
+    const captions = reply
+      .split(/\n\s*\n|\n(?=\d+[\).\s])|\n(?=- )/)
+      .map((item) => item.replace(/^\d+[\).\s-]*/, '').trim())
+      .filter(Boolean);
+    return { captions: captions.length ? captions : [reply] };
+  }
+
+  if (aiTab === 'hashtags') {
+    const hashtags = reply
+      .split(/\s|,|\n/)
+      .map((tag) => tag.trim())
+      .filter((tag) => /^#/.test(tag));
+    return { hashtags: hashtags.length ? hashtags : [reply] };
+  }
+
+  if (aiTab === 'tags') {
+    const tags = reply
+      .split(/\n|,/)
+      .map((tag) => tag.replace(/^\d+[\).\s-]*/, '').replace(/^#/, '').trim())
+      .filter(Boolean);
+    return { tags: tags.length ? tags : [reply.replace(/^#/, '').trim()] };
+  }
+
+  return { reply };
+}
 
 const HASHTAG_LIMITS: Record<Platform, number> = {
   INSTAGRAM: 30,
@@ -124,6 +184,8 @@ function isYoutubeManualRequired(post: any) {
 export default function CreatePostPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { accessToken } = useAuthStore();
+  const isDemoSession = accessToken === DEMO_TOKEN;
   const editPostId = searchParams.get('edit');
   const suggestedFix = searchParams.get('suggest');
   const source = searchParams.get('source');
@@ -132,7 +194,7 @@ export default function CreatePostPage() {
     title: '', caption: '', platforms: [] as Platform[], mediaType: 'TEXT' as MediaType,
     hashtags: '', scheduledAt: '',
   });
-  const [aiTab, setAiTab] = useState<'caption' | 'hashtags' | 'image' | null>(null);
+  const [aiTab, setAiTab] = useState<'caption' | 'hashtags' | 'tags' | 'image' | null>(null);
   const [aiInput, setAiInput] = useState('');
   const [aiResult, setAiResult] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -140,6 +202,7 @@ export default function CreatePostPage() {
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaLink, setMediaLink] = useState('');
   const [attachedProductId, setAttachedProductId] = useState<string | null>(null);
+  const aiInputWordCount = countWords(aiInput);
 
   const { data: connectedAccounts, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ['accounts'],
@@ -331,9 +394,33 @@ export default function CreatePostPage() {
     setAiLoading(true);
     setAiResult(null);
     try {
+      if (isDemoSession) {
+        if (aiTab === 'image') {
+          toast.error('Demo session me AI image generation available nahi hai. Real account se login karke try karo.');
+          return;
+        }
+
+        const prompt = buildCreateDemoPrompt(aiTab, aiInput, form.platforms);
+        if (!prompt) {
+          toast.error('Yeh AI action demo mode me supported nahi hai.');
+          return;
+        }
+
+        const res = await aiApi.publicChat({ message: prompt, history: [] });
+        const payload = unwrapApiResponse<{ reply: string }>(res);
+        setAiResult(normalizeCreateDemoResult(aiTab, payload.reply));
+        return;
+      }
+
       let res;
       if (aiTab === 'caption') res = await aiApi.generateCaption({ description: aiInput, platforms: form.platforms.map(p => p.toLowerCase()), includeHashtags: true, includeEmojis: true });
       else if (aiTab === 'hashtags') res = await aiApi.generateHashtags({ content: aiInput });
+      else if (aiTab === 'tags') {
+        res = await aiApi.generateHashtags({ content: aiInput });
+        const payload = unwrapApiResponse(res) as any;
+        setAiResult({ tags: toPlainTags(payload?.hashtags || []) });
+        return;
+      }
       else if (aiTab === 'image') res = await aiApi.generateImage({ prompt: aiInput });
       setAiResult(res ? unwrapApiResponse(res) : null);
     } catch (e: any) {
@@ -343,6 +430,13 @@ export default function CreatePostPage() {
 
   const applyCaption = (caption: string) => setForm(prev => ({ ...prev, caption }));
   const applyHashtags = (tags: string[]) => setForm(prev => ({ ...prev, hashtags: formatTagsAsInput(tags) }));
+  const applyPlainTags = (tags: string[]) => setForm(prev => ({ ...prev, hashtags: formatTagsAsInput(toPlainTags(tags)) }));
+  const applyGeneratedImage = (imageUrl: string) => {
+    setMediaUrls([imageUrl]);
+    setMediaLink('');
+    setForm(prev => ({ ...prev, mediaType: 'IMAGE' }));
+    toast.success('Generated image post me attach ho gayi.');
+  };
 
   const handleMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -462,7 +556,7 @@ export default function CreatePostPage() {
                 placeholder="Write your caption or use AI to generate one..."
                 className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-purple-500 resize-vertical overflow-y-auto"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', minHeight: '120px', maxHeight: '300px' }} />
-              <p className="text-xs text-gray-500 mt-1">{form.caption.length} characters</p>
+              <p className="text-xs text-gray-500 mt-1">{countWords(form.caption)} words • {form.caption.length} characters</p>
             </div>
 
             <div>
@@ -476,7 +570,7 @@ export default function CreatePostPage() {
               <div className="mt-1.5 space-y-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-gray-500">
-                    {hashtagTags.length} hashtag{hashtagTags.length !== 1 ? 's' : ''}
+                    {hashtagTags.length} tags • {hashtagTags.length} #tags
                     {form.platforms.length > 0 && (
                       <span className="text-slate-500"> — max allowed: {strictestTagLimit} (strictest platform)</span>
                     )}
@@ -676,10 +770,21 @@ export default function CreatePostPage() {
 
           <div className="dashboard-surface p-6">
             <h2 className="font-semibold text-white mb-4">🤖 AI Studio</h2>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {CREATE_AI_PROVIDER_BADGES.map((badge) => (
+                <span
+                  key={badge.label}
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium ${badge.tone}`}
+                >
+                  <span>{badge.label}</span>
+                </span>
+              ))}
+            </div>
             <div className="grid grid-cols-2 gap-2 mb-4">
-              {(['caption', 'hashtags', 'image'] as const).map(tab => (
+              {(['caption', 'hashtags', 'tags', 'image'] as const).map(tab => (
                 <button key={tab} onClick={() => setAiTab(tab === aiTab ? null : tab)}
-                  className={`dashboard-tab capitalize ${aiTab === tab ? 'dashboard-tab-active text-white' : 'text-gray-400 hover:text-white'}`}>
+                  className={`dashboard-tab capitalize text-[0] ${aiTab === tab ? 'dashboard-tab-active text-white' : 'text-gray-400 hover:text-white'}`}>
+                  <span className="text-sm">{tab === 'caption' ? 'Caption' : tab === 'hashtags' ? '#Tags' : tab === 'tags' ? 'Tags' : 'Image'}</span>
                   {tab === 'caption' ? '✍️' : tab === 'hashtags' ? '#️⃣' : '🎨'} {tab}
                 </button>
               ))}
@@ -688,11 +793,15 @@ export default function CreatePostPage() {
             {aiTab && (
               <div className="space-y-3">
                 <textarea value={aiInput} onChange={e => setAiInput(e.target.value)} rows={3}
-                  placeholder={aiTab === 'caption' ? 'Describe your post...' : aiTab === 'hashtags' ? 'Describe your content...' : 'Image description...'}
+                  placeholder={aiTab === 'caption' ? 'Describe your post...' : aiTab === 'hashtags' ? 'Describe your content for #tags...' : aiTab === 'tags' ? 'Describe your content for plain tags...' : 'Image description...'}
                   className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                   style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>{aiInputWordCount} words</span>
+                  <span>{aiTab === 'caption' ? 'Caption' : aiTab === 'hashtags' ? '#Tags' : aiTab === 'tags' ? 'Tags' : 'Image prompt'}</span>
+                </div>
                 <button onClick={runAi} disabled={aiLoading || !aiInput}
-                  className="w-full py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                  className="w-full rounded-xl py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition-all duration-200 disabled:opacity-50 hover:scale-[1.01]"
                   style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
                   {aiLoading ? '⏳ Generating...' : '✨ Generate'}
                 </button>
@@ -702,18 +811,60 @@ export default function CreatePostPage() {
                     {aiTab === 'caption' && aiResult.captions?.map((c: string, i: number) => (
                       <div key={i} className="dashboard-surface-muted p-3 text-xs text-gray-300">
                         <p className="mb-2">{c}</p>
-                        <button onClick={() => applyCaption(c)} className="text-purple-400 hover:text-purple-300 font-medium">← Use this</button>
+                        <div className="mb-3 flex items-center justify-between text-[11px] text-slate-400">
+                          <span>{countWords(c)} words</span>
+                          <span>{parseTagValue(c).length} #tags</span>
+                        </div>
+                        <button
+                          onClick={() => applyCaption(c)}
+                          className="mb-2 w-full rounded-xl border border-purple-400/30 bg-purple-500/15 px-3 py-2 text-sm font-semibold text-purple-200 transition-colors hover:bg-purple-500/25"
+                        >
+                          Add Caption
+                        </button>
+                        <button onClick={() => applyCaption(c)} className="hidden text-purple-400 hover:text-purple-300 font-medium">← Use this</button>
                       </div>
                     ))}
                     {aiTab === 'hashtags' && aiResult.hashtags && (
                       <div className="dashboard-surface-muted p-3">
                         <p className="text-xs text-gray-300 mb-2">{aiResult.hashtags.join(' ')}</p>
-                        <button onClick={() => applyHashtags(aiResult.hashtags)} className="text-purple-400 hover:text-purple-300 text-xs font-medium">← Apply hashtags</button>
+                        <div className="mb-3 flex items-center justify-between text-[11px] text-slate-400">
+                          <span>{toPlainTags(aiResult.hashtags).length} #tags</span>
+                          <span>{countWords(aiResult.hashtags.join(' '))} words</span>
+                        </div>
+                        <button
+                          onClick={() => applyHashtags(aiResult.hashtags)}
+                          className="mb-2 w-full rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-sm font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/20"
+                        >
+                          Add #Tags
+                        </button>
+                        <button onClick={() => applyHashtags(aiResult.hashtags)} className="hidden text-purple-400 hover:text-purple-300 text-xs font-medium">← Apply hashtags</button>
+                      </div>
+                    )}
+                    {aiTab === 'tags' && aiResult.tags && (
+                      <div className="dashboard-surface-muted p-3">
+                        <p className="text-xs text-gray-300 mb-2">{aiResult.tags.join(', ')}</p>
+                        <div className="mb-3 flex items-center justify-between text-[11px] text-slate-400">
+                          <span>{aiResult.tags.length} tags</span>
+                          <span>{countWords(aiResult.tags.join(' '))} words</span>
+                        </div>
+                        <button
+                          onClick={() => applyPlainTags(aiResult.tags)}
+                          className="w-full rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20"
+                        >
+                          Add Tags
+                        </button>
                       </div>
                     )}
                     {aiTab === 'image' && aiResult.imageUrl && (
                       <div>
                         <img src={aiResult.imageUrl} alt="Generated" className="w-full rounded-lg" />
+                        <button
+                          onClick={() => applyGeneratedImage(aiResult.imageUrl)}
+                          className="block w-full mt-3 rounded-lg py-2 text-xs font-semibold text-white"
+                          style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}
+                        >
+                          + Add To Post
+                        </button>
                         <button onClick={() => { fetch(aiResult.imageUrl).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'zynovexa-ai-image.png'; a.click(); URL.revokeObjectURL(a.href); }); }} className="block w-full mt-2 text-purple-400 text-xs text-center hover:text-purple-300">↓ Download Image</button>
                       </div>
                     )}

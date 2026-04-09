@@ -1,6 +1,24 @@
 import { Controller, Get, Post, Param, Body, Query, UseGuards, Req, Res } from '@nestjs/common';
 import { IntegrationsService } from './integrations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
+
+function getFrontendUrlFromState(state?: string) {
+  if (!state) {
+    return sanitizeFrontendUrl(process.env.FRONTEND_URL);
+  }
+
+  try {
+    const [encodedPayload] = state.split('.');
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as {
+      frontendUrl?: string;
+    };
+
+    return sanitizeFrontendUrl(payload.frontendUrl, process.env.FRONTEND_URL);
+  } catch {
+    return sanitizeFrontendUrl(process.env.FRONTEND_URL);
+  }
+}
 
 @Controller('integrations')
 export class IntegrationsController {
@@ -29,7 +47,7 @@ export class IntegrationsController {
       const result = await this.integrationsService.handleOAuthCallback(platform, code, state);
       return res.redirect(result.redirectUrl);
     } catch {
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      const frontendUrl = getFrontendUrlFromState(state);
       return res.redirect(`${frontendUrl.replace(/\/$/, '')}/accounts?error=${platform.toLowerCase()}_failed`);
     }
   }

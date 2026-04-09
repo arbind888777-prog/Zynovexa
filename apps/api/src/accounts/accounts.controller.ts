@@ -36,8 +36,16 @@ export class AccountsController {
   @Get('youtube/insights')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get connected YouTube channel insights with latest videos' })
-  getYoutubeInsights(@Request() req) {
-    return this.accountsService.getYoutubeInsights(req.user.id);
+  @ApiQuery({ name: 'accountId', required: false, description: 'Specific YouTube account ID (for multi-account)' })
+  getYoutubeInsights(@Request() req, @Query('accountId') accountId?: string) {
+    return this.accountsService.getYoutubeInsights(req.user.id, accountId);
+  }
+
+  @Get(':id/insights')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get deep analytics insights for a specific connected account (overview, content, audience)' })
+  getAccountInsights(@Request() req, @Param('id') id: string) {
+    return this.accountsService.getAccountInsights(req.user.id, id);
   }
 
   @Post('connect')

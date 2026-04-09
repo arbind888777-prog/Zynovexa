@@ -125,6 +125,27 @@ export class GenerateImageDto {
   style?: string;
 }
 
+export class GenerateVideoDto {
+  @ApiProperty({ example: 'A cinematic drone shot of a coastal city at sunset' })
+  @IsString()
+  prompt: string;
+
+  @ApiPropertyOptional({ enum: ['16:9', '9:16', '1:1'], example: '16:9' })
+  @IsOptional()
+  @IsString()
+  aspectRatio?: string;
+
+  @ApiPropertyOptional({ example: 5, description: 'Video duration in seconds (5-10)' })
+  @IsOptional()
+  durationSeconds?: number;
+}
+
+export class CheckVideoDto {
+  @ApiProperty({ example: 'operations/generate-video-xxxx' })
+  @IsString()
+  operationName: string;
+}
+
 export class ChatMessageDto {
   @ApiProperty({ example: 'How do I grow my Instagram following?' })
   @IsString()

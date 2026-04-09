@@ -76,6 +76,7 @@ export default function ContactPage() {
               <p className="text-slate-500 uppercase tracking-wider text-xs mb-2">Business address</p>
               <p className="text-slate-300">Zynovexa Technologies</p>
               <p className="text-slate-400">New Delhi, Delhi, India</p>
+              <p className="text-slate-400">support@zynovexa.com</p>
             </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-400">

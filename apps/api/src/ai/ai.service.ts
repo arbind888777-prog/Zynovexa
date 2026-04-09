@@ -4,8 +4,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import OpenAI from 'openai';
 import {
   GenerateCaptionDto, GenerateScriptDto, GenerateHashtagsDto,
-  GenerateImageDto, ChatMessageDto, BestTimeDto,
+  GenerateImageDto, GenerateVideoDto, ChatMessageDto, BestTimeDto,
 } from './dto/ai.dto';
+
+type GoogleImagePart = {
+  inlineData?: { data?: string; mimeType?: string };
+  inline_data?: { data?: string; mime_type?: string };
+};
 
 // Plan limits for AI requests per month
 const PLAN_LIMITS = {
@@ -24,7 +29,11 @@ type ChatOptions = { includeLongTermMemory: boolean };
 export class AiService {
   private openai: OpenAI | null = null;
   private geminiApiKey = '';
+  private nanoBananaApiKey = '';
+  private veo3ApiKey = '';
   private aiProvider: 'openai' | 'gemini' | 'demo' = 'demo';
+  private imageProvider: 'google' | 'demo' = 'demo';
+  private videoProvider: 'veo3' | 'demo' = 'demo';
   private isDemoMode: boolean;
 
   constructor(
@@ -33,24 +42,41 @@ export class AiService {
   ) {
     const openAiKey = this.config.get('OPENAI_API_KEY') || '';
     const geminiKey = this.config.get('GEMINI_API_KEY') || '';
+    const nanoBananaKey = this.config.get('NANO_BANANA_API_KEY') || this.config.get('IMAGEN_API_KEY') || '';
+    const veo3Key = this.config.get('VEO3_API_KEY') || '';
     const hasOpenAi = !!openAiKey && !openAiKey.includes('your-openai') && openAiKey !== 'sk-your-openai-key-here';
     const hasGemini = !!geminiKey && !geminiKey.includes('your-gemini');
-
-    if (hasOpenAi) {
-      this.openai = new OpenAI({ apiKey: openAiKey });
-      this.aiProvider = 'openai';
-      this.isDemoMode = false;
-      return;
-    }
+    const hasNanoBanana = !!nanoBananaKey && !nanoBananaKey.includes('your-nano') && !nanoBananaKey.includes('your-imagen');
+    const hasVeo3 = !!veo3Key && !veo3Key.includes('your-veo3');
 
     if (hasGemini) {
       this.geminiApiKey = geminiKey;
       this.aiProvider = 'gemini';
-      this.isDemoMode = false;
-      return;
     }
 
-    this.isDemoMode = true;
+    if (hasOpenAi) {
+      this.openai = new OpenAI({ apiKey: openAiKey });
+      if (this.aiProvider === 'demo') {
+        this.aiProvider = 'openai';
+      }
+    }
+
+    // Image generation is Google-only: Nano Banana key first, then Gemini key.
+    if (hasNanoBanana) {
+      this.nanoBananaApiKey = nanoBananaKey;
+      this.imageProvider = 'google';
+    } else if (hasGemini) {
+      this.nanoBananaApiKey = geminiKey;
+      this.imageProvider = 'google';
+    }
+
+    // Video provider
+    if (hasVeo3 || hasGemini) {
+      this.veo3ApiKey = veo3Key;
+      this.videoProvider = 'veo3';
+    }
+
+    this.isDemoMode = this.aiProvider === 'demo' && this.imageProvider === 'demo';
   }
 
   // ─── Caption Generator ────────────────────────────────────────────────────
@@ -156,21 +182,11 @@ Return as JSON: { "hashtags": ["#tag1", "#tag2", ...], "categories": { "trending
 
   async generateImage(userId: string, dto: GenerateImageDto) {
     await this.checkUsageLimit(userId);
-    if (this.isDemoMode || !this.openai) {
-      throw new BadRequestException('AI image generation ke liye OPENAI_API_KEY required hai. Text AI Gemini se chal sakta hai, image generation nahi.');
+    if (this.imageProvider !== 'google' || !this.nanoBananaApiKey) {
+      throw new BadRequestException('AI image generation ke liye NANO_BANANA_API_KEY ya GEMINI_API_KEY required hai.');
     }
-    const response = await this.openai.images.generate({
-      model: this.config.get('OPENAI_IMAGE_MODEL') || 'dall-e-3',
-      prompt: dto.prompt,
-      n: 1,
-      size: (dto.size as any) || '1024x1024',
-      style: (dto.style as any) || 'natural',
-      quality: 'hd',
-    });
 
-    await this.logRequest(userId, dto.prompt, response.data[0]?.url || '', 0, 'IMAGE');
-
-    return { imageUrl: response.data[0]?.url, revisedPrompt: response.data[0]?.revised_prompt };
+    return this.generateImageWithNanoBanana(userId, dto);
   }
 
   // ─── AI Chatbot ───────────────────────────────────────────────────────────
@@ -232,6 +248,15 @@ Return as JSON:
   // ─── Usage Stats ──────────────────────────────────────────────────────────
 
   async getUsageStats(userId: string) {
+    if (this.config.get('NODE_ENV') !== 'production') {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      const used = await this.prisma.aiRequest.count({
+        where: { userId, createdAt: { gte: startOfMonth } },
+      });
+
+      return { used, limit: null, plan: 'DEV' };
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { subscription: true },
@@ -356,6 +381,311 @@ Return as JSON:
     const tokensUsed = data?.usageMetadata?.totalTokenCount || 0;
     await this.logRequest(userId, prompt, text, tokensUsed, type);
     return { text, tokensUsed };
+  }
+
+  // ─── Google Nano Banana Image Generation ──────────────────────────────────
+
+  private async generateImageWithNanoBanana(userId: string, dto: GenerateImageDto) {
+    const aspectRatio = this.mapImageSizeToAspectRatio(dto.size);
+    const preferredModel = this.config.get('NANO_BANANA_MODEL') || 'gemini-3.1-flash-image-preview';
+    const models = Array.from(new Set([
+      preferredModel,
+      'gemini-3.1-flash-image-preview',
+      'gemini-2.5-flash-image',
+    ]));
+    const apiKeys = Array.from(new Set([
+      this.nanoBananaApiKey,
+      this.geminiApiKey,
+    ].filter(Boolean)));
+
+    let lastError = 'Nano Banana image generation failed.';
+
+    for (const apiKey of apiKeys) {
+      for (const model of models) {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: dto.prompt }] }],
+              generationConfig: {
+                responseModalities: ['IMAGE'],
+                imageConfig: {
+                  aspectRatio,
+                  imageSize: '1K',
+                },
+              },
+            }),
+          },
+        );
+
+        const payload = await response.json().catch(() => null) as any;
+        if (!response.ok) {
+          lastError = payload?.error?.message || payload?.message || lastError;
+          continue;
+        }
+
+        const imagePart = (payload?.candidates || [])
+          .flatMap((candidate: any) => candidate?.content?.parts || [])
+          .find((part: GoogleImagePart) => part?.inlineData?.data || part?.inline_data?.data);
+
+        const inlineData = imagePart?.inlineData || imagePart?.inline_data;
+        if (!inlineData?.data) {
+          lastError = 'Nano Banana ne image payload return nahi kiya.';
+          continue;
+        }
+
+        const mimeType = inlineData?.mimeType || inlineData?.mime_type || 'image/png';
+        const imageUrl = `data:${mimeType};base64,${inlineData.data}`;
+        await this.logRequest(userId, dto.prompt, imageUrl, 0, 'IMAGE');
+
+        return {
+          imageUrl,
+          provider: model,
+          mimeType,
+        };
+      }
+    }
+
+    throw new BadRequestException(lastError);
+  }
+
+  // ─── Veo 3 Video Generation ───────────────────────────────────────────────
+
+  async generateVideo(userId: string, dto: GenerateVideoDto) {
+    await this.checkUsageLimit(userId);
+
+    if (this.videoProvider !== 'veo3') {
+      throw new BadRequestException('Video generation ke liye VEO3_API_KEY required hai.');
+    }
+
+    const aspectRatio = dto.aspectRatio || '16:9';
+    const durationSeconds = dto.durationSeconds || 6;
+    const model = this.config.get('VEO3_MODEL') || 'veo-3.1-generate-preview';
+    const apiKeys = Array.from(new Set([
+      this.veo3ApiKey,
+      this.geminiApiKey,
+    ].filter(Boolean)));
+
+    let lastError = 'Veo 3 video generation failed.';
+
+    for (const apiKey of apiKeys) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:predictLongRunning?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instances: [{ prompt: dto.prompt }],
+            parameters: {
+              aspectRatio,
+              durationSeconds,
+              personGeneration: 'allow_all',
+              resolution: '720p',
+            },
+          }),
+        },
+      );
+
+      const payload = await response.json().catch(() => null) as any;
+      if (!response.ok) {
+        lastError = payload?.error?.message || payload?.message || lastError;
+        continue;
+      }
+
+      const operationName = payload?.name;
+      if (!operationName) {
+        lastError = 'Veo 3 did not return an operation ID.';
+        continue;
+      }
+
+      await this.logRequest(userId, dto.prompt, `operation:${operationName}`, 0, 'VIDEO');
+
+      return {
+        operationName,
+        status: 'PROCESSING',
+        message: 'Video generation started. Use the check-video endpoint to poll for results.',
+        provider: 'veo-3',
+      };
+    }
+
+    throw new BadRequestException(lastError);
+  }
+
+  async checkVideoStatus(userId: string, operationName: string) {
+    if (this.videoProvider !== 'veo3') {
+      throw new BadRequestException('Video generation ke liye VEO3_API_KEY required hai.');
+    }
+
+    const apiKeys = Array.from(new Set([
+      this.veo3ApiKey,
+      this.geminiApiKey,
+    ].filter(Boolean)));
+
+    let payload: any = null;
+    let lastError = 'Failed to check video status.';
+
+    for (const apiKey of apiKeys) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/${operationName}?key=${apiKey}`,
+        { method: 'GET' },
+      );
+
+      const nextPayload = await response.json().catch(() => null) as any;
+      if (response.ok) {
+        payload = nextPayload;
+        break;
+      }
+
+      payload = null;
+      lastError = nextPayload?.error?.message || nextPayload?.message || lastError;
+    }
+
+    if (!payload) {
+      throw new BadRequestException(lastError);
+    }
+
+    if (!payload?.done) {
+      return {
+        operationName,
+        status: 'PROCESSING',
+        message: 'Video is still being generated. Check again in a few seconds.',
+      };
+    }
+
+    const generatedVideos = payload?.response?.generatedVideos || payload?.response?.generated_videos || [];
+    const video = generatedVideos?.[0]?.video;
+    const videoUri = video?.uri || video?.fileUri || null;
+    const playableVideoUrl = videoUri ? await this.buildGoogleMediaDataUrl(videoUri, video?.mimeType || 'video/mp4') : null;
+
+    return {
+      operationName,
+      status: 'COMPLETED',
+      videoUrl: playableVideoUrl || videoUri,
+      sourceFileUri: videoUri,
+      encoding: video?.encoding || video?.mimeType || 'video/mp4',
+      provider: 'veo-3',
+    };
+  }
+
+  private async buildGoogleMediaDataUrl(fileUri: string, fallbackMimeType: string) {
+    const apiKeys = Array.from(new Set([
+      this.veo3ApiKey,
+      this.geminiApiKey,
+    ].filter(Boolean)));
+
+    for (const apiKey of apiKeys) {
+      try {
+        const separator = fileUri.includes('?') ? '&' : '?';
+        const response = await fetch(`${fileUri}${separator}alt=media&key=${apiKey}`);
+        if (!response.ok) {
+          continue;
+        }
+
+        const buffer = Buffer.from(await response.arrayBuffer());
+        const mimeType = response.headers.get('content-type') || fallbackMimeType;
+        return `data:${mimeType};base64,${buffer.toString('base64')}`;
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  private mapImageSizeToAspectRatio(size?: string) {
+    switch (size) {
+      case '1792x1024':
+        return '16:9';
+      case '1024x1792':
+        return '9:16';
+      default:
+        return '1:1';
+    }
+  }
+
+  private async generateLocalPreviewImage(userId: string, prompt: string) {
+    const title = this.escapeSvgText(prompt.trim() || 'Creative image preview').slice(0, 120);
+    const lines = this.wrapSvgText(title, 22, 4);
+    const textSvg = lines
+      .map((line, index) => `<tspan x="80" dy="${index === 0 ? 0 : 36}">${line}</tspan>`)
+      .join('');
+
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+        <defs>
+          <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#111827"/>
+            <stop offset="50%" stop-color="#4f46e5"/>
+            <stop offset="100%" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+        <rect width="1024" height="1024" rx="64" fill="url(#bg)"/>
+        <circle cx="830" cy="180" r="120" fill="rgba(255,255,255,0.12)"/>
+        <circle cx="170" cy="830" r="150" fill="rgba(255,255,255,0.08)"/>
+        <rect x="64" y="64" width="896" height="896" rx="48" fill="rgba(10,10,25,0.28)" stroke="rgba(255,255,255,0.18)"/>
+        <text x="80" y="140" fill="#cbd5e1" font-size="34" font-family="Arial, Helvetica, sans-serif">Local image preview</text>
+        <text x="80" y="240" fill="#ffffff" font-size="44" font-weight="700" font-family="Arial, Helvetica, sans-serif">${textSvg}</text>
+        <text x="80" y="900" fill="#d8b4fe" font-size="28" font-family="Arial, Helvetica, sans-serif">Live image credits unavailable, so this preview was generated locally.</text>
+      </svg>
+    `.trim();
+
+    const imageUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    await this.logRequest(userId, prompt, imageUrl, 0, 'IMAGE');
+
+    return {
+      imageUrl,
+      provider: 'local-preview',
+      finishReason: 'LOCAL_FALLBACK',
+    };
+  }
+
+  private escapeSvgText(value: string) {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  private wrapSvgText(value: string, wordsPerLine: number, maxLines: number) {
+    const words = value.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let current = '';
+
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (candidate.length <= wordsPerLine) {
+        current = candidate;
+        continue;
+      }
+
+      if (current) {
+        lines.push(current);
+      }
+      current = word;
+
+      if (lines.length === maxLines - 1) {
+        break;
+      }
+    }
+
+    if (current && lines.length < maxLines) {
+      lines.push(current);
+    }
+
+    if (!lines.length) {
+      return ['Creative image preview'];
+    }
+
+    if (words.length > 0 && lines.length === maxLines) {
+      const last = lines[maxLines - 1];
+      lines[maxLines - 1] = last.length > wordsPerLine - 3 ? `${last.slice(0, wordsPerLine - 3)}...` : `${last}...`;
+    }
+
+    return lines;
   }
 
   private async logRequest(userId: string | null, prompt: string, result: string, tokens: number, type: any) {

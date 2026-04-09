@@ -118,7 +118,7 @@ else
 fi
 
 if pm2 describe zynovexa-api >/dev/null 2>&1; then
-  run_step "Reloading PM2 processes" pm2 reload ecosystem.config.cjs --env production
+  run_step "Restarting PM2 processes" pm2 restart ecosystem.config.cjs --env production
 else
   run_step "Starting PM2 processes" pm2 start ecosystem.config.cjs --env production
 fi

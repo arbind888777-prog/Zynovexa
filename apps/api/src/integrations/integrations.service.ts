@@ -15,6 +15,12 @@ interface PlatformConfig {
   clientSecretEnv?: string;
 }
 
+type PlatformAvailability = {
+  connectAvailable: boolean;
+  connectMode: 'oauth' | 'server-token' | 'unavailable';
+  statusMessage?: string;
+};
+
 const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
   INSTAGRAM: {
     name: 'Instagram',
@@ -62,6 +68,8 @@ const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
   },
 };
 
+const ENABLED_DIRECT_OAUTH_PLATFORMS = new Set<Platform>([]);
+
 @Injectable()
 export class IntegrationsService {
   private encryptionKey: string;
@@ -80,6 +88,7 @@ export class IntegrationsService {
     });
 
     const connectedMap = new Map(connected.map((a) => [a.platform, a.isActive]));
+    const availability = await this.getPlatformAvailability();
 
     return Object.entries(PLATFORM_CONFIGS).map(([key, config]) => ({
       id: key,
@@ -87,7 +96,10 @@ export class IntegrationsService {
       connected: connectedMap.has(key as Platform),
       active: connectedMap.get(key as Platform) ?? false,
       scopes: config.scopes,
-      oauthSupported: this.isPlatformConfigured(config),
+      oauthSupported: this.isPlatformConfigured(config) && ENABLED_DIRECT_OAUTH_PLATFORMS.has(key as Platform),
+      connectAvailable: availability[key as Platform]?.connectAvailable ?? false,
+      connectMode: availability[key as Platform]?.connectMode ?? 'unavailable',
+      statusMessage: availability[key as Platform]?.statusMessage,
     }));
   }
 
@@ -95,6 +107,9 @@ export class IntegrationsService {
     const platKey = platform.toUpperCase();
     const config = PLATFORM_CONFIGS[platKey];
     if (!config) throw new BadRequestException(`Unsupported platform: ${platform}`);
+    if (!ENABLED_DIRECT_OAUTH_PLATFORMS.has(platKey as Platform)) {
+      throw new BadRequestException(`${config.name} direct OAuth connect is not available yet.`);
+    }
     if (!this.isPlatformConfigured(config)) {
       throw new BadRequestException(`${config.name} OAuth is not configured yet. Add ${config.clientIdEnv}${config.clientSecretEnv ? ` and ${config.clientSecretEnv}` : ''} in the API env.`);
     }
@@ -132,12 +147,15 @@ export class IntegrationsService {
 
   async handleOAuthCallback(platform: string, code: string, state: string) {
     if (!code) throw new BadRequestException('Authorization code missing');
+    const platKey = platform.toUpperCase() as Platform;
+    if (!ENABLED_DIRECT_OAUTH_PLATFORMS.has(platKey)) {
+      throw new BadRequestException(`${platform} direct OAuth connect is not available yet.`);
+    }
     const oauthState = this.parseSignedState(state, platform);
     const userId = oauthState.userId;
 
     // In production: exchange code for tokens via the platform's token endpoint
     // For now, simulate token storage
-    const platKey = platform.toUpperCase() as Platform;
     const accessToken = this.encryptToken(crypto.randomBytes(32).toString('hex'));
     const refreshToken = this.encryptToken(crypto.randomBytes(32).toString('hex'));
 
@@ -255,6 +273,132 @@ export class IntegrationsService {
     const clientId = this.config.get(config.clientIdEnv);
     const clientSecret = config.clientSecretEnv ? this.config.get(config.clientSecretEnv) : 'configured';
     return Boolean(clientId && clientSecret);
+  }
+
+  private async getPlatformAvailability(): Promise<Record<Platform, PlatformAvailability>> {
+    const youtubeConfigured = this.isPlatformConfigured(PLATFORM_CONFIGS.YOUTUBE);
+    const metaToken = this.getConfiguredMetaToken();
+    const metaState = await this.getMetaTokenState(metaToken);
+
+    return {
+      YOUTUBE: youtubeConfigured
+        ? { connectAvailable: true, connectMode: 'oauth' }
+        : {
+            connectAvailable: false,
+            connectMode: 'unavailable',
+            statusMessage: 'YouTube connect needs Google client setup on the API server.',
+          },
+      INSTAGRAM: metaState.instagramAvailable
+        ? { connectAvailable: true, connectMode: 'server-token' }
+        : {
+            connectAvailable: false,
+            connectMode: 'unavailable',
+            statusMessage: metaState.instagramMessage,
+          },
+      FACEBOOK: metaState.facebookAvailable
+        ? { connectAvailable: true, connectMode: 'server-token' }
+        : {
+            connectAvailable: false,
+            connectMode: 'unavailable',
+            statusMessage: metaState.facebookMessage,
+          },
+      TIKTOK: {
+        connectAvailable: false,
+        connectMode: 'unavailable',
+        statusMessage: 'TikTok direct connect is not enabled yet.',
+      },
+      TWITTER: {
+        connectAvailable: false,
+        connectMode: 'unavailable',
+        statusMessage: 'X / Twitter connect is not enabled yet.',
+      },
+      LINKEDIN: {
+        connectAvailable: false,
+        connectMode: 'unavailable',
+        statusMessage: 'LinkedIn connect is not enabled yet.',
+      },
+      SNAPCHAT: {
+        connectAvailable: false,
+        connectMode: 'unavailable',
+        statusMessage: 'Snapchat connect is not enabled yet.',
+      },
+    };
+  }
+
+  private getConfiguredMetaToken() {
+    return (
+      this.config.get<string>('FACEBOOK_GRAPH_API_TOKEN')?.trim()
+      || this.config.get<string>('INSTAGRAM_GRAPH_API_TOKEN')?.trim()
+      || ''
+    );
+  }
+
+  private async getMetaTokenState(accessToken: string) {
+    if (!accessToken) {
+      return {
+        facebookAvailable: false,
+        instagramAvailable: false,
+        facebookMessage: 'Facebook connect needs a valid server token.',
+        instagramMessage: 'Instagram connect needs a valid server token.',
+      };
+    }
+
+    const [facebookAvailable, instagramAvailable] = await Promise.all([
+      this.canFetchFacebookPages(accessToken),
+      this.canFetchInstagramProfile(accessToken),
+    ]);
+
+    let facebookMessage: string | undefined;
+    let instagramMessage: string | undefined;
+
+    if (!facebookAvailable) {
+      facebookMessage = 'Facebook server token is invalid or the Meta app is unavailable.';
+    }
+
+    if (!instagramAvailable) {
+      instagramMessage = facebookAvailable
+        ? 'Instagram profile access is missing for the current server token.'
+        : 'Instagram server token is invalid or the Meta app is unavailable.';
+    }
+
+    return {
+      facebookAvailable,
+      instagramAvailable,
+      facebookMessage,
+      instagramMessage,
+    };
+  }
+
+  private async canFetchFacebookPages(accessToken: string) {
+    try {
+      const response = await fetch(
+        `https://graph.facebook.com/v18.0/me/accounts?${new URLSearchParams({
+          fields: 'id',
+          access_token: accessToken,
+        }).toString()}`,
+      );
+
+      const payload: any = await response.json().catch(() => null);
+      return response.ok && Array.isArray(payload?.data) && payload.data.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  private async canFetchInstagramProfile(accessToken: string) {
+    try {
+      const response = await fetch(
+        `https://graph.instagram.com/me?${new URLSearchParams({
+          fields: 'id,username',
+          access_token: accessToken,
+        }).toString()}`,
+      );
+
+      const payload: any = await response.json().catch(() => null);
+      return response.ok && Boolean(payload?.id);
+    } catch {
+      return false;
+    }
   }
 
   private createSignedState(userId: string, platform: string, frontendUrl?: string) {

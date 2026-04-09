@@ -107,8 +107,9 @@ export default function TermsPage() {
             Subscriptions renew automatically unless cancelled before the next billing date.
           </p>
           <p>
-            Payments are processed through Razorpay. By making a purchase, you also agree to Razorpay's applicable
-            payment terms and processing policies.
+            Payments are processed through Razorpay (for INR transactions) and Stripe (for international/USD
+            transactions). By making a purchase, you agree to the applicable payment terms of the respective
+            payment processor.
           </p>
           <p>
             If a payment fails, we may retry billing, limit paid features, or suspend access until payment is

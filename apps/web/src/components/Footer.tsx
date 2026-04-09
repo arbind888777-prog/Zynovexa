@@ -89,7 +89,6 @@ const FOOTER_COLS = [
       { label: 'Privacy Policy', href: '/privacy' },
       { label: 'Terms of Service', href: '/terms' },
       { label: 'Refund Policy', href: '/refund-policy' },
-      { label: 'Return Policy', href: '/return-policy' },
       { label: 'Disclaimer', href: '/disclaimer' },
       { label: 'Cookie Policy', href: '/legal/cookies' },
       { label: 'Contact Us', href: '/contact' },
@@ -123,7 +122,6 @@ export default function Footer() {
           </Link>
           <p className="text-slate-500 text-sm max-w-sm">The all-in-one AI social media platform for creators and businesses. Schedule, create, and grow — all in one place.</p>
           <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
-            <span className="dashboard-inline-stat px-3 py-1.5">50K+ creators</span>
             <span className="dashboard-inline-stat px-3 py-1.5">7 social platforms</span>
             <span className="dashboard-inline-stat px-3 py-1.5">AI + analytics + publishing</span>
           </div>
@@ -157,6 +155,11 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
+        <div className="mb-8 text-sm text-slate-400">
+          <p className="font-semibold text-white mb-1">Zynovexa</p>
+          <p>Zynovexa Technologies<br />New Delhi, Delhi, India<br />support@zynovexa.com</p>
+        </div>
+
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t" style={{ borderColor: 'var(--border)' }}>
           <p className="text-slate-500 text-sm">© {new Date().getFullYear()} Zynovexa. Built for creators, by creators. 🚀</p>
           <div className="flex items-center gap-4">

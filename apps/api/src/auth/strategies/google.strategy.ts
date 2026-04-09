@@ -3,6 +3,17 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 import { ConfigService } from '@nestjs/config';
 
+function getDefaultCallbackUrl(config: ConfigService) {
+  const configuredApiUrl = config.get<string>('API_URL') || config.get<string>('BACKEND_URL');
+
+  if (configuredApiUrl) {
+    const normalizedApiUrl = configuredApiUrl.replace(/\/api\/?$/, '');
+    return `${normalizedApiUrl}/api/auth/google/callback`;
+  }
+
+  return 'http://localhost:4000/api/auth/google/callback';
+}
+
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(config: ConfigService) {
@@ -11,7 +22,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     super({
       clientID,
       clientSecret,
-      callbackURL: config.get('GOOGLE_CALLBACK_URL') || 'http://localhost:4000/api/auth/google/callback',
+      callbackURL: config.get('GOOGLE_CALLBACK_URL') || getDefaultCallbackUrl(config),
       scope: ['email', 'profile'],
     });
   }

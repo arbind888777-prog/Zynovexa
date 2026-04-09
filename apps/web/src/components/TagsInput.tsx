@@ -117,7 +117,7 @@ export default function TagsInput({ label, tags, onChange, placeholder, helperTe
               className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium text-white"
               style={{ background: 'rgba(255,255,255,0.08)' }}
             >
-              {tag}
+              #{tag}
               <button type="button" onClick={() => removeTag(tag)} className="text-slate-400 transition-colors hover:text-white">
                 ×
               </button>

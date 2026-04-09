@@ -7,7 +7,7 @@ import FloatingSocialIcons from '@/components/FloatingSocialIcons';
 export const metadata: Metadata = {
   title: 'Zynovexa — AI Social Media Manager & Creator Commerce Platform',
   description:
-    'Zynovexa helps 50,000+ creators schedule posts, generate viral AI captions, sell digital products, courses & templates, and grow across Instagram, YouTube, TikTok, Twitter, LinkedIn & more. Start free today.',
+    'Zynovexa helps creators schedule posts, generate viral AI captions, sell digital products, courses & templates, and grow across Instagram, YouTube, TikTok, Twitter, LinkedIn & more. Start free today.',
   alternates: { canonical: 'https://zynovexa.com' },
   openGraph: {
     title: 'Zynovexa — AI Social Media Manager & Creator Commerce Platform',
@@ -111,18 +111,13 @@ const PLATFORMS = [
   { name: 'Snapchat', icon: '👻', color: '#fffc00', href: '' },
 ];
 
-const STATS = [
-  { value: '50K+', label: 'Active Creators', icon: '👥' },
-  { value: '2M+', label: 'Posts Scheduled', icon: '📅' },
-  { value: '99.9%', label: 'Uptime SLA', icon: '⚡' },
-  { value: '4.9★', label: 'Average Rating', icon: '⭐' },
+const TRUST_CARDS = [
+  { icon: '🎉', title: 'Free to start', desc: 'No credit card required' },
+  { icon: '🔓', title: 'Cancel anytime', desc: 'No lock-in' },
+  { icon: '🔒', title: 'Secure payments', desc: 'Razorpay + Stripe' },
 ];
 
-const TESTIMONIALS = [
-  { name: 'Rahul Sharma', role: 'YouTuber · 250K subs', text: 'Zynovexa saved me 15 hours/week. The AI script generator writes better hooks than I do!', avatar: 'R', plan: 'Pro' },
-  { name: 'Priya Gupta', role: 'Instagram Creator · 180K', text: 'My engagement went up 340% after using the AI hashtag generator consistently. Unreal results.', avatar: 'P', plan: 'Business' },
-  { name: 'Amit Verma', role: 'TikTok & Reels Creator', text: 'The video studio feature is a game-changer. Script, caption, hashtags — all in one place.', avatar: 'A', plan: 'Pro' },
-];
+
 
 export default async function LandingPage() {
   const host = (await headers()).get('host') ?? '';
@@ -147,7 +142,7 @@ export default async function LandingPage() {
     },
     {
       plan: 'Pro',
-      price: currency === 'inr' ? 699 : 9,
+      price: currency === 'inr' ? 599 : 9,
       desc: 'For serious creators',
       features: ['100 posts/month', '500 AI credits', '5 platforms', '90-day analytics', 'Video Studio', 'Priority email'],
       cta: 'Start Pro',
@@ -156,7 +151,7 @@ export default async function LandingPage() {
     },
     {
       plan: 'Growth',
-      price: currency === 'inr' ? 1299 : 19,
+      price: currency === 'inr' ? 1199 : 19,
       desc: 'For agencies & teams',
       features: ['Unlimited posts', 'Unlimited AI', 'All 7 platforms', '1-year analytics', 'Team collaboration', 'API access'],
       cta: 'Choose Growth',
@@ -200,7 +195,7 @@ export default async function LandingPage() {
             <Link href="/signup" className="btn btn-primary btn-xl">
               Start free
             </Link>
-            <Link href="/login" className="btn btn-secondary btn-xl">
+            <Link href="/features" className="btn btn-secondary btn-xl">
               Explore the platform
             </Link>
           </div>
@@ -212,7 +207,7 @@ export default async function LandingPage() {
                 <div key={i} className="w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold text-white" style={{ borderColor: 'var(--bg)', background: `hsl(${i*60+220},70%,55%)` }}>{l}</div>
               ))}
             </div>
-            <span>Trusted by <strong className="text-white">50,000+</strong> creators, operators, and social teams</span>
+            <span>Join early creators building smarter workflows</span>
           </div>
 
           <div className="hero-panel mt-12 grid gap-3 p-4 sm:grid-cols-3 sm:p-5 text-left animate-fade-in delay-500">
@@ -241,14 +236,14 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Stats Bar ─────────────────────────────────────────── */}
+      {/* ─── Trust Cards ──────────────────────────────────────── */}
       <section className="section-shell-tight pt-0">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-          {STATS.map((s, i) => (
-            <div key={s.label} className={`card text-center p-5 sm:p-6 animate-scale-in delay-${(i+1)*100}`}>
-              <div className="text-2xl sm:text-3xl mb-1">{s.icon}</div>
-              <div className="text-2xl sm:text-3xl font-black text-white stat-number">{s.value}</div>
-              <div className="text-xs sm:text-sm text-slate-400 mt-1">{s.label}</div>
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          {TRUST_CARDS.map((card, i) => (
+            <div key={card.title} className={`card text-center p-5 sm:p-6 animate-scale-in delay-${(i+1)*100}`}>
+              <div className="text-2xl sm:text-3xl mb-2">{card.icon}</div>
+              <div className="text-base sm:text-lg font-bold text-white">{card.title}</div>
+              <div className="text-xs sm:text-sm text-slate-400 mt-1">{card.desc}</div>
             </div>
           ))}
         </div>
@@ -401,11 +396,12 @@ export default async function LandingPage() {
             <span className="section-kicker text-green-300">Low platform fee</span>
             <h2 className="section-title">Keep more of what you earn</h2>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             {[
-              { plan: 'Free / Basic', fee: '5%', desc: 'Get started at zero cost' },
+              { plan: 'Free', fee: '5%', desc: 'Get started at zero cost' },
+              { plan: 'Starter', fee: '4%', desc: 'For individual creators' },
               { plan: 'Pro', fee: '3%', desc: 'For serious creators' },
-              { plan: 'Business', fee: '2%', desc: 'Maximum earnings' },
+              { plan: 'Growth', fee: '2%', desc: 'Maximum earnings' },
             ].map(p => (
               <div key={p.plan} className="card p-5">
                 <p className="text-3xl font-black text-white">{p.fee}</p>
@@ -418,38 +414,13 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Testimonials ──────────────────────────────────────── */}
+      {/* ─── Early Access ─────────────────────────────────────── */}
       <section className="section-shell-tight">
-        <div className="max-w-6xl mx-auto">
-          <div className="section-intro">
-            <span className="section-kicker text-green-300">Customer stories</span>
-            <h2 className="section-title">Used by creators who care about repeatable growth</h2>
-            <p className="section-copy">Results matter more when the workflow behind them is sustainable.</p>
-          </div>
-          <div className="marketing-summary-strip mb-8 text-xs sm:text-sm">
-            <span className="marketing-logo-pill">Teams with 3 to 30 seats</span>
-            <span className="marketing-logo-pill">Creator workflows without tool sprawl</span>
-            <span className="marketing-logo-pill">Measured growth, not vanity dashboards</span>
-          </div>
-          <div className="marketing-grid-shell grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t, i) => (
-              <div key={t.name} className={`card card-hover marketing-metric-card premium-tilt-card p-6 sm:p-7 relative animate-fade-in delay-${(i+1)*100}`}>
-                <div className="flex items-start gap-1 mb-4">
-                  {[...Array(5)].map((_,j) => <span key={j} className="text-yellow-400 text-sm">★</span>)}
-                </div>
-                <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-5 italic">"{t.text}"</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>{t.avatar}</div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">{t.name}</p>
-                      <p className="text-xs text-slate-500">{t.role}</p>
-                    </div>
-                  </div>
-                  <span className="badge badge-purple text-xs">{t.plan}</span>
-                </div>
-              </div>
-            ))}
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="card p-10 sm:p-14 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))', border: '1px solid rgba(99,102,241,0.3)' }}>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">Be one of our first power users</h2>
+            <p className="text-slate-400 text-base sm:text-lg mb-8 max-w-2xl mx-auto">Zynovexa is in early access. Join now and shape the product with your feedback. Early members get locked-in pricing forever.</p>
+            <Link href="/signup" className="btn btn-primary btn-xl inline-flex">Claim Early Access</Link>
           </div>
         </div>
       </section>

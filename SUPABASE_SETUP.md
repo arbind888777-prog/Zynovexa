@@ -91,6 +91,19 @@ For Google auth:
 3. Put the Google Client ID and Client Secret there
 4. In Google Cloud Console add the callback URL that Supabase shows on that provider page
 
+Current production values for this project:
+
+- Google Client ID: `199784448190-eip8g38ba92hnmn952uvut6vfv8ohugl.apps.googleusercontent.com`
+- Supabase callback URL: `https://pkvuchjrmsixbdaltfhq.supabase.co/auth/v1/callback`
+- Production site URL: `https://zynovexa.com`
+- Production redirect URL: `https://zynovexa.com/auth/google/callback`
+
+If you keep the legacy backend Google fallback enabled, keep these API env values aligned too:
+
+- `GOOGLE_CLIENT_ID=199784448190-eip8g38ba92hnmn952uvut6vfv8ohugl.apps.googleusercontent.com`
+- `GOOGLE_CLIENT_SECRET=your-google-client-secret`
+- `GOOGLE_CALLBACK_URL=https://zynovexa.com/api/auth/google/callback`
+
 ## 5. Configure Storage
 
 If you want uploads in Supabase Storage:

@@ -1,6 +1,9 @@
 const path = require('path');
 
-const defaultApiOrigin = process.env.NEXT_PUBLIC_API_URL || process.env.INTERNAL_API_URL || 'https://zynovexa.com/api';
+const isDevelopment = process.env.NODE_ENV !== 'production';
+const defaultApiOrigin =
+  process.env.INTERNAL_API_URL ||
+  (isDevelopment ? 'http://localhost:4000/api' : process.env.NEXT_PUBLIC_API_URL || 'https://zynovexa.com/api');
 
 const apiDestination =
   defaultApiOrigin;

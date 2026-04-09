@@ -143,7 +143,8 @@ export const uploadsApi = {
 export const accountsApi = {
   getAll: () => api.get('/accounts'),
   getStats: () => api.get('/accounts/stats'),
-  getYoutubeInsights: () => api.get('/accounts/youtube/insights'),
+  getYoutubeInsights: (accountId?: string) => api.get('/accounts/youtube/insights', { params: accountId ? { accountId } : undefined }),
+  getAccountInsights: (id: string) => api.get(`/accounts/${id}/insights`),
   connect: (data: any) => api.post('/accounts/connect', data),
   connectFacebookWithConfiguredToken: () => api.post('/accounts/connect/facebook/configured-token'),
   connectInstagramWithConfiguredToken: () => api.post('/accounts/connect/instagram/configured-token'),
@@ -151,6 +152,11 @@ export const accountsApi = {
   update: (id: string, data: any) => api.put(`/accounts/${id}`, data),
   // YouTube OAuth connect flow
   getYoutubeConnectUrl: (frontend?: string) => api.get('/accounts/connect/youtube', { params: frontend ? { frontend } : undefined }),
+};
+
+// ─── Video Analytics API ───────────────────────────────────────────────────
+export const videoAnalyticsApi = {
+  getTrendingVideos: (regionCode = 'IN', maxResults = 10) => api.get('/video-analytics/youtube/trending', { params: { regionCode, maxResults } }),
 };
 
 // ─── Analytics API ─────────────────────────────────────────────────────────
@@ -167,6 +173,8 @@ export const aiApi = {
   generateScript: (data: any) => api.post('/ai/script', data),
   generateHashtags: (data: any) => api.post('/ai/hashtags', data),
   generateImage: (data: any) => api.post('/ai/image', data),
+  generateVideo: (data: any) => api.post('/ai/video', data),
+  checkVideoStatus: (data: any) => api.post('/ai/check-video', data),
   chat: (data: any) => api.post('/ai/chat', data),
   publicChat: (data: any) => api.post('/ai/public-chat', data),
   getBestTimes: (data: any) => api.post('/ai/best-time', data),

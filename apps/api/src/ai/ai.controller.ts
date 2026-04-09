@@ -5,7 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AiService } from './ai.service';
 import {
   GenerateCaptionDto, GenerateScriptDto, GenerateHashtagsDto,
-  GenerateImageDto, ChatMessageDto, BestTimeDto,
+  GenerateImageDto, GenerateVideoDto, CheckVideoDto, ChatMessageDto, BestTimeDto,
 } from './dto/ai.dto';
 
 @ApiTags('AI')
@@ -40,9 +40,25 @@ export class AiController {
   @Post('image')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Generate AI image with DALL-E 3' })
+  @ApiOperation({ summary: 'Generate AI image with Google Nano Banana' })
   generateImage(@Request() req, @Body() dto: GenerateImageDto) {
     return this.aiService.generateImage(req.user.id, dto);
+  }
+
+  @Post('video')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Generate AI video with Google Veo 3.1' })
+  generateVideo(@Request() req, @Body() dto: GenerateVideoDto) {
+    return this.aiService.generateVideo(req.user.id, dto);
+  }
+
+  @Post('check-video')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Check Veo 3 video generation status' })
+  checkVideoStatus(@Request() req, @Body() dto: CheckVideoDto) {
+    return this.aiService.checkVideoStatus(req.user.id, dto.operationName);
   }
 
   @Post('chat')

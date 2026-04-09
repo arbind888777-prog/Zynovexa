@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
 RUN npx prisma generate
 
 COPY . .

@@ -181,11 +181,15 @@ export class AccountsService {
     };
   }
 
-  async getYoutubeInsights(userId: string) {
-    const account = await this.prisma.socialAccount.findFirst({
-      where: { userId, platform: 'YOUTUBE', isActive: true },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getYoutubeInsights(userId: string, accountId?: string) {
+    const account = accountId
+      ? await this.prisma.socialAccount.findFirst({
+          where: { id: accountId, userId, platform: 'YOUTUBE', isActive: true },
+        })
+      : await this.prisma.socialAccount.findFirst({
+          where: { userId, platform: 'YOUTUBE', isActive: true },
+          orderBy: { createdAt: 'desc' },
+        });
 
     if (!account) {
       throw new NotFoundException('YouTube account not connected');
@@ -220,6 +224,138 @@ export class AccountsService {
     return {
       account: safeAccount(account),
       ...insights,
+    };
+  }
+
+  /**
+   * Deep analytics for any connected account (YouTube supported).
+   * Returns overview, content, audience data for the 3-tab analytics panel.
+   */
+  async getAccountInsights(userId: string, accountId: string) {
+    const account = await this.prisma.socialAccount.findFirst({
+      where: { id: accountId, userId, isActive: true },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    if (account.platform === 'YOUTUBE') {
+      return this.getYoutubeDeepInsights(account);
+    }
+
+    // For other platforms, return basic data from DB
+    return {
+      account: safeAccount(account),
+      platform: account.platform,
+      overview: {
+        followers: account.followersCount || 0,
+        posts: account.postsCount || 0,
+      },
+      content: { topVideos: [], trafficSources: [] },
+      audience: { demographics: { ageGroups: [], genderBreakdown: [] }, countries: [], devices: [] },
+      analyticsAvailable: false,
+      message: `${account.platform} deep analytics coming soon. Currently only YouTube has full analytics support.`,
+    };
+  }
+
+  private async getYoutubeDeepInsights(account: any) {
+    let accessToken: string | null = null;
+    try {
+      accessToken = await this.getValidYoutubeAccessToken(account);
+    } catch (e) {
+      this.logger.warn(`Failed to get valid YouTube access token for deep insights: ${e}`);
+    }
+
+    // Get basic channel insights (Data API)
+    let channelInsights: any = null;
+    try {
+      if (accessToken) {
+        channelInsights = await this.youtubeService.getMyChannelInsights(accessToken);
+      }
+    } catch (e) {
+      this.logger.warn(`Falling back to API-key fetch for channel insights`);
+    }
+
+    if (!channelInsights) {
+      const channelRef = account.platformUserId || account.handle?.replace(/^@/, '');
+      if (channelRef) {
+        try {
+          channelInsights = await this.youtubeService.getChannelInsights(channelRef);
+        } catch (e) {
+          this.logger.warn(`Channel insights fetch failed: ${e}`);
+        }
+      }
+    }
+
+    // Get YouTube Analytics API data (requires yt-analytics.readonly scope)
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate28 = new Date(Date.now() - 28 * 86400000).toISOString().split('T')[0];
+    const startDate90 = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
+
+    let analyticsOverview: any = null;
+    let timeSeries: any[] = [];
+    let topVideos: any[] = [];
+    let trafficSources: any[] = [];
+    let demographics: any = { ageGroups: [], genderBreakdown: [] };
+    let countries: any[] = [];
+    let devices: any[] = [];
+    let analyticsAvailable = false;
+
+    if (accessToken) {
+      try {
+        [analyticsOverview, timeSeries, topVideos, trafficSources, demographics, countries, devices] = await Promise.all([
+          this.youtubeService.getAnalyticsOverview(accessToken, startDate28, endDate).catch(() => null),
+          this.youtubeService.getAnalyticsTimeSeries(accessToken, startDate28, endDate).catch(() => []),
+          this.youtubeService.getAnalyticsTopVideos(accessToken, startDate90, endDate).catch(() => []),
+          this.youtubeService.getAnalyticsTrafficSources(accessToken, startDate28, endDate).catch(() => []),
+          this.youtubeService.getAnalyticsDemographics(accessToken, startDate28, endDate).catch(() => ({ ageGroups: [], genderBreakdown: [] })),
+          this.youtubeService.getAnalyticsCountries(accessToken, startDate28, endDate).catch(() => []),
+          this.youtubeService.getAnalyticsDevices(accessToken, startDate28, endDate).catch(() => []),
+        ]);
+        analyticsAvailable = !!analyticsOverview;
+      } catch (e) {
+        this.logger.warn(`YouTube Analytics API not available: ${e}`);
+      }
+    }
+
+    // Enrich top videos with titles/thumbnails from Data API
+    if (topVideos.length > 0 && accessToken) {
+      try {
+        const videoIds = topVideos.map(v => v.videoId).join(',');
+        const videoDetails = await this.youtubeService.getVideoStats(videoIds);
+        const detailMap = new Map(videoDetails.map((v: any) => [v.videoId, v]));
+        topVideos = topVideos.map(v => ({
+          ...v,
+          title: detailMap.get(v.videoId)?.title || v.videoId,
+          thumbnail: detailMap.get(v.videoId)?.thumbnail || null,
+          publishedAt: detailMap.get(v.videoId)?.publishedAt || null,
+        }));
+      } catch (e) {
+        // Fine — continue with videoIds only
+      }
+    }
+
+    return {
+      account: safeAccount(account),
+      platform: 'YOUTUBE',
+      analyticsAvailable,
+      overview: {
+        channel: channelInsights?.channel || null,
+        totals: channelInsights?.totals || null,
+        analytics: analyticsOverview,
+        timeSeries,
+      },
+      content: {
+        recentVideos: channelInsights?.recentVideos || [],
+        topVideos,
+        trafficSources,
+      },
+      audience: {
+        demographics,
+        countries,
+        devices,
+      },
     };
   }
 
@@ -382,10 +518,13 @@ export class AccountsService {
   generateYoutubeConnectUrl(userId: string, frontendUrl?: string): { url: string } {
     const secret   = this.config.get<string>('JWT_ACCESS_SECRET')!;
     const safeFrontendUrl = sanitizeFrontendUrl(frontendUrl, this.config.get<string>('FRONTEND_URL'));
-    const callback = buildApiCallbackUrl(
+    // YOUTUBE_CONNECT_CALLBACK_URL explicitly overrides the auto-generated callback URL.
+    // This ensures the registered redirect URI in Google Cloud Console is always used.
+    const explicitCallback = this.config.get<string>('YOUTUBE_CONNECT_CALLBACK_URL')?.trim();
+    const callback = explicitCallback || buildApiCallbackUrl(
       safeFrontendUrl,
       '/api/accounts/connect/youtube/callback',
-      this.config.get<string>('API_URL') || this.config.get<string>('BACKEND_URL') || this.config.get<string>('YOUTUBE_CONNECT_CALLBACK_URL') || undefined,
+      this.config.get<string>('API_URL') || this.config.get<string>('BACKEND_URL') || undefined,
     );
     const state = jwt.sign({ userId, purpose: 'yt-connect', frontendUrl: safeFrontendUrl, callbackUrl: callback }, secret, { expiresIn: '5m' });
 
@@ -399,6 +538,7 @@ export class AccountsService {
       'profile',
       'https://www.googleapis.com/auth/youtube.readonly',
       'https://www.googleapis.com/auth/youtube.upload',
+      'https://www.googleapis.com/auth/yt-analytics.readonly',
     ].join(' '));
     url.searchParams.set('access_type', 'offline');
     url.searchParams.set('prompt',       'consent'); // forces refresh_token
@@ -507,13 +647,14 @@ export class AccountsService {
     if (payload.purpose !== 'yt-connect') throw new Error('Invalid state purpose');
     const userId = payload.userId as string;
     const frontendUrl = sanitizeFrontendUrl(payload.frontendUrl, this.config.get<string>('FRONTEND_URL'));
-    const callback = typeof payload.callbackUrl === 'string' && payload.callbackUrl.trim()
+    const explicitCallback = this.config.get<string>('YOUTUBE_CONNECT_CALLBACK_URL')?.trim();
+    const callback = (typeof payload.callbackUrl === 'string' && payload.callbackUrl.trim())
       ? payload.callbackUrl
-      : buildApiCallbackUrl(
+      : (explicitCallback || buildApiCallbackUrl(
           frontendUrl,
           '/api/accounts/connect/youtube/callback',
-          this.config.get<string>('API_URL') || this.config.get<string>('BACKEND_URL') || this.config.get<string>('YOUTUBE_CONNECT_CALLBACK_URL') || undefined,
-        );
+          this.config.get<string>('API_URL') || this.config.get<string>('BACKEND_URL') || undefined,
+        ));
 
     // Exchange auth code for access + refresh tokens
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {

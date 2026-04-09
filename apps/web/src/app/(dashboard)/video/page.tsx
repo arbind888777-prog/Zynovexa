@@ -22,6 +22,11 @@ export default function VideoStudioPage() {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [step, setStep] = useState<'type' | 'details' | 'script' | 'publish'>('type');
+  const [videoPrompt, setVideoPrompt] = useState('');
+  const [videoDuration, setVideoDuration] = useState('6');
+  const [videoGenerationLoading, setVideoGenerationLoading] = useState(false);
+  const [videoGenerationStatus, setVideoGenerationStatus] = useState('');
+  const [videoOperationName, setVideoOperationName] = useState('');
 
   const [form, setForm] = useState({
     title: '',
@@ -48,6 +53,13 @@ export default function VideoStudioPage() {
   const [captionLoading, setCaptionLoading] = useState(false);
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [hashtagLoading, setHashtagLoading] = useState(false);
+
+  const getAspectRatio = () => {
+    if (selectedType === 'REEL' || selectedType === 'SHORT' || selectedType === 'TIKTOK' || selectedType === 'STORY') {
+      return '9:16';
+    }
+    return '16:9';
+  };
 
   const selectVideoType = (type: typeof VIDEO_TYPES[0]) => {
     setSelectedType(type.id);
@@ -113,6 +125,75 @@ export default function VideoStudioPage() {
       toast.error(e?.response?.data?.message || 'Hashtag generation failed');
     } finally {
       setHashtagLoading(false);
+    }
+  };
+
+  const pollVideoStatus = async (operationName: string) => {
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      const res = await aiApi.checkVideoStatus({ operationName });
+      const payload = res?.data;
+
+      if (payload?.status === 'COMPLETED' && payload?.videoUrl) {
+        setForm((prev) => ({ ...prev, videoUrl: payload.videoUrl }));
+        setVideoGenerationStatus('Video ready');
+        toast.success('AI video generate ho gaya.');
+        return;
+      }
+
+      setVideoGenerationStatus(payload?.message || 'Video generate ho raha hai...');
+      await new Promise((resolve) => window.setTimeout(resolve, 5000));
+    }
+
+    setVideoGenerationStatus('Video abhi processing me hai. Baad me Check Status dubara chalao.');
+  };
+
+  const handleGenerateVideo = async () => {
+    const prompt = videoPrompt.trim() || scriptInputs.topic.trim() || form.description.trim();
+    if (!prompt) {
+      toast.error('Video prompt ya topic dalo.');
+      return;
+    }
+
+    setVideoGenerationLoading(true);
+    setVideoGenerationStatus('Video generation start ho raha hai...');
+
+    try {
+      const res = await aiApi.generateVideo({
+        prompt,
+        aspectRatio: getAspectRatio(),
+        durationSeconds: parseInt(videoDuration, 10),
+      });
+
+      const payload = res?.data;
+      const operationName = payload?.operationName;
+      if (!operationName) {
+        throw new Error('Operation ID missing');
+      }
+
+      setVideoOperationName(operationName);
+      setVideoGenerationStatus(payload?.message || 'Video processing...');
+      await pollVideoStatus(operationName);
+    } catch (e: any) {
+      setVideoGenerationStatus('Video generation failed');
+      toast.error(e?.response?.data?.message || e?.message || 'Video generation failed');
+    } finally {
+      setVideoGenerationLoading(false);
+    }
+  };
+
+  const handleCheckVideoStatus = async () => {
+    if (!videoOperationName.trim()) {
+      toast.error('Pehle video generate karo.');
+      return;
+    }
+
+    setVideoGenerationLoading(true);
+    try {
+      await pollVideoStatus(videoOperationName.trim());
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Video status check failed');
+    } finally {
+      setVideoGenerationLoading(false);
     }
   };
 
@@ -303,6 +384,65 @@ export default function VideoStudioPage() {
                     <button onClick={() => setForm(p => ({ ...p, hashtags: formatTagsAsInput(parseTagValue(hashtags)) }))} className="text-purple-400 text-xs hover:text-purple-300">← Apply all</button>
                   </div>
                 )}
+
+                <div className="rounded-2xl p-4" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.22)' }}>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">🎥 AI Video Generator</p>
+                      <p className="text-xs text-slate-400">Google Veo 3.1 se direct preview video banao.</p>
+                    </div>
+                    <span className="text-[11px] rounded-full px-2 py-1 text-emerald-300 border border-emerald-500/30">{getAspectRatio()}</span>
+                  </div>
+
+                  <textarea
+                    value={videoPrompt}
+                    onChange={(e) => setVideoPrompt(e.target.value)}
+                    rows={4}
+                    placeholder="Cinematic product ad, soft lighting, smooth camera motion, realistic motion..."
+                    className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                  />
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <select
+                      value={videoDuration}
+                      onChange={(e) => setVideoDuration(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none"
+                      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                    >
+                      <option value="4">4 seconds</option>
+                      <option value="6">6 seconds</option>
+                      <option value="8">8 seconds</option>
+                    </select>
+                    <button
+                      onClick={handleGenerateVideo}
+                      disabled={videoGenerationLoading}
+                      className="w-full py-3 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                      style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}
+                    >
+                      {videoGenerationLoading ? '⏳ Generating...' : 'Generate Video'}
+                    </button>
+                  </div>
+
+                  <div className="mt-3 flex gap-3">
+                    <button
+                      onClick={handleCheckVideoStatus}
+                      disabled={videoGenerationLoading || !videoOperationName}
+                      className="text-xs text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
+                    >
+                      Check Status
+                    </button>
+                    {videoOperationName && <span className="text-xs text-slate-500 truncate">{videoOperationName}</span>}
+                  </div>
+
+                  {videoGenerationStatus && <p className="mt-2 text-xs text-slate-400">{videoGenerationStatus}</p>}
+                  {form.videoUrl && (
+                    <div className="mt-3 space-y-2">
+                      <video controls className="w-full rounded-xl" src={form.videoUrl} />
+                      <p className="text-xs text-emerald-300 break-all">Ready: {form.videoUrl}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

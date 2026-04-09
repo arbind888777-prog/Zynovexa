@@ -31,8 +31,16 @@ export const envValidationSchema = Joi.object({
   JWT_REFRESH_EXPIRES: Joi.string().default('7d'),
 
   // ── Frontend ────────────────────────────────────────────────
-  FRONTEND_URL: Joi.string().default('http://localhost:3001'),
-  API_URL: Joi.string().default('http://localhost:4000'),
+  FRONTEND_URL: Joi.string().uri().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().uri().required(),
+    otherwise: Joi.string().uri().default('http://localhost:3001'),
+  }),
+  API_URL: Joi.string().uri().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().uri().required(),
+    otherwise: Joi.string().uri().default('http://localhost:4000'),
+  }),
 
   // ── Google OAuth (optional in dev) ──────────────────────────
   GOOGLE_CLIENT_ID: Joi.string().when('NODE_ENV', {
@@ -45,7 +53,11 @@ export const envValidationSchema = Joi.object({
     then: Joi.required(),
     otherwise: Joi.optional(),
   }),
-  GOOGLE_CALLBACK_URL: Joi.string().optional(),
+  GOOGLE_CALLBACK_URL: Joi.string().uri().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().uri().required(),
+    otherwise: Joi.optional(),
+  }),
 
   // ── Supabase (optional but recommended) ────────────────────
   SUPABASE_URL: Joi.string().uri().optional(),
@@ -54,11 +66,7 @@ export const envValidationSchema = Joi.object({
   SUPABASE_STORAGE_BUCKET: Joi.string().default('media'),
 
   // ── OpenAI ──────────────────────────────────────────────────
-  OPENAI_API_KEY: Joi.string().when('NODE_ENV', {
-    is: 'production',
-    then: Joi.required(),
-    otherwise: Joi.optional(),
-  }),
+  OPENAI_API_KEY: Joi.string().optional(),
   OPENAI_MODEL: Joi.string().optional(),
   OPENAI_FALLBACK_MODEL: Joi.string().optional(),
   OPENAI_IMAGE_MODEL: Joi.string().optional(),
@@ -66,6 +74,12 @@ export const envValidationSchema = Joi.object({
   // ── Gemini (optional fallback for text AI) ──────────────────
   GEMINI_API_KEY: Joi.string().optional(),
   GEMINI_MODEL: Joi.string().optional(),
+  NANO_BANANA_API_KEY: Joi.string().optional(),
+  NANO_BANANA_MODEL: Joi.string().optional(),
+  VEO3_API_KEY: Joi.string().optional(),
+  VEO3_MODEL: Joi.string().optional(),
+  STABILITY_API_KEY: Joi.string().optional(),
+  STABILITY_MODEL: Joi.string().optional(),
 
   // ── Social platform integrations ────────────────────────────
   TWITTER_CLIENT_ID: Joi.string().optional(),

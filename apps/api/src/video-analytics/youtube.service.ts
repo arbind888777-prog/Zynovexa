@@ -1,11 +1,13 @@
 // ============================================================
 // Zynovexa - YouTube Data API v3 Service
 // Fetches real channel stats, video details, and trending data
+// Also: YouTube Analytics API for watch time, demographics, etc.
 // ============================================================
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 const YT_BASE = 'https://www.googleapis.com/youtube/v3';
+const YT_ANALYTICS_BASE = 'https://youtubeanalytics.googleapis.com/v2';
 
 type YoutubeChannelDetails = {
   id: string;
@@ -305,6 +307,199 @@ export class YoutubeService {
       likeCount: parseInt(v.statistics.likeCount || '0'),
       commentCount: parseInt(v.statistics.commentCount || '0'),
       tags: v.snippet.tags?.slice(0, 10) || [],
+    }));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // YouTube Analytics API (requires yt-analytics.readonly scope)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  private async ytAnalyticsFetch(params: Record<string, string>, accessToken: string): Promise<any> {
+    const url = new URL(`${YT_ANALYTICS_BASE}/reports`);
+    url.searchParams.set('ids', 'channel==MINE');
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as any;
+      const msg = err?.error?.message || `YouTube Analytics API error ${res.status}`;
+      this.logger.warn(`YouTube Analytics API failure: ${msg}`);
+      throw new HttpException(msg, res.status);
+    }
+
+    return res.json();
+  }
+
+  /**
+   * Overview analytics: views, watch time, subscribers gained/lost over a date range
+   */
+  async getAnalyticsOverview(accessToken: string, startDate: string, endDate: string): Promise<any> {
+    const data = await this.ytAnalyticsFetch({
+      startDate,
+      endDate,
+      metrics: 'views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost,likes,dislikes,comments,shares',
+      dimensions: '',
+    }, accessToken);
+
+    const row = data.rows?.[0] || [];
+    return {
+      views: row[0] || 0,
+      estimatedMinutesWatched: row[1] || 0,
+      averageViewDuration: row[2] || 0,
+      subscribersGained: row[3] || 0,
+      subscribersLost: row[4] || 0,
+      likes: row[5] || 0,
+      dislikes: row[6] || 0,
+      comments: row[7] || 0,
+      shares: row[8] || 0,
+    };
+  }
+
+  /**
+   * Daily time series for views, watch time, subs over a date range
+   */
+  async getAnalyticsTimeSeries(accessToken: string, startDate: string, endDate: string): Promise<any[]> {
+    const data = await this.ytAnalyticsFetch({
+      startDate,
+      endDate,
+      metrics: 'views,estimatedMinutesWatched,subscribersGained,likes,comments',
+      dimensions: 'day',
+      sort: 'day',
+    }, accessToken);
+
+    return (data.rows || []).map((row: any[]) => ({
+      date: row[0],
+      views: row[1] || 0,
+      estimatedMinutesWatched: row[2] || 0,
+      subscribersGained: row[3] || 0,
+      likes: row[4] || 0,
+      comments: row[5] || 0,
+    }));
+  }
+
+  /**
+   * Content-level: per-video metrics (top videos by views)
+   */
+  async getAnalyticsTopVideos(accessToken: string, startDate: string, endDate: string, maxResults = 10): Promise<any[]> {
+    const data = await this.ytAnalyticsFetch({
+      startDate,
+      endDate,
+      metrics: 'views,estimatedMinutesWatched,averageViewDuration,likes,comments,shares',
+      dimensions: 'video',
+      sort: '-views',
+      maxResults: String(maxResults),
+    }, accessToken);
+
+    return (data.rows || []).map((row: any[]) => ({
+      videoId: row[0],
+      views: row[1] || 0,
+      estimatedMinutesWatched: row[2] || 0,
+      averageViewDuration: row[3] || 0,
+      likes: row[4] || 0,
+      comments: row[5] || 0,
+      shares: row[6] || 0,
+    }));
+  }
+
+  /**
+   * Traffic sources: where viewers find your videos
+   */
+  async getAnalyticsTrafficSources(accessToken: string, startDate: string, endDate: string): Promise<any[]> {
+    const data = await this.ytAnalyticsFetch({
+      startDate,
+      endDate,
+      metrics: 'views,estimatedMinutesWatched',
+      dimensions: 'insightTrafficSourceType',
+      sort: '-views',
+    }, accessToken);
+
+    return (data.rows || []).map((row: any[]) => ({
+      source: row[0],
+      views: row[1] || 0,
+      estimatedMinutesWatched: row[2] || 0,
+    }));
+  }
+
+  /**
+   * Audience demographics: age group + gender breakdown
+   */
+  async getAnalyticsDemographics(accessToken: string, startDate: string, endDate: string): Promise<any> {
+    // Age groups
+    let ageGroups: any[] = [];
+    try {
+      const ageData = await this.ytAnalyticsFetch({
+        startDate,
+        endDate,
+        metrics: 'viewerPercentage',
+        dimensions: 'ageGroup',
+      }, accessToken);
+      ageGroups = (ageData.rows || []).map((row: any[]) => ({
+        ageGroup: row[0],
+        viewerPercentage: row[1] || 0,
+      }));
+    } catch (e) {
+      this.logger.warn('Age group demographics not available');
+    }
+
+    // Gender
+    let genderBreakdown: any[] = [];
+    try {
+      const genderData = await this.ytAnalyticsFetch({
+        startDate,
+        endDate,
+        metrics: 'viewerPercentage',
+        dimensions: 'gender',
+      }, accessToken);
+      genderBreakdown = (genderData.rows || []).map((row: any[]) => ({
+        gender: row[0],
+        viewerPercentage: row[1] || 0,
+      }));
+    } catch (e) {
+      this.logger.warn('Gender demographics not available');
+    }
+
+    return { ageGroups, genderBreakdown };
+  }
+
+  /**
+   * Audience by country
+   */
+  async getAnalyticsCountries(accessToken: string, startDate: string, endDate: string): Promise<any[]> {
+    const data = await this.ytAnalyticsFetch({
+      startDate,
+      endDate,
+      metrics: 'views,estimatedMinutesWatched',
+      dimensions: 'country',
+      sort: '-views',
+      maxResults: '25',
+    }, accessToken);
+
+    return (data.rows || []).map((row: any[]) => ({
+      country: row[0],
+      views: row[1] || 0,
+      estimatedMinutesWatched: row[2] || 0,
+    }));
+  }
+
+  /**
+   * Audience by device type (MOBILE, DESKTOP, TV, TABLET, etc.)
+   */
+  async getAnalyticsDevices(accessToken: string, startDate: string, endDate: string): Promise<any[]> {
+    const data = await this.ytAnalyticsFetch({
+      startDate,
+      endDate,
+      metrics: 'views,estimatedMinutesWatched',
+      dimensions: 'deviceType',
+      sort: '-views',
+    }, accessToken);
+
+    return (data.rows || []).map((row: any[]) => ({
+      device: row[0],
+      views: row[1] || 0,
+      estimatedMinutesWatched: row[2] || 0,
     }));
   }
 }

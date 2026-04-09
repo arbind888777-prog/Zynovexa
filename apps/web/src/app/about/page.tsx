@@ -127,6 +127,22 @@ export default function AboutPage() {
         </div>
       </section>
 
+      <section className="py-12 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto card p-8 sm:p-10" style={{ border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.04)' }}>
+          <h2 className="text-2xl font-extrabold text-white mb-4">Who&apos;s building Zynovexa</h2>
+          <p className="text-slate-300 leading-relaxed mb-4">
+            Zynovexa is built by a small, focused team passionate about helping creators grow smarter. We are based
+            in India and building this for creators and businesses worldwide.
+          </p>
+          <p className="text-slate-400 text-sm">
+            Have a question? Reach us at{' '}
+            <a href="mailto:support@zynovexa.com" className="text-purple-400 hover:text-purple-300 underline">
+              support@zynovexa.com
+            </a>
+          </p>
+        </div>
+      </section>
+
       <section className="py-16 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto text-center card p-10" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))', border: '1px solid rgba(99,102,241,0.3)' }}>
           <h2 className="text-3xl font-extrabold text-white mb-4">Need help or verification details?</h2>

@@ -47,7 +47,7 @@ const PLANS: PricingPlan[] = [
   },
   {
     plan: 'Pro',
-    inrMonthly: 699, inrYearly: 559,
+    inrMonthly: 599, inrYearly: 479,
     usdMonthly: 9, usdYearly: 7,
     desc: 'For serious creators & businesses',
     features: [
@@ -68,7 +68,7 @@ const PLANS: PricingPlan[] = [
   },
   {
     plan: 'Growth',
-    inrMonthly: 1299, inrYearly: 1039,
+    inrMonthly: 1199, inrYearly: 999,
     usdMonthly: 19, usdYearly: 15,
     desc: 'For agencies & growing teams',
     features: [
@@ -118,8 +118,14 @@ const COMPARISON = [
 
 function detectCurrency(): Currency {
   if (typeof window === 'undefined') return 'usd';
-  const host = window.location.hostname;
-  return host.endsWith('.in') ? 'inr' : 'usd';
+  const stored = localStorage.getItem('zynovexa-currency');
+  if (stored === 'inr' || stored === 'usd') return stored;
+  const lang = navigator.language || '';
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  if (lang === 'hi-IN' || lang.startsWith('hi') || tz === 'Asia/Kolkata' || window.location.hostname.endsWith('.in')) {
+    return 'inr';
+  }
+  return 'usd';
 }
 
 export default function PricingPage() {
@@ -129,6 +135,11 @@ export default function PricingPage() {
   useEffect(() => {
     setCurrency(detectCurrency());
   }, []);
+
+  const handleCurrencyChange = (c: Currency) => {
+    setCurrency(c);
+    localStorage.setItem('zynovexa-currency', c);
+  };
 
   const sym = currency === 'inr' ? '₹' : '$';
   const paymentNote = currency === 'inr' ? 'Secure payments via Razorpay' : 'Secure payments via Stripe';
@@ -173,6 +184,30 @@ export default function PricingPage() {
             </button>
           </div>
 
+          {/* Currency Toggle */}
+          <div className="mt-4 inline-flex items-center gap-3 p-1.5 rounded-full" style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+            <button
+              type="button"
+              onClick={() => handleCurrencyChange('usd')}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                currency === 'usd' ? 'text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+              style={currency === 'usd' ? { background: 'linear-gradient(135deg, #6366f1, #a855f7)' } : undefined}
+            >
+              USD $
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCurrencyChange('inr')}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                currency === 'inr' ? 'text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+              style={currency === 'inr' ? { background: 'linear-gradient(135deg, #6366f1, #a855f7)' } : undefined}
+            >
+              INR ₹
+            </button>
+          </div>
+
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <div className="dashboard-inline-stat px-4 py-3 text-left">
               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Billing style</p>
@@ -204,7 +239,7 @@ export default function PricingPage() {
             <span>Showing prices in {currency === 'inr' ? 'INR (₹)' : 'USD ($)'}</span>
             <button
               type="button"
-              onClick={() => setCurrency(currency === 'inr' ? 'usd' : 'inr')}
+              onClick={() => handleCurrencyChange(currency === 'inr' ? 'usd' : 'inr')}
               className="text-purple-400 hover:text-purple-300 underline transition-colors"
             >
               Switch to {currency === 'inr' ? 'USD ($)' : 'INR (₹)'}

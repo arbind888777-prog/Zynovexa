@@ -19,21 +19,19 @@ export class AiEngineService {
     const hasOpenAi = !!openAiKey && !openAiKey.includes('your-openai') && openAiKey !== 'sk-your-openai-key-here';
     const hasGemini = !!geminiKey && !geminiKey.includes('your-gemini');
 
-    if (hasOpenAi) {
-      this.openai = new OpenAI({ apiKey: openAiKey });
-      this.aiProvider = 'openai';
-      this.isDemoMode = false;
-      return;
-    }
-
     if (hasGemini) {
       this.geminiApiKey = geminiKey;
       this.aiProvider = 'gemini';
-      this.isDemoMode = false;
-      return;
     }
 
-    this.isDemoMode = true;
+    if (hasOpenAi) {
+      this.openai = new OpenAI({ apiKey: openAiKey });
+      if (this.aiProvider === 'demo') {
+        this.aiProvider = 'openai';
+      }
+    }
+
+    this.isDemoMode = this.aiProvider === 'demo';
   }
 
   async generate(userId: string, dto: { niche: string; platform: string; tone: string; audience: string; contentType: string; topic?: string }) {

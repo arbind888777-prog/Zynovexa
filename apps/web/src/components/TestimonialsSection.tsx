@@ -36,13 +36,13 @@ export function TestimonialsSection() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-12">
           <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
-            Real Results
+            Early Access
           </span>
           <h2 className="text-3xl md:text-4xl font-bold mt-2 text-gray-900 dark:text-white">
-            Trusted by 50,000+ Creators
+            What our early users are saying
           </h2>
           <p className="text-gray-500 mt-3 max-w-xl mx-auto">
-            See how creators across every niche are growing faster with Zynovexa.
+            Hear from creators who joined Zynovexa early.
           </p>
         </div>
 

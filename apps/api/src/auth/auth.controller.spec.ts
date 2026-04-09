@@ -72,6 +72,31 @@ describe('AuthController Google flow', () => {
     expect(redirect).toHaveBeenCalledWith('https://www.zynovexa.com/auth/google/callback?success=true');
   });
 
+  it('ignores localhost frontend state in production and falls back to the configured frontend URL', async () => {
+    authService.googleLogin.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
+
+    const redirect = jest.fn();
+    const cookie = jest.fn();
+    const req = {
+      user: {
+        googleId: 'google_2',
+        email: 'creator@example.com',
+        name: 'Creator One',
+      },
+      query: {
+        state: encodeFrontendState('http://localhost:3001'),
+      },
+    };
+    const res = { cookie, redirect };
+
+    await controller.googleCallback(req as any, res as any);
+
+    expect(redirect).toHaveBeenCalledWith('https://zynovexa.com/auth/google/callback?success=true');
+  });
+
   it('exchanges Google auth cookies into JSON tokens and clears the one-time cookies', async () => {
     const status = jest.fn().mockReturnThis();
     const json = jest.fn();

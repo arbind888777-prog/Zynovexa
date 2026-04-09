@@ -337,10 +337,12 @@ export class AuthService {
       this.jwt.signAsync(payload, {
         secret: this.config.get('JWT_ACCESS_SECRET'),
         expiresIn: this.config.get('JWT_ACCESS_EXPIRES') || '15m',
+        jwtid: uuidv4(),
       }),
       this.jwt.signAsync(payload, {
         secret: this.config.get('JWT_REFRESH_SECRET'),
         expiresIn: this.config.get('JWT_REFRESH_EXPIRES') || '7d',
+        jwtid: uuidv4(),
       }),
     ]);
     return { accessToken, refreshToken };

@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Get, Body, UseGuards, Request, HttpCode, HttpStatus, Res, Query,
+  Controller, Post, Get, Body, UseGuards, Request, HttpCode, HttpStatus, Res, Query, Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
@@ -15,6 +15,8 @@ import { decodeFrontendState, sanitizeFrontendUrl } from '../common/utils/fronte
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private authService: AuthService) {}
 
   @Post('signup')
@@ -97,7 +99,24 @@ export class AuthController {
     const frontendUrl = decodeFrontendState(req.query?.state) || fallbackFrontendUrl;
 
     try {
-      const result = await this.authService.googleLogin(req.user);
+      const rawUser = req.user || {};
+      const email = rawUser.email || rawUser.emails?.[0]?.value;
+      const name = rawUser.name
+        || [rawUser.givenName, rawUser.familyName].filter(Boolean).join(' ')
+        || rawUser.displayName
+        || (typeof email === 'string' ? email.split('@')[0] : 'Google User');
+      const avatar = rawUser.avatar || rawUser.photos?.[0]?.value || null;
+
+      if (!email) {
+        throw new Error('Google profile did not return an email address');
+      }
+
+      const result = await this.authService.googleLogin({
+        googleId: rawUser.googleId || rawUser.id || '',
+        email,
+        name,
+        avatar,
+      });
       const isProduction = process.env.NODE_ENV === 'production';
 
       // Set tokens as httpOnly cookies instead of URL query params
@@ -116,7 +135,8 @@ export class AuthController {
       });
 
       return res.redirect(`${frontendUrl}/auth/google/callback?success=true`);
-    } catch {
+    } catch (error: any) {
+      this.logger.error(`Google OAuth callback failed: ${error?.message || 'unknown error'}`);
       return res.redirect(`${frontendUrl}/login?error=google_failed`);
     }
   }

@@ -55,7 +55,7 @@ export default function PartnerProgramPage() {
             Earn with<br /><span className="gradient-text">Zynovexa</span>
           </h1>
           <p className="text-slate-400 text-xl mb-10 max-w-2xl mx-auto">
-            Refer creators to Zynovexa and earn up to 30% recurring commission. Our top affiliates earn $5,000+ per month.
+            Earn 20–30% recurring commission for the lifetime of every customer you refer. No cap on earnings.
           </p>
           <Link href="/signup" className="btn btn-primary btn-xl">Become a Partner →</Link>
         </div>

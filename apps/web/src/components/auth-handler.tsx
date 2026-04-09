@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { supabase, isSupabaseEnabled, getSupabaseAccessToken } from '@/lib/supabase';
 
@@ -29,10 +29,23 @@ import { supabase, isSupabaseEnabled, getSupabaseAccessToken } from '@/lib/supab
 export default function AuthHandler() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { exchangeSupabaseToken, isAuthenticated } = useAuthStore();
   const exchanging = useRef(false);
 
   useEffect(() => {
+    const oauthCode = searchParams.get('code');
+    const oauthError = searchParams.get('error');
+
+    // Safety net: some OAuth providers/site-url setups land on "/?code=..."
+    // instead of the dedicated callback route. Normalize that here.
+    if (pathname === '/' && (oauthCode || oauthError)) {
+      const nextUrl = new URL('/auth/google/callback', window.location.origin);
+      searchParams.forEach((value, key) => nextUrl.searchParams.set(key, value));
+      router.replace(`${nextUrl.pathname}${nextUrl.search}`);
+      return;
+    }
+
     // Don't interfere if the user is already logged in or Supabase is off
     if (!isSupabaseEnabled || !supabase || isAuthenticated) return;
 
@@ -75,7 +88,7 @@ export default function AuthHandler() {
     };
   // Re-run only when auth state or route changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, pathname]);
+  }, [isAuthenticated, pathname, router, searchParams]);
 
   return null;
 }

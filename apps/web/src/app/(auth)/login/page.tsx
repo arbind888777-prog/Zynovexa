@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 import { getSupabaseAccessToken, isSupabaseEnabled, supabase } from '@/lib/supabase';
+import { getPublicApiBaseUrl, getPublicAuthRedirectUrl } from '@/lib/public-env';
 
 function getErrorMessage(err: any, fallback: string) {
   const apiMessage = err?.response?.data?.message;
@@ -87,10 +88,31 @@ export default function LoginPage() {
     }
     try {
       await login(email, password);
-
       toast.success('Welcome back! 🚀');
       routeAfterAuth();
     } catch (err: any) {
+      if (isSupabaseEnabled && supabase) {
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) {
+            throw error;
+          }
+
+          const accessToken = data.session?.access_token || await getSupabaseAccessToken();
+          if (!accessToken) {
+            throw new Error('Supabase session not found after login. Please try again.');
+          }
+
+          await exchangeSupabaseToken(accessToken);
+          toast.success('Welcome back!');
+          routeAfterAuth();
+          return;
+        } catch (supabaseErr: any) {
+          toast.error(getErrorMessage(supabaseErr, getErrorMessage(err, 'Login failed. Check your credentials.')));
+          return;
+        }
+      }
+
       toast.error(getErrorMessage(err, 'Login failed. Check your credentials.'));
     }
   };
@@ -98,8 +120,8 @@ export default function LoginPage() {
   const fillDemo = () => { setEmail('demo@zynovexa.com'); setPassword('demo123'); };
 
   const handleGoogleLogin = async () => {
-    const frontend = encodeURIComponent(window.location.origin);
-    const apiBase = (process.env.NEXT_PUBLIC_API_URL || `${window.location.origin}/api`).replace(/\/$/, '');
+    const frontend = encodeURIComponent(getPublicAuthRedirectUrl(''));
+    const apiBase = getPublicApiBaseUrl();
     window.location.href = `${apiBase}/auth/google?frontend=${frontend}`;
   };
 
@@ -166,9 +188,8 @@ export default function LoginPage() {
             <p className="text-slate-400 text-sm mt-1">Enter your credentials to continue</p>
           </div>
 
-          {/* Google */}
           <button onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 py-3 rounded-xl font-medium text-sm text-white mb-5 card card-hover transition-all active:scale-95">
+            className="w-full flex items-center justify-center gap-3 py-3 rounded-xl font-medium text-sm text-white mb-3 card card-hover transition-all active:scale-95">
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -177,6 +198,9 @@ export default function LoginPage() {
             </svg>
             Continue with Google
           </button>
+          <p className="mb-5 text-center text-[11px] text-slate-500">
+            Google sign-in secure external page par open hota hai, phir wapas app me aata hai.
+          </p>
 
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />

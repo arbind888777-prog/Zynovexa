@@ -18,7 +18,9 @@ const DEFAULT_ALLOWED_FRONTEND_ORIGINS = [
   'https://www.zynovexa.in',
 ];
 
-function toOrigin(urlValue: string): string | null {
+const LOCAL_FRONTEND_HOSTS = new Set(['localhost', '127.0.0.1']);
+
+function toOrigin(urlValue: string, allowLocalhost = true): string | null {
   try {
     const parsed = new URL(urlValue);
 
@@ -30,14 +32,36 @@ function toOrigin(urlValue: string): string | null {
       return null;
     }
 
+    if (!allowLocalhost && LOCAL_FRONTEND_HOSTS.has(parsed.hostname)) {
+      return null;
+    }
+
     return parsed.origin;
   } catch {
     return null;
   }
 }
 
+function shouldAllowLocalFrontend(fallback?: string | null): boolean {
+  if (process.env.NODE_ENV !== 'production') {
+    return true;
+  }
+
+  const fallbackOrigin = toOrigin(fallback || '', true);
+  if (!fallbackOrigin) {
+    return false;
+  }
+
+  try {
+    return LOCAL_FRONTEND_HOSTS.has(new URL(fallbackOrigin).hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function sanitizeFrontendUrl(candidate?: string | null, fallback = DEFAULT_FRONTEND_URL): string {
-  return toOrigin(candidate || '') || toOrigin(fallback) || DEFAULT_FRONTEND_URL;
+  const allowLocalhost = shouldAllowLocalFrontend(fallback);
+  return toOrigin(candidate || '', allowLocalhost) || toOrigin(fallback, true) || DEFAULT_FRONTEND_URL;
 }
 
 export function buildApiCallbackUrl(
@@ -61,7 +85,7 @@ export function buildApiCallbackUrl(
 
 export function getAllowedFrontendOrigins(configuredFrontendUrl?: string | null): string[] {
   const origins = new Set<string>(DEFAULT_ALLOWED_FRONTEND_ORIGINS);
-  const configuredOrigin = toOrigin(configuredFrontendUrl || '');
+  const configuredOrigin = toOrigin(configuredFrontendUrl || '', true);
 
   if (configuredOrigin) {
     origins.add(configuredOrigin);
@@ -88,7 +112,7 @@ export function decodeFrontendState(state?: string | string[] | null): string | 
 
   try {
     const decoded = JSON.parse(Buffer.from(stateValue, 'base64url').toString('utf8')) as { frontendUrl?: string };
-    return decoded.frontendUrl ? sanitizeFrontendUrl(decoded.frontendUrl) : undefined;
+    return decoded.frontendUrl ? sanitizeFrontendUrl(decoded.frontendUrl, process.env.FRONTEND_URL) : undefined;
   } catch {
     return undefined;
   }

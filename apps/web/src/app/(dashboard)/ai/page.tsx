@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 
-type Tool = 'caption' | 'hashtags' | 'script' | 'image' | 'chat' | 'besttime' | 'hook' | 'scorer';
+type Tool = 'caption' | 'hashtags' | 'script' | 'image' | 'video' | 'chat' | 'besttime' | 'hook' | 'scorer';
 const AI_STUDIO_TRANSFER_KEY = 'zynovexa.aiStudioDraft';
 const DEMO_TOKEN = 'demo-token-zynovexa';
 
@@ -34,11 +34,18 @@ const TOOLS = [
   { id: 'caption', icon: '✍️', name: 'Caption Writer', desc: 'Generate viral captions for any platform' },
   { id: 'hashtags', icon: '#️⃣', name: 'Hashtag Generator', desc: 'Find the best hashtags for your content' },
   { id: 'script', icon: '🎬', name: 'Video Script', desc: 'Write scripts for TikTok, YouTube, Reels' },
-  { id: 'image', icon: '🎨', name: 'Image Generator', desc: 'Create AI images with DALL-E 3' },
+  { id: 'image', icon: '🎨', name: 'Image Generator', desc: 'Create AI images with Google Nano Banana' },
+  { id: 'video', icon: '🎥', name: 'Video Generator', desc: 'Create short AI videos with Google Veo 3.1' },
   { id: 'chat', icon: '💬', name: 'Zyx Chatbot', desc: 'Your 24/7 creator growth advisor' },
   { id: 'besttime', icon: '⏰', name: 'Best Time to Post', desc: 'AI-powered posting schedule optimizer' },
   { id: 'hook', icon: '🎯', name: 'Hook Generator', desc: 'Platform-specific hooks that stop the scroll' },
   { id: 'scorer', icon: '📊', name: 'Content Scorer', desc: 'Score your content for viral & engagement potential' },
+] as const;
+
+const PROVIDER_BADGES = [
+  { label: 'Text', tone: 'text-cyan-200 border-cyan-500/30 bg-cyan-500/10' },
+  { label: 'Images', tone: 'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-500/10' },
+  { label: 'Video', tone: 'text-emerald-200 border-emerald-500/30 bg-emerald-500/10' },
 ] as const;
 
 const PLATFORM_MAP: Record<string, string> = {
@@ -52,6 +59,72 @@ const PLATFORM_MAP: Record<string, string> = {
   snapchat: 'SNAPCHAT',
   shorts: 'YOUTUBE',
 };
+
+function buildDemoToolPrompt(activeTool: Tool, fields: {
+  description: string;
+  niche: string;
+  tone: string;
+  platforms: string;
+  topic: string;
+  duration: string;
+  content: string;
+  prompt: string;
+  platform: string;
+  timezone: string;
+  language: string;
+  brandVoice: string;
+}) {
+  const voice = fields.brandVoice ? `Brand voice: ${fields.brandVoice}.` : '';
+  const language = fields.language || 'English';
+  const platforms = fields.platforms || fields.platform || 'social media';
+
+  switch (activeTool) {
+    case 'caption':
+      return `Generate 3 high-quality ${fields.tone} social captions in ${language} for ${platforms}. Niche: ${fields.niche || 'general'}. Description: ${fields.description}. Include emojis and hashtags. ${voice}`.trim();
+    case 'hashtags':
+      return `Generate 25 relevant hashtags in ${language} for this content: ${fields.content}. Niche: ${fields.niche || 'general'}. Platforms: ${platforms}. Return hashtags only in a clean list. ${voice}`.trim();
+    case 'script':
+      return `Write a ${fields.duration || '60'} second ${fields.platform || 'short-form'} video script in ${language}. Topic: ${fields.topic}. Niche: ${fields.niche || 'general'}. Tone: ${fields.tone}. Include hook, sections, CTA, and simple visual notes. ${voice}`.trim();
+    case 'besttime':
+      return `Suggest the best posting times in JSON-like bullet format for platform ${fields.platform || 'all'} in timezone ${fields.timezone || 'UTC'}. Niche: ${fields.niche || 'general'}. Include top days and brief reasoning.`;
+    case 'hook':
+      return `Generate 5 scroll-stopping hooks in ${language} for ${fields.platform || 'instagram'}. Topic: ${fields.topic || fields.description}. Niche: ${fields.niche || 'general'}. Tone: ${fields.tone}. Return a numbered list only. ${voice}`.trim();
+    default:
+      return '';
+  }
+}
+
+function normalizeDemoToolResult(activeTool: Tool, reply: string) {
+  if (activeTool === 'hashtags') {
+    const hashtags = reply
+      .split(/\s|,|\n/)
+      .map((tag) => tag.trim())
+      .filter((tag) => /^#/.test(tag));
+    return { hashtags: hashtags.length ? hashtags : [reply] };
+  }
+
+  if (activeTool === 'caption') {
+    const captions = reply
+      .split(/\n\s*\n|\n(?=\d+[\).\s])|\n(?=- )/)
+      .map((item) => item.replace(/^\d+[\).\s-]*/, '').trim())
+      .filter(Boolean);
+    return { captions: captions.length ? captions : [reply] };
+  }
+
+  if (activeTool === 'script') {
+    return { script: reply };
+  }
+
+  if (activeTool === 'besttime') {
+    return { insights: reply, bestTimes: [] };
+  }
+
+  if (activeTool === 'hook') {
+    return { hookContent: reply, hookScore: null };
+  }
+
+  return { reply };
+}
 
 function normalizePlatforms(values: string[]) {
   return values
@@ -84,13 +157,18 @@ function nextDateForDayTime(day: string, time: string) {
 export default function AIStudioPage() {
   const router = useRouter();
   const { accessToken } = useAuthStore();
+  const isDemoSession = accessToken === DEMO_TOKEN;
   const [activeTool, setActiveTool] = useState<Tool>('caption');
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<{ role: string; content: string }[]>([]);
   const [chatMsg, setChatMsg] = useState('');
 
-  const { data: usage } = useQuery({ queryKey: ['ai-usage'], queryFn: () => aiApi.getUsage().then(unwrapApiResponse) });
+  const { data: usage } = useQuery({
+    queryKey: ['ai-usage'],
+    queryFn: () => aiApi.getUsage().then(unwrapApiResponse),
+    enabled: !isDemoSession,
+  });
 
   const [fields, setFields] = useState({
     description: '',
@@ -105,6 +183,8 @@ export default function AIStudioPage() {
     timezone: 'UTC',
     language: 'English',
     brandVoice: '',
+    videoAspectRatio: '16:9',
+    videoDuration: '6',
   });
   const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setFields(p => ({ ...p, [k]: e.target.value }));
 
@@ -118,12 +198,42 @@ export default function AIStudioPage() {
   const runTool = async () => {
     setLoading(true); setResult(null);
     try {
+      if (isDemoSession) {
+        if (activeTool === 'image' || activeTool === 'video') {
+          toast.error('Demo session me media generation available nahi hai. Real account se login karke try karo.');
+          return;
+        }
+
+        if (activeTool === 'scorer') {
+          const res = await aiEngineApi.scoreContent({ content: fields.content, platform: fields.platform || 'instagram' });
+          setResult(unwrapApiResponse(res));
+          return;
+        }
+
+        const prompt = buildDemoToolPrompt(activeTool, fields);
+        if (!prompt) {
+          toast.error('Yeh AI tool demo mode me abhi supported nahi hai.');
+          return;
+        }
+
+        const res = await aiApi.publicChat({
+          message: prompt,
+          history: [],
+          language: fields.language,
+          brandVoice: fields.brandVoice,
+        });
+        const payload = unwrapApiResponse<{ reply: string }>(res);
+        setResult(normalizeDemoToolResult(activeTool, payload.reply));
+        return;
+      }
+
       let res: any;
       const plats = fields.platforms.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
       if (activeTool === 'caption') res = await aiApi.generateCaption({ description: fields.description, niche: fields.niche, tone: fields.tone, platforms: plats, includeHashtags: true, includeEmojis: true, language: fields.language, brandVoice: fields.brandVoice });
       else if (activeTool === 'hashtags') res = await aiApi.generateHashtags({ content: fields.content, niche: fields.niche, language: fields.language, platforms: plats });
       else if (activeTool === 'script') res = await aiApi.generateScript({ topic: fields.topic, platform: fields.platform, durationSeconds: parseInt(fields.duration), niche: fields.niche, language: fields.language, brandVoice: fields.brandVoice });
       else if (activeTool === 'image') res = await aiApi.generateImage({ prompt: fields.prompt });
+      else if (activeTool === 'video') res = await aiApi.generateVideo({ prompt: fields.prompt, aspectRatio: fields.videoAspectRatio, durationSeconds: parseInt(fields.videoDuration, 10) });
       else if (activeTool === 'besttime') res = await aiApi.getBestTimes({ platform: fields.platform, niche: fields.niche, timezone: fields.timezone });
       else if (activeTool === 'hook') {
         res = await aiEngineApi.generate({ niche: fields.niche || 'general', platform: fields.platform || 'instagram', tone: fields.tone, audience: 'general', contentType: 'hook', topic: fields.topic || fields.description });
@@ -215,18 +325,28 @@ export default function AIStudioPage() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Creator Intelligence</p>
           <h1 className="mt-2 text-2xl font-bold text-white">🤖 AI Studio</h1>
-          <p className="mt-2 text-sm text-gray-400">Powered by Gemini AI for captions, scripts, hashtags, scheduling signals aur creator support.</p>
+          <p className="mt-2 text-sm text-gray-400">Captions, tags, scripts, images, videos aur chat ke liye ek focused workspace.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {PROVIDER_BADGES.map((badge) => (
+              <span
+                key={badge.label}
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium ${badge.tone}`}
+              >
+                <span>{badge.label}</span>
+              </span>
+            ))}
+          </div>
         </div>
         {usage && (
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
             <p className="text-sm text-gray-400">AI Usage: <span className="text-white font-mono">{usage.used} / {usage.limit ?? '∞'}</span></p>
-            <p className="text-xs text-purple-400">{usage.plan}</p>
+            <p className="text-xs text-purple-400">{usage.plan === 'DEV' ? 'Local mode' : usage.plan}</p>
           </div>
         )}
       </div>
 
       {/* Tool Grid */}
-      <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
+      <div className="grid grid-cols-3 lg:grid-cols-9 gap-3 mb-8">
         {TOOLS.map(t => (
           <button key={t.id} onClick={() => { setActiveTool(t.id as Tool); setResult(null); }}
             className={`dashboard-tab p-4 text-center transition-all hover:scale-[1.02] ${activeTool === t.id ? 'dashboard-tab-active glow text-white' : 'text-gray-400 hover:text-white'}`}>
@@ -302,6 +422,11 @@ export default function AIStudioPage() {
               </>}
               {activeTool === 'image' && <>
                 <div><label className="block text-xs text-gray-400 mb-1">Image Prompt *</label><textarea value={fields.prompt} onChange={f('prompt')} rows={4} placeholder="A stunning sunset over mountains, professional photography, cinematic..." className={inputClass + ' resize-none'} style={inputStyle} /></div>
+              </>}
+              {activeTool === 'video' && <>
+                <div><label className="block text-xs text-gray-400 mb-1">Video Prompt *</label><textarea value={fields.prompt} onChange={f('prompt')} rows={4} placeholder="Cinematic product ad, smooth camera motion, realistic lighting, synced ambience..." className={inputClass + ' resize-none'} style={inputStyle} /></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Aspect Ratio</label><select value={fields.videoAspectRatio} onChange={f('videoAspectRatio') as any} className={inputClass} style={inputStyle}>{['16:9', '9:16'].map((ratio) => <option key={ratio}>{ratio}</option>)}</select></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Duration</label><select value={fields.videoDuration} onChange={f('videoDuration') as any} className={inputClass} style={inputStyle}>{['4', '6', '8'].map((duration) => <option key={duration} value={duration}>{duration} seconds</option>)}</select></div>
               </>}
               {activeTool === 'besttime' && <>
                 <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['', 'instagram', 'tiktok', 'youtube', 'twitter', 'linkedin'].map(p => <option key={p} value={p}>{p || 'All platforms'}</option>)}</select></div>
@@ -430,6 +555,31 @@ export default function AIStudioPage() {
                       Use this result
                     </button>
                   </div>
+                </div>
+              )}
+              {activeTool === 'video' && result.operationName && (
+                <div className="space-y-3">
+                  <div className="dashboard-surface-muted p-4">
+                    <p className="text-xs text-emerald-300 font-medium mb-2">Veo 3.1 job started</p>
+                    <p className="text-xs text-slate-400 break-all">{result.operationName}</p>
+                    {result.videoUrl && (
+                      <video controls className="mt-3 w-full rounded-xl" src={result.videoUrl} />
+                    )}
+                  </div>
+                  {result.videoUrl && (
+                    <button
+                      onClick={() => sendToCreatePost({
+                        title: fields.prompt.slice(0, 80),
+                        caption: fields.prompt,
+                        videoUrl: result.videoUrl,
+                        platforms: normalizePlatforms([]),
+                        mediaType: 'VIDEO',
+                      }, 'AI video Create Post me bhej diya gaya.')}
+                      className="text-sm text-emerald-400 hover:text-emerald-300 font-medium"
+                    >
+                      Use this result
+                    </button>
+                  )}
                 </div>
               )}
               {activeTool === 'besttime' && result.bestTimes && (

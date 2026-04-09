@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { aiApi } from '@/lib/api';
+import { aiApi, unwrapApiResponse } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 
 interface Message {
@@ -38,6 +38,23 @@ function getChatErrorMessage(error: any) {
   return "I'm having trouble connecting right now. Please try again in a moment!";
 }
 
+function collectVisibleScreenContext() {
+  if (typeof document === 'undefined') return '';
+
+  const pageTitle = document.title || 'Untitled page';
+  const pageUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const pageText = (document.body?.innerText || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 2500);
+
+  return `Visible screen context:
+Page: ${pageTitle}
+URL: ${pageUrl}
+Visible text snapshot:
+${pageText}`;
+}
+
 export default function AiChatbot() {
   const { isAuthenticated, accessToken, _hydrated } = useAuthStore();
   const [open, setOpen] = useState(false);
@@ -51,10 +68,18 @@ export default function AiChatbot() {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [screenContextEnabled, setScreenContextEnabled] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isDemoSession = accessToken === DEMO_TOKEN;
-  const useGuestMode = _hydrated && (!isAuthenticated || isDemoSession);
+  const hasUsableAuthToken = Boolean(accessToken && accessToken !== DEMO_TOKEN && accessToken !== 'undefined' && accessToken !== 'null');
+  const useGuestMode = !isAuthenticated || isDemoSession || !hasUsableAuthToken;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem('zynovexa-chat-screen-context') === 'true';
+    setScreenContextEnabled(saved);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -71,12 +96,18 @@ export default function AiChatbot() {
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isTyping) return;
 
-    if (!_hydrated) return;
+    const trimmedText = text.trim();
+    const finalMessage = screenContextEnabled
+      ? `${trimmedText}
+
+[User granted screen/context assist]
+${collectVisibleScreenContext()}`
+      : trimmedText;
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: text.trim(),
+      content: trimmedText,
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMsg]);
@@ -84,10 +115,19 @@ export default function AiChatbot() {
     setIsTyping(true);
 
     try {
+      const history = messages
+        .filter((message) => message.id !== 'welcome')
+        .slice(-8)
+        .map((message) => ({
+          role: message.role,
+          content: message.content,
+        }));
+
       const res = await (useGuestMode
-        ? aiApi.publicChat({ message: text.trim() })
-        : aiApi.chat({ message: text.trim() }));
-      const reply = res.data?.reply || res.data?.message || "Sorry, I couldn't process that. Try again!";
+        ? aiApi.publicChat({ message: finalMessage, history })
+        : aiApi.chat({ message: finalMessage, history }));
+      const payload = unwrapApiResponse<{ reply?: string; message?: string }>(res);
+      const reply = payload?.reply || payload?.message || "Sorry, I couldn't process that. Try again!";
       setMessages(prev => [
         ...prev,
         { id: (Date.now() + 1).toString(), role: 'assistant', content: reply, timestamp: new Date() },
@@ -106,7 +146,15 @@ export default function AiChatbot() {
     } finally {
       setIsTyping(false);
     }
-  }, [_hydrated, isTyping, useGuestMode]);
+  }, [isTyping, messages, screenContextEnabled, useGuestMode]);
+
+  const toggleScreenContext = () => {
+    const next = !screenContextEnabled;
+    setScreenContextEnabled(next);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('zynovexa-chat-screen-context', String(next));
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,9 +211,26 @@ export default function AiChatbot() {
               <h3 className="text-sm font-bold" style={{ color: 'var(--text, #e2e8f0)' }}>Zyx AI Assistant</h3>
               <p className="text-xs" style={{ color: 'var(--text3, #64748b)' }}>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-1" />
-                {useGuestMode ? 'Guest mode' : 'Always online'}
+                {!_hydrated ? 'Connecting...' : useGuestMode ? 'Guest mode' : 'Always online'}
               </p>
             </div>
+            <button
+              type="button"
+              onClick={toggleScreenContext}
+              className="p-2 rounded-lg transition-colors hover:bg-white/10 touch-manipulation"
+              style={{
+                color: screenContextEnabled ? '#c4b5fd' : 'var(--text3)',
+                border: screenContextEnabled ? '1px solid rgba(168,85,247,0.35)' : '1px solid transparent',
+                background: screenContextEnabled ? 'rgba(168,85,247,0.12)' : 'transparent',
+              }}
+              aria-label={screenContextEnabled ? 'Disable screen context permission' : 'Enable screen context permission'}
+              title={screenContextEnabled ? 'Screen/context assist enabled' : 'Allow chat to read visible page text'}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 9.75h4.5v4.5h-4.5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.5 7.5A3 3 0 017.5 4.5h9a3 3 0 013 3v9a3 3 0 01-3 3h-9a3 3 0 01-3-3v-9z" />
+              </svg>
+            </button>
             <button type="button" onClick={() => setOpen(false)} className="p-1.5 rounded-lg transition-colors hover:bg-white/10 touch-manipulation" style={{ color: 'var(--text3)' }} aria-label="Close chat">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -223,6 +288,21 @@ export default function AiChatbot() {
             </div>
           )}
 
+          <div className="px-4 pb-2">
+            <div
+              className="rounded-xl px-3 py-2 text-[11px]"
+              style={{
+                background: screenContextEnabled ? 'rgba(168,85,247,0.1)' : 'rgba(255,255,255,0.04)',
+                border: screenContextEnabled ? '1px solid rgba(168,85,247,0.25)' : '1px solid rgba(255,255,255,0.06)',
+                color: screenContextEnabled ? '#ddd6fe' : 'var(--text3, #64748b)',
+              }}
+            >
+              {screenContextEnabled
+                ? 'Permission on: chat visible page text padh kar better help de sakta hai.'
+                : 'Permission off: chat sirf tumhare message ke basis par reply karega.'}
+            </div>
+          </div>
+
           {/* Input */}
           <form onSubmit={handleSubmit} className="px-4 py-3 flex gap-2" style={{ borderTop: '1px solid var(--border)' }}>
             <input
@@ -241,13 +321,14 @@ export default function AiChatbot() {
             <button
               type="submit"
               disabled={!input.trim() || isTyping}
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white transition-all disabled:opacity-40 hover:scale-105 active:scale-95 shrink-0"
+              className="min-w-[52px] h-10 rounded-xl flex items-center justify-center gap-1.5 px-3 text-white transition-all disabled:opacity-40 hover:scale-105 active:scale-95 shrink-0"
               style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}
               aria-label="Send message"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
+              <span className="text-xs font-semibold">Send</span>
             </button>
           </form>
         </div>
