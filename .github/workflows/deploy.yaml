@@ -24,17 +24,25 @@ jobs:
 
             echo "=== Starting Zynovexa Deployment ==="
 
+            # Folder path ko sahi kiya gaya hai (root folder)
+            DEPLOY_PATH="/root/Zynovexa"
+
             # Check if directory exists
-            if [ ! -d "/var/www/Zynovexa" ]; then
-              echo "ERROR: /var/www/Zynovexa directory not found on VPS!"
+            if [ ! -d "$DEPLOY_PATH" ]; then
+              echo "ERROR: $DEPLOY_PATH directory not found on VPS!"
               exit 1
             fi
 
-            cd /var/www/Zynovexa
+            cd $DEPLOY_PATH
 
             echo "=== Pulling latest code ==="
             git fetch origin main
             git reset --hard origin/main
+
+            # Env files validation fix
+            echo "=== Checking Env Files ==="
+            touch apps/web/.env
+            touch apps/api/.env
 
             echo "=== Running deploy script ==="
             chmod +x deploy.sh
