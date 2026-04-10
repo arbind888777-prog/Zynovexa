@@ -37,17 +37,24 @@ jobs:
             git reset --hard origin/main
 
             echo "=== Fixing Database & Dependencies ==="
-            # Yarn error se bachne ke liye npm ka use
             cd apps/api
             touch .env
+            
+            # Installing dependencies with npm to avoid yarn errors
             npm install
-            npx prisma migrate resolve --applied 20260303083532_init || echo "Migration already handled"
+            
+            # Forcefully resolving the migrations that are causing conflicts
+            npx prisma migrate resolve --applied 20260303083532_init || echo "Migration 1 skip"
+            npx prisma migrate resolve --applied 20260306034710_add_brand_deals_media_jobs_video_seo || echo "Migration 2 skip"
+            
+            # Generating Prisma Client
             npx prisma generate
 
             echo "=== Building & Restarting Services ==="
             cd $DEPLOY_PATH
             chmod +x deploy.sh
-            # Script ko bina yarn ke chalane ki koshish
-            ./deploy.sh --branch=main || (npm install && ./deploy.sh --branch=main)
+            
+            # Running the main deployment script
+            ./deploy.sh --branch=main
 
             echo "=== Deployment Successfully Completed ==="
