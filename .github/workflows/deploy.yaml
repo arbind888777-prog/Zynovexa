@@ -44,8 +44,11 @@ jobs:
             touch apps/web/.env
             touch apps/api/.env
 
+          echo "=== Fixing Database Migration ==="
+            cd apps/api
+            npx prisma migrate resolve --applied 20260303083532_init || echo "Migration already applied"
+            
             echo "=== Running deploy script ==="
+            cd /root/Zynovexa
             chmod +x deploy.sh
-            ./deploy.sh --branch=main --force
-
-            echo "=== Deployment complete ==="
+            ./deploy.sh --branch=main
