@@ -40,14 +40,13 @@ jobs:
             cd apps/api
             touch .env
             
-            # Installing dependencies with npm to avoid yarn errors
             npm install
             
-            # Forcefully resolving the migrations that are causing conflicts
+            # Jo migrations conflict kar rahi hain unhe force-resolve kar rahe hain
             npx prisma migrate resolve --applied 20260303083532_init || echo "Migration 1 skip"
             npx prisma migrate resolve --applied 20260306034710_add_brand_deals_media_jobs_video_seo || echo "Migration 2 skip"
+            npx prisma migrate resolve --applied 20260309090000_add_commerce || echo "Migration 3 skip"
             
-            # Generating Prisma Client
             npx prisma generate
 
             echo "=== Building & Restarting Services ==="
