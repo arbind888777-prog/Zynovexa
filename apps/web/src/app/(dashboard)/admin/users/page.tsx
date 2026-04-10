@@ -5,6 +5,8 @@ import { usersApi, unwrapApiResponse } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
+export const dynamic = 'force-dynamic';
+
 type AdminUserRow = {
   id: string;
   email: string;
