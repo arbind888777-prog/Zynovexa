@@ -46,6 +46,6 @@ jobs:
 
             echo "=== Running deploy script ==="
             chmod +x deploy.sh
-            ./deploy.sh --branch=main
+            ./deploy.sh --branch=main --force
 
             echo "=== Deployment complete ==="
