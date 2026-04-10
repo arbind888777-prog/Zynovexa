@@ -23,32 +23,31 @@ jobs:
             set -e
 
             echo "=== Starting Zynovexa Deployment ==="
-
-            # Folder path ko sahi kiya gaya hai (root folder)
             DEPLOY_PATH="/root/Zynovexa"
 
-            # Check if directory exists
             if [ ! -d "$DEPLOY_PATH" ]; then
-              echo "ERROR: $DEPLOY_PATH directory not found on VPS!"
+              echo "ERROR: $DEPLOY_PATH folder not found!"
               exit 1
             fi
 
             cd $DEPLOY_PATH
 
-            echo "=== Pulling latest code ==="
+            echo "=== Syncing Code ==="
             git fetch origin main
             git reset --hard origin/main
 
-            # Env files validation fix
-            echo "=== Checking Env Files ==="
-            touch apps/web/.env
-            touch apps/api/.env
-
-          echo "=== Fixing Database Migration ==="
+            echo "=== Fixing Database & Dependencies ==="
+            # Yarn error se bachne ke liye npm ka use
             cd apps/api
-            npx prisma migrate resolve --applied 20260303083532_init || echo "Migration already applied"
-            
-            echo "=== Running deploy script ==="
-            cd /root/Zynovexa
+            touch .env
+            npm install
+            npx prisma migrate resolve --applied 20260303083532_init || echo "Migration already handled"
+            npx prisma generate
+
+            echo "=== Building & Restarting Services ==="
+            cd $DEPLOY_PATH
             chmod +x deploy.sh
-            ./deploy.sh --branch=main
+            # Script ko bina yarn ke chalane ki koshish
+            ./deploy.sh --branch=main || (npm install && ./deploy.sh --branch=main)
+
+            echo "=== Deployment Successfully Completed ==="
