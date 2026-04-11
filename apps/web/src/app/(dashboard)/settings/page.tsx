@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi, subscriptionsApi, unwrapApiData, unwrapApiResponse } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 type Tab = 'profile' | 'billing' | 'security';
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const qc = useQueryClient();
   const { user, setUser } = useAuthStore();
   const router = useRouter();
@@ -334,5 +334,13 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="dashboard-content-shell animate-fade-in" />}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api, commerceApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -19,7 +19,7 @@ interface Product {
   creator?: { name: string };
 }
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -199,5 +199,13 @@ export default function CheckoutPage() {
       {/* Razorpay SDK */}
       <script src="https://checkout.razorpay.com/v1/checkout.js" async />
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen hero-bg" />}>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }

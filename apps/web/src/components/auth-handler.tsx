@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { supabase, isSupabaseEnabled, getSupabaseAccessToken } from '@/lib/supabase';
@@ -26,7 +26,7 @@ import { supabase, isSupabaseEnabled, getSupabaseAccessToken } from '@/lib/supab
  *
  * Auth pages (/login, /signup) are excluded to avoid redirect loops.
  */
-export default function AuthHandler() {
+function AuthHandlerContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -91,4 +91,12 @@ export default function AuthHandler() {
   }, [isAuthenticated, pathname, router, searchParams]);
 
   return null;
+}
+
+export default function AuthHandler() {
+  return (
+    <Suspense fallback={null}>
+      <AuthHandlerContent />
+    </Suspense>
+  );
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { postsApi, aiApi, uploadsApi, accountsApi, commerceApi, unwrapApiResponse } from '@/lib/api';
 import MediaUploader from '@/components/MediaUploader';
@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Platform, MediaType } from '@/types';
 import { useAuthStore } from '@/stores/auth.store';
 
-const PLATFORMS: Platform[] = ['INSTAGRAM', 'YOUTUBE', 'TIKTOK', 'TWITTER', 'LINKEDIN', 'FACEBOOK', 'SNAPCHAT'];
+const PLATFORMS: Platform[] = ['INSTAGRAM', 'YOUTUBE', 'TWITTER', 'LINKEDIN', 'FACEBOOK', 'SNAPCHAT'];
 const MEDIA_TYPES: MediaType[] = ['TEXT', 'IMAGE', 'VIDEO'];
 const VIDEO_STUDIO_TRANSFER_KEY = 'zynovexa.videoStudioDraft';
 const AI_STUDIO_TRANSFER_KEY = 'zynovexa.aiStudioDraft';
@@ -76,7 +76,6 @@ function normalizeCreateDemoResult(aiTab: 'caption' | 'hashtags' | 'tags' | 'ima
 const HASHTAG_LIMITS: Record<Platform, number> = {
   INSTAGRAM: 30,
   YOUTUBE: 15,
-  TIKTOK: 10,
   TWITTER: 3,
   LINKEDIN: 10,
   FACEBOOK: 15,
@@ -95,12 +94,6 @@ const PLATFORM_META: Record<Platform, { label: string; color: string; gradient: 
     color: '#FF0000',
     gradient: 'linear-gradient(45deg, #FF0000, #cc0000)',
     path: 'M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z',
-  },
-  TIKTOK: {
-    label: 'TikTok',
-    color: '#00f2ea',
-    gradient: 'linear-gradient(45deg, #00f2ea, #ff0050)',
-    path: 'M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z',
   },
   TWITTER: {
     label: 'X',
@@ -181,7 +174,7 @@ function isYoutubeManualRequired(post: any) {
   return Boolean(post?.publishResults?.YOUTUBE?.manualRequired && post?.publishResults?.YOUTUBE?.mode === 'youtube-manual');
 }
 
-export default function CreatePostPage() {
+function CreatePostPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { accessToken } = useAuthStore();
@@ -692,7 +685,7 @@ export default function CreatePostPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-white">Video banana hai? Video Studio use karo.</p>
-                  <p className="text-xs text-slate-400 mt-1">Reels, Shorts, TikTok formats, duration guides aur future editing tools ke liye advanced workflow wahan hai.</p>
+                  <p className="text-xs text-slate-400 mt-1">Reels, Shorts, duration guides aur future editing tools ke liye advanced workflow wahan hai.</p>
                 </div>
                 <button
                   type="button"
@@ -762,7 +755,7 @@ export default function CreatePostPage() {
             <h2 className="font-semibold text-white mb-2">🎥 Advanced Video Flow</h2>
             <p className="text-sm text-slate-400">Video Studio me format choose karo, AI script banao, phir final video ko yahan quick scheduling ke liye bhejo.</p>
             <div className="mt-4 space-y-2 text-xs text-slate-400">
-              <div className="dashboard-surface-muted px-3 py-2">1. Reel / Short / TikTok format choose karo</div>
+              <div className="dashboard-surface-muted px-3 py-2">1. Reel / Short format choose karo</div>
               <div className="dashboard-surface-muted px-3 py-2">2. Script aur caption generate karo</div>
               <div className="dashboard-surface-muted px-3 py-2">3. Send to Create Post karke schedule karo</div>
             </div>
@@ -880,5 +873,13 @@ export default function CreatePostPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreatePostPage() {
+  return (
+    <Suspense fallback={<div className="dashboard-content-shell animate-fade-in" />}>
+      <CreatePostPageContent />
+    </Suspense>
   );
 }
