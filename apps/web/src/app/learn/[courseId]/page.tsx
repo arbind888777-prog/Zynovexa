@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { commerceApi, unwrapApiResponse } from '@/lib/api';
 import Link from 'next/link';
@@ -44,7 +44,7 @@ interface Enrollment {
   lessonProgress: LessonProgress[];
 }
 
-export default function LearnCoursePage() {
+function LearnCoursePageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -375,5 +375,13 @@ export default function LearnCoursePage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function LearnCoursePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" />}>
+      <LearnCoursePageContent />
+    </Suspense>
   );
 }

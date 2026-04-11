@@ -1,6 +1,6 @@
 export type Plan = 'FREE' | 'STARTER' | 'PRO' | 'GROWTH' | 'BUSINESS';
 export type Role = 'USER' | 'ADMIN';
-export type Platform = 'INSTAGRAM' | 'YOUTUBE' | 'TIKTOK' | 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'SNAPCHAT';
+export type Platform = 'INSTAGRAM' | 'YOUTUBE' | 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'SNAPCHAT';
 export type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'FAILED';
 export type MediaType = 'IMAGE' | 'VIDEO' | 'CAROUSEL' | 'TEXT' | 'STORY' | 'REEL' | 'SHORT';
 

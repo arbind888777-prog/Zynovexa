@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
@@ -22,7 +22,7 @@ const LEFT_FEATURES = [
   { icon: '🚀', text: 'Viral score predictions' },
 ];
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, demoLogin, exchangeSupabaseToken, isAuthenticated, isLoading } = useAuthStore();
@@ -247,5 +247,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen hero-bg" />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

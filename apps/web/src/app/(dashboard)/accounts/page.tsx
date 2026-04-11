@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { accountsApi, integrationsApi, videoAnalyticsApi, unwrapApiResponse } from '@/lib/api';
@@ -20,7 +20,6 @@ type PlatformMeta = {
 const PLATFORM_META: Record<Platform, PlatformMeta> = {
   YOUTUBE:   { icon: '▶️',  color: '#ff0000', label: 'YouTube',    oauthSupported: true },
   INSTAGRAM: { icon: '📸',  color: '#e1306c', label: 'Instagram',  oauthSupported: true },
-  TIKTOK:    { icon: '🎵',  color: '#69c9d0', label: 'TikTok',     oauthSupported: false, comingSoon: true },
   TWITTER:   { icon: '𝕏',  color: '#1da1f2', label: 'X / Twitter', oauthSupported: false, comingSoon: true },
   LINKEDIN:  { icon: '💼',  color: '#0077b5', label: 'LinkedIn',   oauthSupported: false, comingSoon: true },
   FACEBOOK:  { icon: '👤',  color: '#1877f2', label: 'Facebook',   oauthSupported: true },
@@ -37,7 +36,6 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   youtube_failed:  'YouTube connection failed. Check your Google account permissions and retry.',
   instagram_failed: 'Instagram direct OAuth is not enabled here. Use the configured token flow instead.',
   linkedin_failed: 'LinkedIn direct OAuth connect is not available yet.',
-  tiktok_failed: 'TikTok direct OAuth connect is not available yet.',
   twitter_failed:  'X / Twitter connection failed. Verify app settings and callback URL, then try again.',
   twitter_unavailable: 'X / Twitter direct connection is not available yet.',
   snapchat_failed: 'Snapchat direct OAuth connect is not available yet.',
@@ -55,7 +53,7 @@ type IntegrationPlatformCapability = {
 };
 
 // ── Main Page ──────────────────────────────────────────────────
-export default function AccountsPage() {
+function AccountsPageContent() {
   const qc = useQueryClient();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -310,7 +308,7 @@ export default function AccountsPage() {
               <div key={item.id} className="dashboard-surface p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-xl">
-                    {item.payload?.platform === 'INSTAGRAM' ? '📸' : item.payload?.platform === 'YOUTUBE' ? '▶️' : item.payload?.platform === 'TIKTOK' ? '🎵' : item.payload?.platform === 'LINKEDIN' ? '💼' : item.payload?.platform === 'TWITTER' ? '🐦' : '📄'}
+                    {item.payload?.platform === 'INSTAGRAM' ? '📸' : item.payload?.platform === 'YOUTUBE' ? '▶️' : item.payload?.platform === 'LINKEDIN' ? '💼' : item.payload?.platform === 'TWITTER' ? '🐦' : '📄'}
                   </span>
                   <div>
                     <p className="text-sm text-white font-medium">{item.payload?.platform || 'Unknown'} — Post</p>
@@ -1180,5 +1178,13 @@ export default function AccountsPage() {
         onCancel={() => setDisconnectTarget(null)}
       />
     </div>
+  );
+}
+
+export default function AccountsPage() {
+  return (
+    <Suspense fallback={<div className="dashboard-content-shell animate-fade-in" />}>
+      <AccountsPageContent />
+    </Suspense>
   );
 }

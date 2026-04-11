@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi, unwrapApiResponse } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import Link from 'next/link';
 
-export default function MagicLoginPage() {
+function MagicLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -85,5 +85,13 @@ export default function MagicLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MagicLoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen hero-bg" />}>
+      <MagicLoginContent />
+    </Suspense>
   );
 }

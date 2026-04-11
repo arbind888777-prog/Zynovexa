@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth.store';
@@ -9,7 +9,7 @@ import { getSupabaseAccessToken, isSupabaseEnabled } from '@/lib/supabase';
 
 type ConfirmState = 'pending' | 'verifying' | 'success' | 'error';
 
-export default function ConfirmPage() {
+function ConfirmPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const { exchangeSupabaseToken } = useAuthStore();
@@ -109,5 +109,13 @@ export default function ConfirmPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ConfirmPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen hero-bg" />}>
+      <ConfirmPageContent />
+    </Suspense>
   );
 }
