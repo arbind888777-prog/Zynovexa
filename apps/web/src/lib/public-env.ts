@@ -2,6 +2,13 @@ function trimTrailingSlash(value: string) {
   return value.replace(/\/$/, '');
 }
 
+const HOSTED_FRONTEND_HOSTS = new Set([
+  'zynovexa.com',
+  'www.zynovexa.com',
+  'zynovexa.in',
+  'www.zynovexa.in',
+]);
+
 function isLocalOrigin(value: string | null): boolean {
   if (!value) {
     return false;
@@ -12,6 +19,37 @@ function isLocalOrigin(value: string | null): boolean {
     return hostname === 'localhost' || hostname === '127.0.0.1';
   } catch {
     return false;
+  }
+}
+
+function isHostedFrontendOrigin(value: string | null): boolean {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    const { hostname } = new URL(value);
+    return HOSTED_FRONTEND_HOSTS.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
+function shouldUseSameOriginApi(envUrl: string | undefined, browserOrigin: string | null): boolean {
+  if (!browserOrigin || !isHostedFrontendOrigin(browserOrigin)) {
+    return false;
+  }
+
+  if (!envUrl) {
+    return true;
+  }
+
+  try {
+    const envHostname = new URL(envUrl).hostname;
+    const browserHostname = new URL(browserOrigin).hostname;
+    return envHostname === `api.${browserHostname}` || HOSTED_FRONTEND_HOSTS.has(envHostname);
+  } catch {
+    return true;
   }
 }
 
@@ -26,6 +64,10 @@ function getBrowserOrigin(): string | null {
 export function getPublicApiBaseUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
   const browserOrigin = getBrowserOrigin();
+
+  if (shouldUseSameOriginApi(envUrl, browserOrigin)) {
+    return trimTrailingSlash(`${browserOrigin}/api`);
+  }
 
   if (envUrl) {
     return trimTrailingSlash(envUrl);
