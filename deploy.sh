@@ -47,6 +47,14 @@ run_step() {
   "$@"
 }
 
+pm2_delete_if_exists() {
+  local app_name=$1
+  if pm2 describe "$app_name" >/dev/null 2>&1; then
+    log "Removing stale PM2 app registration: $app_name"
+    pm2 delete "$app_name" >/dev/null 2>&1 || warn "Failed to delete PM2 app $app_name, continuing with fresh start"
+  fi
+}
+
 health_check() {
   if command -v curl >/dev/null 2>&1; then
     curl -fsS http://127.0.0.1:4000/api/health >/dev/null && ok "API health check passed" || warn "API health check failed"
@@ -117,11 +125,9 @@ else
   warn "Skipping application builds"
 fi
 
-if pm2 describe zynovexa-api >/dev/null 2>&1; then
-  run_step "Restarting PM2 processes" pm2 restart ecosystem.config.cjs --env production
-else
-  run_step "Starting PM2 processes" pm2 start ecosystem.config.cjs --env production
-fi
+pm2_delete_if_exists zynovexa-web
+pm2_delete_if_exists zynovexa-api
+run_step "Starting PM2 processes from ecosystem config" pm2 start ecosystem.config.cjs --env production
 
 run_step "Saving PM2 process list" pm2 save
 run_step "Current PM2 status" pm2 status
