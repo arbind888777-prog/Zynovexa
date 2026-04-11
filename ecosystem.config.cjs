@@ -1,4 +1,14 @@
+const fs = require('fs');
 const path = require('path');
+
+const webStandaloneCandidates = [
+  path.join(__dirname, 'apps/web/.next/standalone/apps/web/server.js'),
+  path.join(__dirname, 'apps/web/.next/standalone/server.js'),
+];
+
+const webStandaloneScript =
+  webStandaloneCandidates.find((candidate) => fs.existsSync(candidate)) ||
+  webStandaloneCandidates[0];
 
 /**
  * PM2 Ecosystem Config — Zynovexa
@@ -38,7 +48,7 @@ module.exports = {
     // ──────────────────────────────────────────────────────────
     {
       name: 'zynovexa-web',
-      script: path.join(__dirname, 'apps/web/.next/standalone/server.js'),
+      script: webStandaloneScript,
       cwd: path.join(__dirname, 'apps/web'),
       instances: 1,
       exec_mode: 'fork',
