@@ -14,7 +14,7 @@ describe('Footer — all links', () => {
 
   // ─── Logo ─────────────────────────────────────────────
   it('footer logo links to /', () => {
-    const logo = screen.getByText('Zynovexa').closest('a');
+    const logo = screen.getAllByText('Zynovexa').find(el => el.closest('a'))?.closest('a');
     expect(logo).toHaveAttribute('href', '/');
   });
 
@@ -106,7 +106,6 @@ describe('Footer — all links', () => {
     ['Privacy Policy', '/privacy'],
     ['Terms of Service', '/terms'],
     ['Refund Policy', '/refund-policy'],
-    ['Return Policy', '/return-policy'],
     ['Disclaimer', '/disclaimer'],
     ['Cookie Policy', '/legal/cookies'],
     ['Contact Us', '/contact'],

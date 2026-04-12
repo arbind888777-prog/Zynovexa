@@ -54,7 +54,12 @@ describe('AuthController Google flow', () => {
 
     await controller.googleCallback(req as any, res as any);
 
-    expect(authService.googleLogin).toHaveBeenCalledWith(req.user);
+    expect(authService.googleLogin).toHaveBeenCalledWith({
+      googleId: 'google_1',
+      email: 'creator@example.com',
+      name: 'Creator One',
+      avatar: null,
+    });
     expect(cookie).toHaveBeenNthCalledWith(1, 'zy_access_token', 'access-token', expect.objectContaining({
       httpOnly: true,
       secure: true,

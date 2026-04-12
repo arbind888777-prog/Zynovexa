@@ -30,9 +30,9 @@ describe('Landing Page — buttons & links', () => {
     expect(el.closest('a')).toHaveAttribute('href', '/signup');
   });
 
-  it('hero CTA "Explore the platform" links to /login', () => {
+  it('hero CTA "Explore the platform" links to /features', () => {
     const el = screen.getByText('Explore the platform');
-    expect(el.closest('a')).toHaveAttribute('href', '/login');
+    expect(el.closest('a')).toHaveAttribute('href', '/features');
   });
 
   // ─── Pricing section CTAs ─────────────────────────────

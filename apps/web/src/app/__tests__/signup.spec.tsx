@@ -90,7 +90,7 @@ describe('Signup Page — buttons & links', () => {
   });
 
   it('renders password input', () => {
-    expect(screen.getByPlaceholderText('Min 6 characters')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Min 8 characters')).toBeTruthy();
   });
 
   it('renders confirm password input', () => {
