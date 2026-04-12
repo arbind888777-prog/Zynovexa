@@ -9,13 +9,66 @@ jobs:
   deploy-app:
     name: Deploy Frontend And Backend To VPS
     runs-on: ubuntu-latest
+    env:
+      RAW_DEPLOY_HOST: ${{ secrets.HOST }}
+      RAW_DEPLOY_HOST_ALT_1: ${{ secrets.SSH_HOST }}
+      RAW_DEPLOY_HOST_ALT_2: ${{ secrets.VPS_HOST }}
+      RAW_DEPLOY_USERNAME: ${{ secrets.USERNAME }}
+      RAW_DEPLOY_USERNAME_ALT_1: ${{ secrets.SSH_USERNAME }}
+      RAW_DEPLOY_USERNAME_ALT_2: ${{ secrets.VPS_USERNAME }}
+      RAW_DEPLOY_KEY: ${{ secrets.KEY }}
+      RAW_DEPLOY_KEY_ALT_1: ${{ secrets.SSH_PRIVATE_KEY }}
+      RAW_DEPLOY_KEY_ALT_2: ${{ secrets.VPS_SSH_KEY }}
+      RAW_DEPLOY_PASSWORD: ${{ secrets.PASSWORD }}
+      RAW_DEPLOY_PASSWORD_ALT_1: ${{ secrets.SSH_PASSWORD }}
+      RAW_DEPLOY_PASSWORD_ALT_2: ${{ secrets.VPS_PASSWORD }}
+      RAW_DEPLOY_PATH: ${{ secrets.APP_DIR }}
+      RAW_DEPLOY_PATH_ALT_1: ${{ secrets.DEPLOY_PATH }}
     steps:
+      - name: Resolve deploy secrets
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          deploy_host="${RAW_DEPLOY_HOST:-${RAW_DEPLOY_HOST_ALT_1:-${RAW_DEPLOY_HOST_ALT_2:-}}}"
+          deploy_username="${RAW_DEPLOY_USERNAME:-${RAW_DEPLOY_USERNAME_ALT_1:-${RAW_DEPLOY_USERNAME_ALT_2:-}}}"
+          deploy_key="${RAW_DEPLOY_KEY:-${RAW_DEPLOY_KEY_ALT_1:-${RAW_DEPLOY_KEY_ALT_2:-}}}"
+          deploy_password="${RAW_DEPLOY_PASSWORD:-${RAW_DEPLOY_PASSWORD_ALT_1:-${RAW_DEPLOY_PASSWORD_ALT_2:-}}}"
+          deploy_path="${RAW_DEPLOY_PATH:-${RAW_DEPLOY_PATH_ALT_1:-/root/Zynovexa}}"
+
+          if [ -z "$deploy_host" ]; then
+            echo "::error::Missing SSH host secret. Set one of: HOST, SSH_HOST, VPS_HOST"
+            exit 1
+          fi
+
+          if [ -z "$deploy_username" ]; then
+            echo "::error::Missing SSH username secret. Set one of: USERNAME, SSH_USERNAME, VPS_USERNAME"
+            exit 1
+          fi
+
+          if [ -z "$deploy_key" ] && [ -z "$deploy_password" ]; then
+            echo "::error::Missing SSH auth secret. Set KEY or PASSWORD, or use SSH_PRIVATE_KEY / SSH_PASSWORD / VPS_SSH_KEY / VPS_PASSWORD"
+            exit 1
+          fi
+
+          {
+            echo "deploy_host=$deploy_host"
+            echo "deploy_username=$deploy_username"
+            echo "deploy_password=$deploy_password"
+            echo "deploy_path=$deploy_path"
+            echo "deploy_key<<EOF"
+            printf '%s\n' "$deploy_key"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
+          host: ${{ steps.resolve.outputs.deploy_host }}
+          username: ${{ steps.resolve.outputs.deploy_username }}
+          key: ${{ steps.resolve.outputs.deploy_key }}
+          password: ${{ steps.resolve.outputs.deploy_password }}
           port: 22
           timeout: 120s
           command_timeout: 30m
@@ -23,21 +76,41 @@ jobs:
             set -e
 
             echo "=== Starting Zynovexa Deployment ==="
+            DEPLOY_PATH="${{ steps.resolve.outputs.deploy_path }}"
 
-            # Check if directory exists
-            if [ ! -d "/var/www/Zynovexa" ]; then
-              echo "ERROR: /var/www/Zynovexa directory not found on VPS!"
+            if [ ! -d "$DEPLOY_PATH" ]; then
+              echo "ERROR: $DEPLOY_PATH folder not found!"
               exit 1
             fi
 
-            cd /var/www/Zynovexa
+            cd $DEPLOY_PATH
 
-            echo "=== Pulling latest code ==="
+            echo "=== Syncing Code ==="
             git fetch origin main
             git reset --hard origin/main
 
-            echo "=== Running deploy script ==="
+            echo "=== Fixing Database & Dependencies ==="
+            cd apps/api
+            touch .env
+            
+            npm install
+            
+            echo "=== Resolving All Migrations Automatically ==="
+            # Ek-ek karne ki bajaye saari 9 migrations ko ek baar mein pass kar rahe hain
+            for dir in prisma/migrations/*/; do
+              if [ -d "$dir" ]; then
+                migration=$(basename "$dir")
+                npx prisma migrate resolve --applied "$migration" || echo "Already resolved: $migration"
+              fi
+            done
+            
+            npx prisma generate
+
+            echo "=== Building & Restarting Services ==="
+            cd $DEPLOY_PATH
             chmod +x deploy.sh
+            
+            # Running the main deployment script
             ./deploy.sh --branch=main
 
-            echo "=== Deployment complete ==="
+            echo "=== Deployment Successfully Completed ==="

@@ -275,15 +275,15 @@ npx prisma migrate deploy
 
 ## Optional GitHub Actions deploy
 
-The workflow [deploy.yml](.github/workflows/deploy.yml) expects these repository secrets:
+The workflow [.github/workflows/deploy.yaml](.github/workflows/deploy.yaml) expects these repository secrets:
 
-1. `HOST`
-2. `USERNAME`
-3. `PASSWORD`
-4. `APP_DIR`
-5. `DOMAIN`
-6. `SSL_EMAIL`
-7. `ENABLE_WWW`
+1. SSH host: use one of `HOST`, `SSH_HOST`, or `VPS_HOST`
+2. SSH username: use one of `USERNAME`, `SSH_USERNAME`, or `VPS_USERNAME`
+3. SSH auth: use either `KEY` or `PASSWORD`
+4. Alternative SSH auth names also supported: `SSH_PRIVATE_KEY`, `SSH_PASSWORD`, `VPS_SSH_KEY`, `VPS_PASSWORD`
+5. Optional deploy path: `APP_DIR` or `DEPLOY_PATH` (defaults to `/root/Zynovexa`)
+
+If the SSH key is multi-line, paste the full private key exactly as the repository secret value.
 
 If you do not want GitHub Actions deployment, you can ignore that workflow and deploy only through SSH.
 
