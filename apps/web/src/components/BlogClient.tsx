@@ -18,7 +18,6 @@ interface Post {
 
 const CATEGORY_COLORS: Record<string, string> = {
   Instagram: 'badge-pink',
-  TikTok: 'badge-purple',
   YouTube: 'badge-purple',
   LinkedIn: 'badge-purple',
   'AI Tools': 'badge-purple',

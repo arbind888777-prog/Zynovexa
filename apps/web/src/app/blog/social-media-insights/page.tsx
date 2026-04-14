@@ -19,9 +19,9 @@ const ARTICLES = [
     tag: 'Algorithm',
   },
   {
-    category: 'TikTok',
-    title: 'TikTok Creator Earnings Report: What Is Actually Possible',
-    desc: 'We surveyed 500 TikTok creators on their monthly earnings, brand deal rates, and growth strategies. The results are eye-opening.',
+    category: 'YouTube',
+    title: 'YouTube Creator Earnings Report: What Is Actually Possible',
+    desc: 'We surveyed 500 YouTube creators on their monthly earnings, brand deal rates, and growth strategies. The results are eye-opening.',
     readTime: '12 min',
     date: 'Feb 25, 2026',
     image: '💰',
@@ -65,7 +65,7 @@ const ARTICLES = [
   },
 ];
 
-const TAGS = ['All', 'Algorithm', 'Growth', 'Monetization', 'AI', 'YouTube', 'TikTok', 'Instagram', 'LinkedIn', 'Strategy'];
+const TAGS = ['All', 'Algorithm', 'Growth', 'Monetization', 'AI', 'YouTube', 'Instagram', 'LinkedIn', 'Strategy'];
 
 export default function SocialMediaInsightsPage() {
   return (

@@ -12,7 +12,7 @@ interface Message {
 
 const SUGGESTIONS = [
   'Write a viral Instagram caption',
-  'Best posting times for TikTok?',
+  'Best posting times for Instagram Reels?',
   'Give me 5 content ideas for YouTube',
   'How to grow followers on LinkedIn?',
 ];

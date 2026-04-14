@@ -6,14 +6,13 @@ import HashtagGeneratorClient from './HashtagGeneratorClient';
 const APP_URL = 'https://zynovexa.com';
 
 export const metadata: Metadata = {
-  title: 'Free Hashtag Generator — Instagram, TikTok, YouTube & More | Zynovexa',
+  title: 'Free Hashtag Generator — Instagram, YouTube & More | Zynovexa',
   description:
-    'Find the perfect hashtags for your niche and platform. Curated hashtag sets for Instagram, TikTok, YouTube, LinkedIn and X. 100% free.',
+    'Find the perfect hashtags for your niche and platform. Curated hashtag sets for Instagram, YouTube, LinkedIn and X. 100% free.',
   keywords: [
     'hashtag generator',
     'free hashtag generator',
     'instagram hashtag generator',
-    'tiktok hashtag generator',
     'niche hashtag tool',
     'social media hashtags',
     'hashtag research',
@@ -31,7 +30,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Free Hashtag Generator | Zynovexa',
     description:
-      'Curated hashtag sets for Instagram, TikTok, YouTube, LinkedIn & more. Free hashtag research tool.',
+      'Curated hashtag sets for Instagram, YouTube, LinkedIn & more. Free hashtag research tool.',
   },
 };
 
@@ -44,16 +43,16 @@ const SEO_SECTIONS = [
     ],
   },
   {
-    title: 'How to choose better hashtags for Instagram, TikTok, and YouTube',
+    title: 'How to choose better hashtags for Instagram and YouTube',
     paragraphs: [
       'The strongest hashtag sets usually include three layers. First, a few broad tags describe the market, such as fitness, fashion, tech, or business. Second, niche tags narrow the audience, such as strength training, sustainable fashion, SaaS growth, or creator education. Third, contextual tags connect the post to a specific moment, campaign, offer, or format. This layered method creates better targeting than repeating the same viral tags on every post.',
-      'Platform context matters too. Instagram often rewards a well-balanced set of relevant tags. TikTok depends more heavily on content quality and watch behavior, but hashtags still support context and trend alignment. YouTube uses metadata differently, yet strategic tags can still support organization and discoverability. That is why a flexible hashtag tool is more useful than a one-size-fits-all tag list.',
+      'Platform context matters too. Instagram often rewards a well-balanced set of relevant tags. YouTube uses metadata differently, yet strategic tags can still support organization and discoverability. That is why a flexible hashtag tool is more useful than a one-size-fits-all tag list.',
     ],
   },
   {
     title: 'What makes this hashtag generator more SEO-friendly',
     paragraphs: [
-      'Search-friendly tool pages need more than an input and output box. They need useful explanations, structured headings, internal linking, and content that answers adjacent questions. By adding long-form guidance, this page can now better support search intent around free hashtag generator, Instagram hashtag tool, TikTok hashtag ideas, and niche hashtag research for creators and brands.',
+      'Search-friendly tool pages need more than an input and output box. They need useful explanations, structured headings, internal linking, and content that answers adjacent questions. By adding long-form guidance, this page can now better support search intent around free hashtag generator, Instagram hashtag tool, and niche hashtag research for creators and brands.',
       'The content also connects naturally to adjacent pages inside Zynovexa, including AI caption generation, content creation, scheduling, and analytics. That internal linking matters because it helps users discover the full workflow while helping search engines understand how the site covers the broader topic of social media growth. In practical terms, this page now works harder as both a tool and a landing page.',
     ],
   },
@@ -65,8 +64,8 @@ const FAQS = [
     a: 'There is no universal number. The right count depends on platform and post quality, but relevance matters more than volume. A smaller, tighter set of targeted hashtags often performs better than a large list of unrelated ones.',
   },
   {
-    q: 'Do hashtags help on TikTok?',
-    a: 'Yes, but they are only one part of the system. TikTok still cares more about the strength of the hook, watch time, replays, shares, and engagement. Hashtags help by giving the algorithm clearer context about the post.',
+    q: 'Do hashtags still matter on YouTube?',
+    a: 'They can still help with organization and context, but they work best when paired with strong titles, thumbnails, and descriptions.',
   },
   {
     q: 'Should I reuse the same hashtags every time?',
@@ -92,7 +91,7 @@ function JsonLd() {
     operatingSystem: 'Web',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     url: `${APP_URL}/tools/hashtag-generator`,
-    description: 'Free hashtag generator for Instagram, TikTok, YouTube, LinkedIn and X. Curated niche hashtag sets.',
+    description: 'Free hashtag generator for Instagram, YouTube, LinkedIn and X. Curated niche hashtag sets.',
   };
   return (
     <>

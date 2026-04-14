@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import MarketingLayout from '@/components/MarketingLayout';
 import PricingCard from '@/components/PricingCard';
-import type { PricingPlan, Currency } from '@/components/PricingCard';
+import type { PricingPlan } from '@/components/PricingCard';
 import FAQItem from '@/components/FAQItem';
 
 const PLANS: PricingPlan[] = [
@@ -29,7 +29,7 @@ const PLANS: PricingPlan[] = [
   {
     plan: 'Starter',
     inrMonthly: 299, inrYearly: 239,
-    usdMonthly: 5, usdYearly: 4,
+    usdMonthly: 299, usdYearly: 239,
     desc: 'For individual creators',
     features: [
       '30 posts/month scheduled',
@@ -47,8 +47,8 @@ const PLANS: PricingPlan[] = [
   },
   {
     plan: 'Pro',
-    inrMonthly: 599, inrYearly: 479,
-    usdMonthly: 9, usdYearly: 7,
+    inrMonthly: 699, inrYearly: 559,
+    usdMonthly: 699, usdYearly: 559,
     desc: 'For serious creators & businesses',
     features: [
       '100 posts/month scheduled',
@@ -68,8 +68,8 @@ const PLANS: PricingPlan[] = [
   },
   {
     plan: 'Growth',
-    inrMonthly: 1199, inrYearly: 999,
-    usdMonthly: 19, usdYearly: 15,
+    inrMonthly: 1299, inrYearly: 1039,
+    usdMonthly: 1299, usdYearly: 1039,
     desc: 'For agencies & growing teams',
     features: [
       'Unlimited posts/month',
@@ -116,33 +116,11 @@ const COMPARISON = [
   ['Priority support', '✗', '✗', '✓', '✓'],
 ];
 
-function detectCurrency(): Currency {
-  if (typeof window === 'undefined') return 'usd';
-  const stored = localStorage.getItem('zynovexa-currency');
-  if (stored === 'inr' || stored === 'usd') return stored;
-  const lang = navigator.language || '';
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-  if (lang === 'hi-IN' || lang.startsWith('hi') || tz === 'Asia/Kolkata' || window.location.hostname.endsWith('.in')) {
-    return 'inr';
-  }
-  return 'usd';
-}
-
 export default function PricingPage() {
   const [yearly, setYearly] = useState(false);
-  const [currency, setCurrency] = useState<Currency>('usd');
-
-  useEffect(() => {
-    setCurrency(detectCurrency());
-  }, []);
-
-  const handleCurrencyChange = (c: Currency) => {
-    setCurrency(c);
-    localStorage.setItem('zynovexa-currency', c);
-  };
-
-  const sym = currency === 'inr' ? '₹' : '$';
-  const paymentNote = currency === 'inr' ? 'Secure payments via Razorpay' : 'Secure payments via Stripe';
+  const currency = 'inr' as const;
+  const sym = '₹';
+  const paymentNote = 'Secure payments via Razorpay';
 
   return (
     <MarketingLayout>
@@ -184,38 +162,14 @@ export default function PricingPage() {
             </button>
           </div>
 
-          {/* Currency Toggle */}
-          <div className="mt-4 inline-flex items-center gap-3 p-1.5 rounded-full" style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}>
-            <button
-              type="button"
-              onClick={() => handleCurrencyChange('usd')}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
-                currency === 'usd' ? 'text-white shadow-lg' : 'text-slate-400 hover:text-white'
-              }`}
-              style={currency === 'usd' ? { background: 'linear-gradient(135deg, #6366f1, #a855f7)' } : undefined}
-            >
-              USD $
-            </button>
-            <button
-              type="button"
-              onClick={() => handleCurrencyChange('inr')}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
-                currency === 'inr' ? 'text-white shadow-lg' : 'text-slate-400 hover:text-white'
-              }`}
-              style={currency === 'inr' ? { background: 'linear-gradient(135deg, #6366f1, #a855f7)' } : undefined}
-            >
-              INR ₹
-            </button>
-          </div>
-
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <div className="dashboard-inline-stat px-4 py-3 text-left">
               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Billing style</p>
               <p className="mt-1 text-sm font-semibold text-white">Monthly or yearly</p>
             </div>
             <div className="dashboard-inline-stat px-4 py-3 text-left">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Global currency</p>
-              <p className="mt-1 text-sm font-semibold text-white">{currency === 'inr' ? 'INR pricing' : 'USD pricing'}</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Currency</p>
+              <p className="mt-1 text-sm font-semibold text-white">INR pricing only</p>
             </div>
             <div className="dashboard-inline-stat px-4 py-3 text-left">
               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Commitment</p>
@@ -233,17 +187,9 @@ export default function PricingPage() {
           ))}
         </div>
 
-        {/* Currency switcher */}
         <div className="flex justify-center mt-6">
           <div className="inline-flex items-center gap-2 text-xs text-slate-500">
-            <span>Showing prices in {currency === 'inr' ? 'INR (₹)' : 'USD ($)'}</span>
-            <button
-              type="button"
-              onClick={() => handleCurrencyChange(currency === 'inr' ? 'usd' : 'inr')}
-              className="text-purple-400 hover:text-purple-300 underline transition-colors"
-            >
-              Switch to {currency === 'inr' ? 'USD ($)' : 'INR (₹)'}
-            </button>
+            <span>Showing prices in INR (₹)</span>
           </div>
         </div>
 

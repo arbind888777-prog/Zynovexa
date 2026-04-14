@@ -5,7 +5,7 @@ import UseTemplateButton from '@/components/UseTemplateButton';
 
 export const metadata: Metadata = {
   title: 'Social Media Templates — 500+ Free Templates | Zynovexa',
-  description: '500+ free social media post templates for Instagram, TikTok, YouTube, LinkedIn, and more. Ready-to-use captions, scripts, and content frameworks.',
+  description: '500+ free social media post templates for Instagram, YouTube, LinkedIn, and more. Ready-to-use captions, scripts, and content frameworks.',
   alternates: { canonical: 'https://zynovexa.com/templates' },
 };
 
@@ -25,7 +25,7 @@ const TEMPLATE_CATEGORIES = [
   },
   {
     icon: '🎵',
-    platform: 'TikTok',
+    platform: 'YouTube Shorts',
     color: 'from-cyan-500/20 to-blue-500/20',
     border: 'border-cyan-500/30',
     templates: [

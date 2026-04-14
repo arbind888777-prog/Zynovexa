@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-const PLATFORMS = ['Instagram', 'TikTok', 'Twitter/X', 'LinkedIn', 'Facebook', 'YouTube'];
+const PLATFORMS = ['Instagram', 'Twitter/X', 'LinkedIn', 'Facebook', 'YouTube'];
 const TONES = ['Professional', 'Casual', 'Funny', 'Inspirational', 'Educational', 'Promotional'];
 
 /* ── Template‐based deterministic caption engine ─────────────────── */
@@ -11,11 +11,6 @@ const HOOKS: Record<string, string[]> = {
     '✨ {topic} — here\'s what changed everything for me 👇',
     'POV: You finally figured out {topic}. Game. Changer. 🙌',
     '3 things I learned about {topic} that nobody talks about 🧵',
-  ],
-  TikTok: [
-    'Wait for it… 👀 This one thing about {topic} will blow your mind.',
-    'Tell me you know about {topic} without telling me 😂',
-    'The truth about {topic} that the algorithm doesn\'t want you to see 📱',
   ],
   LinkedIn: [
     'I spent months studying {topic}. Here\'s what the data revealed. 👇',
@@ -74,7 +69,6 @@ const TONE_CLOSERS: Record<string, string[]> = {
 
 const PLATFORM_CTAS: Record<string, string[]> = {
   Instagram: ['💾 Save this for later', '💬 Comment below', '🔗 Link in bio'],
-  TikTok: ['👆 Follow for Part 2', '#fyp #viral', '🔁 Share with a friend'],
   LinkedIn: ['♻️ Repost if you agree', '👇 What\'s your take?', '🔔 Follow for more insights'],
   'Twitter/X': ['RT if this hits', '🧵 Thread incoming', '💬 Reply with yours'],
   Facebook: ['❤️ Like if you relate', '🔄 Share with your network', '👇 Tell us in the comments'],

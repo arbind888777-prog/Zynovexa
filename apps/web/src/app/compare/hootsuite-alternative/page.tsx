@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const FEATURES = [
   { feature: 'AI Caption Generator', zynovexa: true, competitor: false, detail: 'GPT-4o captions in 25+ languages' },
   { feature: 'AI Hashtag Generator', zynovexa: true, competitor: false, detail: 'Trending & niche hashtags' },
-  { feature: 'AI Video Script Writer', zynovexa: true, competitor: false, detail: 'Full Reels/Shorts/TikTok scripts' },
+  { feature: 'AI Video Script Writer', zynovexa: true, competitor: false, detail: 'Full Reels/Shorts scripts' },
   { feature: 'Viral Score Prediction', zynovexa: true, competitor: false, detail: 'AI predicts virality before posting' },
   { feature: 'Multi-platform Scheduling', zynovexa: true, competitor: true, detail: '7 platforms supported' },
   { feature: 'Bulk Scheduling', zynovexa: true, competitor: true, detail: 'CSV import & bulk upload' },

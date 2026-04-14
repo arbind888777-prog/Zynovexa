@@ -14,7 +14,7 @@ const FEATURES = [
   { feature: 'AI Video Script Writer', zynovexa: true, competitor: false, detail: 'Full short-form video scripts' },
   { feature: 'Viral Score Prediction', zynovexa: true, competitor: false, detail: 'AI predicts post performance' },
   { feature: 'Instagram Scheduling', zynovexa: true, competitor: true, detail: 'Stories, Reels, Posts, Carousels' },
-  { feature: 'TikTok Scheduling', zynovexa: true, competitor: true, detail: 'Auto-publish support' },
+  { feature: 'Short-form Video Scheduling', zynovexa: true, competitor: true, detail: 'Auto-publish support' },
   { feature: 'YouTube Scheduling', zynovexa: true, competitor: false, detail: 'Shorts + long-form videos' },
   { feature: 'Twitter/X Scheduling', zynovexa: true, competitor: true, detail: 'Threads, polls, media' },
   { feature: 'LinkedIn Scheduling', zynovexa: true, competitor: true, detail: 'Personal & company pages' },
@@ -41,7 +41,7 @@ const TESTIMONIALS = [
 
 const REASONS = [
   { icon: '🤖', title: 'Superior AI Engine', desc: 'Later added basic AI recently, but Zynovexa is AI-first — GPT-4o captions, video scripts, viral predictions, and growth strategies are core features, not afterthoughts.' },
-  { icon: '📱', title: 'More Platforms', desc: 'Later doesn\'t support YouTube scheduling. Zynovexa covers Instagram, TikTok, YouTube, Twitter/X, LinkedIn, Facebook, and Google Business — all from one dashboard.' },
+  { icon: '📱', title: 'More Platforms', desc: 'Later doesn\'t support YouTube scheduling. Zynovexa covers Instagram, YouTube, Twitter/X, LinkedIn, Facebook, and Google Business — all from one dashboard.' },
   { icon: '🔓', title: 'No Post Limits', desc: 'Later\'s free plan caps you at 5 posts per profile. Zynovexa free plan gives you unlimited posts across 3 accounts with no restrictions.' },
   { icon: '💰', title: 'Monetization Suite', desc: 'Track brand deals, calculate your rates, generate media kits, and analyze earnings. Later focuses purely on scheduling — Zynovexa helps you actually make money.' },
   { icon: '📊', title: 'Advanced Analytics', desc: 'Later analytics are decent for Instagram. Zynovexa gives you cross-platform analytics, competitor benchmarking, engagement heatmaps, and AI recommendations.' },

@@ -29,7 +29,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     // Channels
     page('/channels/instagram', 0.8),
-    page('/channels/tiktok', 0.8),
     page('/channels/youtube', 0.8),
     page('/channels/twitter', 0.8),
     page('/channels/linkedin', 0.8),
@@ -96,7 +95,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Blog posts
     page('/blog/instagram-reels-algorithm-2026', 0.6, 'monthly'),
     page('/blog/ai-content-creation-workflow', 0.6, 'monthly'),
-    page('/blog/tiktok-growth-strategy-2026', 0.6, 'monthly'),
     page('/blog/linkedin-personal-brand', 0.6, 'monthly'),
     page('/blog/social-media-analytics-guide', 0.6, 'monthly'),
     page('/blog/youtube-shorts-strategy', 0.6, 'monthly'),

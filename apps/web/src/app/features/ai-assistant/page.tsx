@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 const AI_TOOLS = [
   { icon: '✍️', title: 'Caption Generator', desc: 'Platform-optimized captions with hooks, CTAs, and emojis. Tone control: funny, professional, viral.', badge: 'Most Used', href: '/tools/ai-caption-generator', cta: 'Open caption tool' },
-  { icon: '🎬', title: 'Video Script Writer', desc: 'Full TikTok, YouTube & Reels scripts with intros, hooks, body and CTAs. Structured for virality.', badge: null, href: '/features/create', cta: 'See creation suite' },
+  { icon: '🎬', title: 'Video Script Writer', desc: 'Full YouTube & Reels scripts with intros, hooks, body and CTAs. Structured for virality.', badge: null, href: '/features/create', cta: 'See creation suite' },
   { icon: '#️⃣', title: 'Hashtag Generator', desc: '30 targeted hashtags blending trending + niche + branded tags, optimized per platform.', badge: null, href: '/tools/hashtag-generator', cta: 'Open hashtag tool' },
   { icon: '🎨', title: 'AI Image Generator', desc: 'Create stunning social images from text prompts. DALL-E 3. Instagram-ready HD quality.', badge: 'New', href: '/features/create', cta: 'See image workflow' },
   { icon: '💬', title: 'Zyx Chatbot', desc: 'Your 24/7 personal creator advisor. Strategy sessions, content ideas, growth plans.', badge: null, href: '#zyx-chatbot', cta: 'Jump to chatbot info' },
@@ -42,7 +42,7 @@ const SEO_SECTIONS = [
   {
     title: 'How AI improves content velocity without hurting quality',
     paragraphs: [
-      'Content velocity matters because social growth usually rewards repetition, experimentation, and learning loops. But speed without structure leads to weak posts and audience fatigue. AI improves velocity when it helps teams create more variations, test more hooks, and repurpose more intelligently. A creator can start with one strong topic, then generate an Instagram caption, a TikTok script, a YouTube description, a LinkedIn angle, and a supporting hashtag set in one working session.',
+      'Content velocity matters because social growth usually rewards repetition, experimentation, and learning loops. But speed without structure leads to weak posts and audience fatigue. AI improves velocity when it helps teams create more variations, test more hooks, and repurpose more intelligently. A creator can start with one strong topic, then generate an Instagram caption, a Reels script, a YouTube description, a LinkedIn angle, and a supporting hashtag set in one working session.',
       'The quality stays high when the workflow still includes intent, context, and editing. That is why Zynovexa keeps the creator in control while removing repetitive tasks. You choose the angle, tone, and objective; the AI accelerates output and variation. This makes the tool useful for growth, but it also creates better topical coverage for brands that need content across social channels, blogs, landing pages, and campaign assets.',
     ],
   },

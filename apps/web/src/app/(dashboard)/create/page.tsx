@@ -1,5 +1,5 @@
 'use client';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { postsApi, aiApi, uploadsApi, accountsApi, commerceApi, unwrapApiResponse } from '@/lib/api';
 import MediaUploader from '@/components/MediaUploader';
@@ -191,6 +191,9 @@ function CreatePostPageContent() {
   const [aiInput, setAiInput] = useState('');
   const [aiResult, setAiResult] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [recentlyAttachedAiImage, setRecentlyAttachedAiImage] = useState<string | null>(null);
+  const [addedAiImageUrl, setAddedAiImageUrl] = useState<string | null>(null);
+  const mediaUploaderRef = useRef<HTMLDivElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaLink, setMediaLink] = useState('');
@@ -428,8 +431,37 @@ function CreatePostPageContent() {
     setMediaUrls([imageUrl]);
     setMediaLink('');
     setForm(prev => ({ ...prev, mediaType: 'IMAGE' }));
-    toast.success('Generated image post me attach ho gayi.');
+    setRecentlyAttachedAiImage(imageUrl);
+    setAddedAiImageUrl(imageUrl);
+    window.requestAnimationFrame(() => {
+      mediaUploaderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    toast.success('Image add ho gayi. Neeche Media Upload section me preview dikh raha hai.');
   };
+
+  useEffect(() => {
+    if (!recentlyAttachedAiImage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setRecentlyAttachedAiImage(null);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [recentlyAttachedAiImage]);
+
+  useEffect(() => {
+    if (!addedAiImageUrl) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAddedAiImageUrl(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [addedAiImageUrl]);
 
   const handleMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -698,32 +730,37 @@ function CreatePostPageContent() {
               </div>
             </div>
 
-            <MediaUploader
-              mediaTypes={MEDIA_TYPES}
-              selectedMediaType={form.mediaType}
-              onSelectMediaType={(mediaType) => setForm((prev) => ({ ...prev, mediaType }))}
-              mediaRequired={mediaRequired}
-              mediaUrls={mediaUrls}
-              mediaLink={mediaLink}
-              onMediaLinkChange={setMediaLink}
-              onAddMediaLink={addMediaLink}
-              onRemoveMedia={removeMedia}
-              onFileChange={handleMediaUpload}
-              uploading={uploading}
-              accept={uploadAccept}
-              hint={(
-                <>
-                  {isYoutubeSelected && isVideoStyleType(form.mediaType) && (
-                    <p className="mb-2 text-xs text-amber-400">YouTube video post ke liye valid video file ya link zaroori hai.</p>
-                  )}
-                  {isYoutubeSelected && !isVideoStyleType(form.mediaType) && (
-                    <p className="mb-2 text-xs text-amber-400">YouTube pe text/image post API se auto-publish nahi hoti — scheduled time par manual reminder milega.</p>
-                  )}
-                </>
-              )}
-              intro="Quick posts ke liye yahan simple text, image aur video hi support hai."
-              textModeEmptyState={<p className="text-xs text-emerald-400">Text-only post — media zaroorat nahi. Chaaho to upar se image ya video choose karke media add kar sakte ho.</p>}
-            />
+            <div ref={mediaUploaderRef}>
+              <MediaUploader
+                mediaTypes={MEDIA_TYPES}
+                selectedMediaType={form.mediaType}
+                onSelectMediaType={(mediaType) => setForm((prev) => ({ ...prev, mediaType }))}
+                mediaRequired={mediaRequired}
+                mediaUrls={mediaUrls}
+                mediaLink={mediaLink}
+                onMediaLinkChange={setMediaLink}
+                onAddMediaLink={addMediaLink}
+                onRemoveMedia={removeMedia}
+                onFileChange={handleMediaUpload}
+                uploading={uploading}
+                accept={uploadAccept}
+                highlighted={Boolean(recentlyAttachedAiImage)}
+                statusMessage={recentlyAttachedAiImage ? 'AI image attach ho chuki hai. Preview check karo, phir directly publish ya schedule kar sakte ho.' : undefined}
+                previewBadge={recentlyAttachedAiImage ? <span>Ready to publish: yeh image post me attach ho chuki hai.</span> : undefined}
+                hint={(
+                  <>
+                    {isYoutubeSelected && isVideoStyleType(form.mediaType) && (
+                      <p className="mb-2 text-xs text-amber-400">YouTube video post ke liye valid video file ya link zaroori hai.</p>
+                    )}
+                    {isYoutubeSelected && !isVideoStyleType(form.mediaType) && (
+                      <p className="mb-2 text-xs text-amber-400">YouTube pe text/image post API se auto-publish nahi hoti — scheduled time par manual reminder milega.</p>
+                    )}
+                  </>
+                )}
+                intro="Quick posts ke liye yahan simple text, image aur video hi support hai."
+                textModeEmptyState={<p className="text-xs text-emerald-400">Text-only post — media zaroorat nahi. Chaaho to upar se image ya video choose karke media add kar sakte ho.</p>}
+              />
+            </div>
           </div>
 
           <div className="flex gap-3">
@@ -854,9 +891,13 @@ function CreatePostPageContent() {
                         <button
                           onClick={() => applyGeneratedImage(aiResult.imageUrl)}
                           className="block w-full mt-3 rounded-lg py-2 text-xs font-semibold text-white"
-                          style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}
+                          style={{
+                            background: addedAiImageUrl === aiResult.imageUrl
+                              ? 'linear-gradient(135deg, #059669, #10b981)'
+                              : 'linear-gradient(135deg, #6366f1, #a855f7)',
+                          }}
                         >
-                          + Add To Post
+                          {addedAiImageUrl === aiResult.imageUrl ? 'Added to Post' : 'Use This Image In Post'}
                         </button>
                         <button onClick={() => { fetch(aiResult.imageUrl).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'zynovexa-ai-image.png'; a.click(); URL.revokeObjectURL(a.href); }); }} className="block w-full mt-2 text-purple-400 text-xs text-center hover:text-purple-300">↓ Download Image</button>
                       </div>

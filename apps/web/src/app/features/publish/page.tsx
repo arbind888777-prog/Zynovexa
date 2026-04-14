@@ -4,7 +4,7 @@ import MarketingLayout from '@/components/MarketingLayout';
 
 export const metadata: Metadata = {
   title: 'Publish & Schedule Posts — Smart Social Media Scheduler | Zynovexa',
-  description: 'Schedule posts across Instagram, TikTok, YouTube, Twitter, LinkedIn, and more. AI-optimized timing, drag-and-drop calendar, bulk upload. Start free.',
+  description: 'Schedule posts across Instagram, YouTube, Twitter, LinkedIn, Facebook, and more. AI-optimized timing, drag-and-drop calendar, bulk upload. Start free.',
   alternates: { canonical: 'https://zynovexa.com/features/publish' },
 };
 
@@ -86,7 +86,6 @@ const CAPABILITIES = [
 
 const PLATFORM_LINKS = [
   { icon: '📸', name: 'Instagram', href: '/channels/instagram' },
-  { icon: '🎵', name: 'TikTok', href: '/channels/tiktok' },
   { icon: '▶️', name: 'YouTube', href: '/channels/youtube' },
   { icon: '𝕏', name: 'Twitter / X', href: '/channels/twitter' },
   { icon: '💼', name: 'LinkedIn', href: '/channels/linkedin' },
@@ -134,7 +133,7 @@ const DEEP_DIVE = [
 ];
 
 const HERO_STATS = [
-  { icon: '🌐', title: '7-channel publishing', desc: 'One workflow for Instagram, TikTok, YouTube, X, LinkedIn, Facebook, and Snapchat.' },
+  { icon: '🌐', title: '6-channel publishing', desc: 'One workflow for Instagram, YouTube, X, LinkedIn, Facebook, and Snapchat.' },
   { icon: '⏱️', title: 'Best-time automation', desc: 'AI finds the window most likely to lift reach and engagement.' },
   { icon: '📦', title: 'Built for scale', desc: 'Calendar planning, bulk upload, evergreen queues, and mobile reminders.' },
 ];
@@ -144,7 +143,7 @@ const SEO_SECTIONS = [
     title: 'What a modern social media scheduler should actually do',
     paragraphs: [
       'A social media scheduler should do more than let you pick a date and hit publish. Real publishing teams need a system that supports planning, content reuse, campaign visibility, approval control, and analytics feedback in one workflow. If your scheduler only solves the last five minutes of the publishing process, you still waste hours coordinating assets, rewriting captions per network, and checking different tools to see what performed best.',
-      'Zynovexa is designed to close that workflow gap. You can create content once, customize it for each channel, queue it for the best posting window, and review the outcome after it goes live. That makes it useful for solo creators who want speed, agencies that manage many client calendars, and in-house teams that need accountability. Search intent around phrases such as social media scheduling tool, Instagram scheduler, TikTok post planner, and AI social media scheduler usually comes from people who want a reliable end-to-end solution. This page now explains that value more clearly.',
+      'Zynovexa is designed to close that workflow gap. You can create content once, customize it for each channel, queue it for the best posting window, and review the outcome after it goes live. That makes it useful for solo creators who want speed, agencies that manage many client calendars, and in-house teams that need accountability. Search intent around phrases such as social media scheduling tool, Instagram scheduler, and AI social media scheduler usually comes from people who want a reliable end-to-end solution. This page now explains that value more clearly.',
     ],
   },
   {
@@ -179,7 +178,7 @@ export default function PublishFeaturePage() {
             Schedule smarter.<br /><span className="gradient-text">Publish everywhere.</span>
           </h1>
           <p className="text-slate-400 text-lg sm:text-xl mb-8 max-w-2xl mx-auto">
-            One composer. Seven platforms. AI-powered timing. Spend less time posting and more time creating content your audience loves.
+            One composer. Six platforms. AI-powered timing. Spend less time posting and more time creating content your audience loves.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/signup" className="btn btn-primary btn-xl">🚀 Start Scheduling Free</Link>

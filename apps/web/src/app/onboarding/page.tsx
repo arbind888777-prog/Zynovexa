@@ -20,7 +20,6 @@ const USER_TYPES = [
 const PLATFORMS = [
   { id: 'INSTAGRAM', icon: '📸', label: 'Instagram', color: '#e1306c' },
   { id: 'YOUTUBE', icon: '▶️', label: 'YouTube', color: '#ff0000' },
-  { id: 'TIKTOK', icon: '🎵', label: 'TikTok', color: '#010101' },
   { id: 'TWITTER', icon: '𝕏', label: 'Twitter / X', color: '#1d9bf0' },
   { id: 'LINKEDIN', icon: '💼', label: 'LinkedIn', color: '#0077b5' },
   { id: 'FACEBOOK', icon: '📘', label: 'Facebook', color: '#1877f2' },

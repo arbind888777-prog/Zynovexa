@@ -28,7 +28,7 @@ export class SubscriptionsController {
   @Post('checkout')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Create Stripe checkout session' })
+  @ApiOperation({ summary: 'Create Razorpay subscription checkout' })
   createCheckout(@Request() req, @Body() dto: CreateCheckoutDto) {
     return this.subscriptionsService.createCheckoutSession(
       req.user.id,
@@ -40,13 +40,13 @@ export class SubscriptionsController {
   @Post('portal')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Open Stripe billing portal' })
+  @ApiOperation({ summary: 'Get subscription management info (Razorpay)' })
   createPortal(@Request() req) { return this.subscriptionsService.createPortalSession(req.user.id); }
 
   @Post('webhook')
   @HttpCode(200)
   @ApiExcludeEndpoint()
-  handleWebhook(@Req() req: RawBodyRequest<Request>, @Headers('stripe-signature') sig: string) {
+  handleWebhook(@Req() req: RawBodyRequest<Request>, @Headers('x-razorpay-signature') sig: string) {
     return this.subscriptionsService.handleWebhook(req.rawBody as any, sig);
   }
 }

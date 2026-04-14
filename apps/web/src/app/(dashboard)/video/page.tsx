@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation';
 const VIDEO_TYPES: VideoSelectorOption[] = [
   { id: 'REEL', label: 'Instagram Reel', icon: '📱', duration: '15–90 sec', platform: 'INSTAGRAM', color: '#E1306C' },
   { id: 'SHORT', label: 'YouTube Short', icon: '▶️', duration: '< 60 sec', platform: 'YOUTUBE', color: '#FF0000' },
-  { id: 'TIKTOK', label: 'TikTok Video', icon: '🎵', duration: '15 sec – 3 min', platform: 'TIKTOK', color: '#010101' },
   { id: 'STORY', label: 'Story', icon: '⭕', duration: '15 sec', platform: 'INSTAGRAM', color: '#8A3AB9' },
   { id: 'VIDEO', label: 'YouTube Video', icon: '🎬', duration: 'Any length', platform: 'YOUTUBE', color: '#FF0000' },
   { id: 'LINKEDIN_VIDEO', label: 'LinkedIn Video', icon: '💼', duration: '3 sec – 10 min', platform: 'LINKEDIN', color: '#0A66C2' },
@@ -55,7 +54,7 @@ export default function VideoStudioPage() {
   const [hashtagLoading, setHashtagLoading] = useState(false);
 
   const getAspectRatio = () => {
-    if (selectedType === 'REEL' || selectedType === 'SHORT' || selectedType === 'TIKTOK' || selectedType === 'STORY') {
+    if (selectedType === 'REEL' || selectedType === 'SHORT' || selectedType === 'STORY') {
       return '9:16';
     }
     return '16:9';
@@ -253,7 +252,7 @@ export default function VideoStudioPage() {
       {step === 'type' && (
         <VideoSelector
           title="Choose advanced video format 📱"
-          description="Yahan Reels, Shorts, TikTok aur long-form video prep hoga. Final scheduling Create Post page par hoga."
+          description="Yahan Reels, Shorts aur long-form video prep hoga. Final scheduling Create Post page par hoga."
           options={VIDEO_TYPES}
           selectedId={selectedType}
           onSelect={selectVideoType}
@@ -461,12 +460,6 @@ export default function VideoStudioPage() {
                   <li>✅ Vertical format only</li>
                   <li>✅ Add chapters in description</li>
                   <li>✅ Strong thumbnail matters</li>
-                </>}
-                {selectedType === 'TIKTOK' && <>
-                  <li>✅ Hook in first 1-2 seconds</li>
-                  <li>✅ Use trending sounds/effects</li>
-                  <li>✅ Text overlay works great</li>
-                  <li>✅ Post 2-3 times daily for growth</li>
                 </>}
                 {selectedType === 'VIDEO' && <>
                   <li>✅ SEO-optimized title matters</li>

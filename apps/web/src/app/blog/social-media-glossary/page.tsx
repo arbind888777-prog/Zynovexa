@@ -34,7 +34,6 @@ const TERMS: Record<string, { term: string; def: string }[]> = {
     { term: 'Explore Page', def: 'Instagram\'s discovery feature that shows personalised content to users based on interests.' },
   ],
   F: [
-    { term: 'FYP (For You Page)', def: 'TikTok\'s main feed that shows algorithmically selected content to each user.' },
     { term: 'Follower-to-Following Ratio', def: 'A metric comparing how many accounts follow you vs. how many you follow.' },
     { term: 'Funnel', def: 'The journey a potential customer takes from first discovering you to making a purchase.' },
   ],
@@ -50,7 +49,7 @@ const TERMS: Record<string, { term: string; def: string }[]> = {
   I: [
     { term: 'Impressions', def: 'The total number of times your content has been displayed, including multiple views by the same person.' },
     { term: 'Influencer', def: 'A social media creator with an engaged audience who can affect the purchasing decisions of followers.' },
-    { term: 'Instagram Reels', def: 'Short-form vertical videos on Instagram, similar to TikTok videos.' },
+    { term: 'Instagram Reels', def: 'Short-form vertical videos on Instagram designed for discovery and fast engagement.' },
   ],
   K: [
     { term: 'KPI (Key Performance Indicator)', def: 'A measurable value that indicates how effectively a campaign is achieving objectives.' },
