@@ -41,7 +41,7 @@ export default function CreatorsSolutionPage() {
               { emoji: '📊', title: 'Know What Goes Viral', desc: 'AI-predicted viral scores before you post. Double down on what your audience actually loves.' },
               { emoji: '💰', title: 'Monetization Insights', desc: 'Track which posts drive affiliate clicks, merch sales, and brand deal opportunities.' },
               { emoji: '#️⃣', title: 'Hashtag Strategy', desc: '30 niche-specific hashtags per post. Mix viral + niche + branded for maximum discovery.' },
-              { emoji: '🎬', title: 'Video Studio', desc: 'Full scripts for TikTok, YouTube Shorts, and Reels. Hook → Body → CTA in 10 seconds.' },
+              { emoji: '🎬', title: 'Video Studio', desc: 'Full scripts for YouTube Shorts and Reels. Hook → Body → CTA in 10 seconds.' },
             ].map(i => (
               <div key={i.title} className="card card-hover marketing-metric-card premium-tilt-card p-6 flex gap-4">
                 <span className="text-3xl shrink-0">{i.emoji}</span>
@@ -63,7 +63,7 @@ export default function CreatorsSolutionPage() {
             {[
               { name: 'Rahul Sharma', role: 'YouTuber · 250K subs', text: 'I saved 15 hours a week. The AI script generator is genuinely better than what I was writing manually.', plan: 'Pro' },
               { name: 'Priya Gupta', role: 'Instagram Creator · 180K', text: 'My engagement jumped 340% in 3 months after using AI hashtags consistently. The analytics are mind-blowing.', plan: 'Growth' },
-              { name: 'Aarav Kapoor', role: 'TikTok Creator · 500K', text: 'I schedule an entire week of TikTok + Reels content on Sunday morning. Changed my life honestly.', plan: 'Pro' },
+              { name: 'Aarav Kapoor', role: 'Instagram Creator · 500K', text: 'I schedule an entire week of Reels content on Sunday morning. Changed my life honestly.', plan: 'Pro' },
             ].map(t => (
               <div key={t.name} className="card marketing-metric-card premium-tilt-card p-6">
                 <div className="flex gap-1 mb-3">{[...Array(5)].map((_,j) => <span key={j} className="text-yellow-400 text-sm">★</span>)}</div>

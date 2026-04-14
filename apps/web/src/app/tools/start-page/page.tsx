@@ -14,7 +14,7 @@ const FEATURES = [
   { icon: '📊', title: 'Link Analytics', desc: 'See exactly how many people click each link. Optimize your bio for maximum conversions.' },
   { icon: '🌐', title: 'Custom Domain', desc: 'Use your own domain (like yourname.com) instead of a zynovexa.com/u/yourname URL.' },
   { icon: '📧', title: 'Email Capture', desc: 'Built-in email opt-in forms. Grow your list directly from your link-in-bio page.' },
-  { icon: '🎬', title: 'Video Embed', desc: 'Embed your latest YouTube or TikTok video directly on your Start Page. Always fresh.' },
+  { icon: '🎬', title: 'Video Embed', desc: 'Embed your latest YouTube video directly on your Start Page. Always fresh.' },
 ];
 
 export default function StartPageToolPage() {

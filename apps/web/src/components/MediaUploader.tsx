@@ -19,6 +19,9 @@ type MediaUploaderProps = {
   hint?: ReactNode;
   intro?: ReactNode;
   textModeEmptyState?: ReactNode;
+  highlighted?: boolean;
+  statusMessage?: ReactNode;
+  previewBadge?: ReactNode;
 };
 
 export default function MediaUploader({
@@ -37,6 +40,9 @@ export default function MediaUploader({
   hint,
   intro,
   textModeEmptyState,
+  highlighted,
+  statusMessage,
+  previewBadge,
 }: MediaUploaderProps) {
   const isVideo = selectedMediaType === 'VIDEO';
 
@@ -73,8 +79,24 @@ export default function MediaUploader({
 
       {hint}
 
+      {statusMessage && (
+        <div
+          className="mb-3 rounded-xl px-4 py-3 text-sm"
+          style={{
+            background: 'rgba(16, 185, 129, 0.12)',
+            border: '1px solid rgba(16, 185, 129, 0.28)',
+            color: '#a7f3d0',
+          }}
+        >
+          {statusMessage}
+        </div>
+      )}
+
       {selectedMediaType !== 'TEXT' ? (
-        <div className="rounded-xl border border-dashed border-white/15 bg-white/5 p-4">
+        <div
+          className="rounded-xl border border-dashed border-white/15 bg-white/5 p-4 transition-all duration-300"
+          style={highlighted ? { boxShadow: '0 0 0 2px rgba(168,85,247,0.28)', borderColor: 'rgba(168,85,247,0.55)' } : undefined}
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-white">{isVideo ? 'Video upload karo ya link paste karo' : 'Image upload karo ya link paste karo'}</p>
@@ -112,9 +134,21 @@ export default function MediaUploader({
           {mediaUrls.length > 0 && (
             <div className="mt-4 grid gap-2">
               {mediaUrls.map((url) => (
-                <div key={url} className="flex items-center justify-between rounded-lg bg-black/10 px-3 py-2 text-xs text-slate-300">
-                  <span className="truncate pr-3">{url}</span>
-                  <button type="button" onClick={() => onRemoveMedia(url)} className="text-red-400 hover:text-red-300">Remove</button>
+                <div key={url} className="overflow-hidden rounded-xl border border-white/10 bg-black/10">
+                  {previewBadge && (
+                    <div className="flex items-center justify-between border-b border-white/10 bg-emerald-500/10 px-3 py-2 text-[11px] font-medium text-emerald-200">
+                      {previewBadge}
+                    </div>
+                  )}
+                  {isVideo ? (
+                    <video src={url} controls className="max-h-56 w-full bg-black object-contain" />
+                  ) : (
+                    <img src={url} alt="Attached media" className="max-h-72 w-full bg-black/20 object-contain" />
+                  )}
+                  <div className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-slate-300">
+                    <span className="truncate pr-3">{url}</span>
+                    <button type="button" onClick={() => onRemoveMedia(url)} className="shrink-0 text-red-400 hover:text-red-300">Remove</button>
+                  </div>
                 </div>
               ))}
             </div>

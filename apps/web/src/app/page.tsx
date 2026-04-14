@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
 import Link from 'next/link';
 import MarketingLayout from '@/components/MarketingLayout';
 import FloatingSocialIcons from '@/components/FloatingSocialIcons';
@@ -7,7 +6,7 @@ import FloatingSocialIcons from '@/components/FloatingSocialIcons';
 export const metadata: Metadata = {
   title: 'Zynovexa — AI Social Media Manager & Creator Commerce Platform',
   description:
-    'Zynovexa helps creators schedule posts, generate viral AI captions, sell digital products, courses & templates, and grow across Instagram, YouTube, TikTok, Twitter, LinkedIn & more. Start free today.',
+    'Zynovexa helps creators schedule posts, generate viral AI captions, sell digital products, courses & templates, and grow across Instagram, YouTube, Twitter, LinkedIn, Facebook, and more. Start free today.',
   alternates: { canonical: 'https://zynovexa.com' },
   openGraph: {
     title: 'Zynovexa — AI Social Media Manager & Creator Commerce Platform',
@@ -52,7 +51,7 @@ const FEATURES = [
   {
     icon: '🎬',
     title: 'Video Script AI',
-    desc: 'Write TikTok, YouTube & Reels scripts with hooks and CTAs.',
+    desc: 'Write YouTube & Reels scripts with hooks and CTAs.',
     color: 'from-pink-500/20 to-rose-500/20',
     border: 'border-pink-500/30',
     href: '/features/create',
@@ -104,7 +103,6 @@ const FEATURES = [
 const PLATFORMS = [
   { name: 'Instagram', icon: '📸', color: '#e1306c', href: '/channels/instagram' },
   { name: 'YouTube', icon: '▶️', color: '#ff0000', href: '/channels/youtube' },
-  { name: 'TikTok', icon: '🎵', color: '#69c9d0', href: '/channels/tiktok' },
   { name: 'Twitter/X', icon: '𝕏', color: '#1da1f2', href: '/channels/twitter' },
   { name: 'LinkedIn', icon: '💼', color: '#0077b5', href: '/channels/linkedin' },
   { name: 'Facebook', icon: '📘', color: '#1877f2', href: '/channels/facebook' },
@@ -114,15 +112,13 @@ const PLATFORMS = [
 const TRUST_CARDS = [
   { icon: '🎉', title: 'Free to start', desc: 'No credit card required' },
   { icon: '🔓', title: 'Cancel anytime', desc: 'No lock-in' },
-  { icon: '🔒', title: 'Secure payments', desc: 'Razorpay + Stripe' },
+  { icon: '🔒', title: 'Secure payments', desc: 'Razorpay' },
 ];
 
 
 
 export default async function LandingPage() {
-  const host = (await headers()).get('host') ?? '';
-  const currency = host.endsWith('.in') ? 'inr' : 'usd';
-  const symbol = currency === 'inr' ? '₹' : '$';
+  const symbol = '₹';
   const landingPlans = [
     {
       plan: 'Free',
@@ -134,7 +130,7 @@ export default async function LandingPage() {
     },
     {
       plan: 'Starter',
-      price: currency === 'inr' ? 299 : 5,
+      price: 299,
       desc: 'For individual creators',
       features: ['30 posts/month', '100 AI credits', '3 platforms', '30-day analytics', 'AI captions', 'Email support'],
       cta: 'Start Starter',
@@ -142,7 +138,7 @@ export default async function LandingPage() {
     },
     {
       plan: 'Pro',
-      price: currency === 'inr' ? 599 : 9,
+      price: 699,
       desc: 'For serious creators',
       features: ['100 posts/month', '500 AI credits', '5 platforms', '90-day analytics', 'Video Studio', 'Priority email'],
       cta: 'Start Pro',
@@ -151,7 +147,7 @@ export default async function LandingPage() {
     },
     {
       plan: 'Growth',
-      price: currency === 'inr' ? 1199 : 19,
+      price: 1299,
       desc: 'For agencies & teams',
       features: ['Unlimited posts', 'Unlimited AI', 'All 7 platforms', '1-year analytics', 'Team collaboration', 'API access'],
       cta: 'Choose Growth',
@@ -345,7 +341,7 @@ export default async function LandingPage() {
             {[
               { icon: '🏪', title: 'Your Storefront', desc: 'Get zynovexa.com/yourhandle — a beautiful creator page with your products, courses, bio, and social links.', color: 'from-emerald-500/20 to-teal-500/20', border: 'border-emerald-500/30' },
               { icon: '📦', title: '5 Product Types', desc: 'Sell digital downloads, templates, ebooks, courses, and coaching sessions — all from one dashboard.', color: 'from-blue-500/20 to-indigo-500/20', border: 'border-blue-500/30' },
-              { icon: '💳', title: 'Razorpay + Stripe', desc: 'Accept payments in INR via Razorpay or globally via Stripe. Instant checkout with zero setup friction.', color: 'from-purple-500/20 to-pink-500/20', border: 'border-purple-500/30' },
+              { icon: '💳', title: 'Razorpay Checkout', desc: 'Accept payments in INR via Razorpay with cards, UPI, net banking, and wallets.', color: 'from-purple-500/20 to-pink-500/20', border: 'border-purple-500/30' },
               { icon: '🎓', title: 'Course Builder', desc: 'Create courses with lessons, video content, and drip access. Track student progress and completion.', color: 'from-amber-500/20 to-orange-500/20', border: 'border-amber-500/30' },
               { icon: '📊', title: 'Sales Analytics', desc: 'Track revenue, buyers, product performance, and net earnings after platform fees — all real-time.', color: 'from-pink-500/20 to-rose-500/20', border: 'border-pink-500/30' },
               { icon: '🔒', title: 'Secure Downloads', desc: 'Download limits per purchase, signed URLs, and automatic access management. Built-in buyer protection.', color: 'from-violet-500/20 to-purple-500/20', border: 'border-violet-500/30' },
@@ -435,7 +431,7 @@ export default async function LandingPage() {
           </div>
 
           <div className="marketing-summary-strip mb-8 text-xs sm:text-sm">
-            <span className="marketing-logo-pill">{currency === 'inr' ? 'INR pricing for .in visitors' : 'USD pricing for global visitors'}</span>
+            <span className="marketing-logo-pill">INR pricing with Razorpay checkout</span>
             <span className="marketing-logo-pill">20% savings on yearly billing</span>
             <span className="marketing-logo-pill">Free to Growth without migration pain</span>
           </div>

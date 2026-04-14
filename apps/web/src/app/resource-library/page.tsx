@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const RESOURCES = [
   { icon: '📘', type: 'Ebook', title: 'The Complete Guide to Instagram Growth in 2026', desc: '80-page deep dive into algorithm, content strategy, and monetization.', tag: 'Instagram', free: true },
   { icon: '📋', type: 'Template', title: '30-Day Content Calendar Template', desc: 'Ready-to-use calendar with post ideas, hashtag slots, and analytics tracking.', tag: 'Strategy', free: true },
-  { icon: '🎥', type: 'Video Course', title: 'TikTok 0 to 10K in 60 Days', desc: '6-part video course covering hooks, trends, editing, and audience building.', tag: 'TikTok', free: false },
+  { icon: '🎥', type: 'Video Course', title: 'YouTube Shorts 0 to 10K in 60 Days', desc: '6-part video course covering hooks, trends, editing, and audience building.', tag: 'YouTube', free: false },
   { icon: '📊', type: 'Report', title: 'Social Media Benchmarks Report 2026', desc: 'Average engagement rates, reach, and growth metrics by industry and platform.', tag: 'Analytics', free: true },
   { icon: '✅', type: 'Checklist', title: 'The Perfect Post Checklist (All Platforms)', desc: '25-point checklist to review before every post for maximum performance.', tag: 'Strategy', free: true },
   { icon: '🎨', type: 'Template Pack', title: '100 Canva Template Pack for Social Media', desc: 'Professionally designed templates for Stories, Reels covers, carousels, and more.', tag: 'Design', free: false },

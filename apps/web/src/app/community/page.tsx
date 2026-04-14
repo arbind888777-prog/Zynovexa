@@ -18,7 +18,7 @@ const CHANNELS = [
 const FEATURED_CREATORS = [
   { name: 'Priya Sharma', handle: '@priyacreates', platform: 'YouTube', followers: '850K', niche: 'Finance' },
   { name: 'Marcus Webb', handle: '@marcuswebb', platform: 'Instagram', followers: '420K', niche: 'Fitness' },
-  { name: 'Ananya Rao', handle: '@ananyarao', platform: 'TikTok', followers: '1.2M', niche: 'Food' },
+  { name: 'Ananya Rao', handle: '@ananyarao', platform: 'Instagram', followers: '1.2M', niche: 'Food' },
   { name: 'Jay Patel', handle: '@jaypateltech', platform: 'LinkedIn', followers: '180K', niche: 'Tech' },
   { name: 'Sofia Chen', handle: '@sofiastyle', platform: 'Instagram', followers: '300K', niche: 'Fashion' },
   { name: 'Ravi Kumar', handle: '@ravidigital', platform: 'YouTube', followers: '650K', niche: 'Gaming' },

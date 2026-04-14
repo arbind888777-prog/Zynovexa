@@ -8,7 +8,6 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import Stripe from 'stripe';
-import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
 import {
   CreateCommerceCheckoutDto,
   CreateCourseDto,
@@ -24,14 +23,13 @@ import {
 
 @Injectable()
 export class CommerceService {
-  private stripe: Stripe;
+  private stripe: Stripe | null = null;
 
   constructor(private prisma: PrismaService, private config: ConfigService, private jwt: JwtService) {
     const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY');
-    if (!stripeKey) {
-      throw new Error('STRIPE_SECRET_KEY is required for commerce module');
+    if (stripeKey) {
+      this.stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
     }
-    this.stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
   }
 
   /** Calculate platform fee based on creator's plan */
@@ -418,41 +416,8 @@ export class CommerceService {
       throw new BadRequestException('You already own this item');
     }
 
-    const frontendUrl = sanitizeFrontendUrl(this.config.get<string>('FRONTEND_URL'));
-    let customerId = buyer.subscription?.stripeCustomerId || null;
-    if (!customerId) {
-      const customer = await this.stripe.customers.create({ email: buyer.email, name: buyer.name, metadata: { userId } });
-      customerId = customer.id;
-      await this.prisma.subscription.update({ where: { userId }, data: { stripeCustomerId: customerId } });
-    }
-
-    const session = await this.stripe.checkout.sessions.create({
-      customer: customerId,
-      payment_method_types: ['card'],
-      mode: 'payment',
-      line_items: [{
-        quantity: 1,
-        price_data: {
-          currency: item.currency,
-          unit_amount: item.price,
-          product_data: {
-            name: item.title,
-            description: item.shortDescription || item.description.slice(0, 500),
-          },
-        },
-      }],
-      success_url: `${frontendUrl}/purchases?success=true`,
-      cancel_url: `${frontendUrl}/store/${item.store.slug}/${dto.itemType === 'PRODUCT' ? 'products' : 'courses'}/${item.slug}?canceled=true`,
-      metadata: {
-        itemType: dto.itemType,
-        itemId: item.id,
-        storeId: item.storeId,
-        creatorId: item.creatorId,
-        buyerId: userId,
-      },
-    });
-
-    return { url: session.url, sessionId: session.id, provider: 'stripe' };
+    // Use Razorpay as the primary payment provider
+    return this.createRazorpayCheckout(userId, dto);
   }
 
   async createRazorpayCheckout(userId: string, dto: CreateCommerceCheckoutDto) {
@@ -587,6 +552,10 @@ export class CommerceService {
   }
 
   async handleWebhook(rawBody: Buffer, signature: string) {
+    if (!this.stripe) {
+      throw new BadRequestException('Stripe webhook is disabled. Use Razorpay checkout and webhook endpoints.');
+    }
+
     const webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
     if (!webhookSecret) {
       throw new BadRequestException('STRIPE_WEBHOOK_SECRET is required for commerce webhooks');

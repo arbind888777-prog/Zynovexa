@@ -33,7 +33,7 @@ function getApiErrorMessage(error: any, fallback: string) {
 const TOOLS = [
   { id: 'caption', icon: '✍️', name: 'Caption Writer', desc: 'Generate viral captions for any platform' },
   { id: 'hashtags', icon: '#️⃣', name: 'Hashtag Generator', desc: 'Find the best hashtags for your content' },
-  { id: 'script', icon: '🎬', name: 'Video Script', desc: 'Write scripts for TikTok, YouTube, Reels' },
+  { id: 'script', icon: '🎬', name: 'Video Script', desc: 'Write scripts for YouTube and Reels' },
   { id: 'image', icon: '🎨', name: 'Image Generator', desc: 'Create AI images with Google Nano Banana' },
   { id: 'video', icon: '🎥', name: 'Video Generator', desc: 'Create short AI videos with Google Veo 3.1' },
   { id: 'chat', icon: '💬', name: 'Zyx Chatbot', desc: 'Your 24/7 creator growth advisor' },
@@ -51,7 +51,6 @@ const PROVIDER_BADGES = [
 const PLATFORM_MAP: Record<string, string> = {
   instagram: 'INSTAGRAM',
   youtube: 'YOUTUBE',
-  tiktok: 'TIKTOK',
   twitter: 'TWITTER',
   x: 'TWITTER',
   linkedin: 'LINKEDIN',
@@ -409,15 +408,15 @@ export default function AIStudioPage() {
                 <div><label className="block text-xs text-gray-400 mb-1">Post Description *</label><textarea value={fields.description} onChange={f('description')} rows={3} placeholder="What's your post about?" className={inputClass + ' resize-none'} style={inputStyle} /></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Niche</label><input value={fields.niche} onChange={f('niche')} placeholder="lifestyle, fitness, tech..." className={inputClass} style={inputStyle} /></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Tone</label><select value={fields.tone} onChange={f('tone') as any} className={inputClass} style={inputStyle}>{['casual', 'professional', 'funny', 'inspirational'].map(t => <option key={t}>{t}</option>)}</select></div>
-                <div><label className="block text-xs text-gray-400 mb-1">Platforms (comma-separated)</label><input value={fields.platforms} onChange={f('platforms')} placeholder="instagram, tiktok, youtube" className={inputClass} style={inputStyle} /></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Platforms (comma-separated)</label><input value={fields.platforms} onChange={f('platforms')} placeholder="instagram, youtube, linkedin" className={inputClass} style={inputStyle} /></div>
               </>}
               {activeTool === 'hashtags' && <>
                 <div><label className="block text-xs text-gray-400 mb-1">Content Description *</label><textarea value={fields.content} onChange={f('content')} rows={3} placeholder="Describe your content..." className={inputClass + ' resize-none'} style={inputStyle} /></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Niche</label><input value={fields.niche} onChange={f('niche')} placeholder="fitness, travel, food..." className={inputClass} style={inputStyle} /></div>
               </>}
               {activeTool === 'script' && <>
-                <div><label className="block text-xs text-gray-400 mb-1">Video Topic *</label><input value={fields.topic} onChange={f('topic')} placeholder="5 tips to grow on TikTok..." className={inputClass} style={inputStyle} /></div>
-                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['tiktok', 'youtube', 'instagram', 'shorts'].map(p => <option key={p}>{p}</option>)}</select></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Video Topic *</label><input value={fields.topic} onChange={f('topic')} placeholder="5 tips to grow on YouTube Shorts..." className={inputClass} style={inputStyle} /></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['youtube', 'instagram', 'shorts'].map(p => <option key={p}>{p}</option>)}</select></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Duration (seconds)</label><input type="number" value={fields.duration} onChange={f('duration')} className={inputClass} style={inputStyle} /></div>
               </>}
               {activeTool === 'image' && <>
@@ -429,19 +428,19 @@ export default function AIStudioPage() {
                 <div><label className="block text-xs text-gray-400 mb-1">Duration</label><select value={fields.videoDuration} onChange={f('videoDuration') as any} className={inputClass} style={inputStyle}>{['4', '6', '8'].map((duration) => <option key={duration} value={duration}>{duration} seconds</option>)}</select></div>
               </>}
               {activeTool === 'besttime' && <>
-                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['', 'instagram', 'tiktok', 'youtube', 'twitter', 'linkedin'].map(p => <option key={p} value={p}>{p || 'All platforms'}</option>)}</select></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['', 'instagram', 'youtube', 'twitter', 'linkedin'].map(p => <option key={p} value={p}>{p || 'All platforms'}</option>)}</select></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Niche</label><input value={fields.niche} onChange={f('niche')} placeholder="lifestyle, fitness..." className={inputClass} style={inputStyle} /></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Timezone</label><input value={fields.timezone} onChange={f('timezone')} placeholder="America/New_York" className={inputClass} style={inputStyle} /></div>
               </>}
               {activeTool === 'hook' && <>
                 <div><label className="block text-xs text-gray-400 mb-1">Topic / Idea *</label><textarea value={fields.topic || fields.description} onChange={f('topic')} rows={3} placeholder="What's the hook about? e.g., morning routine tips..." className={inputClass + ' resize-none'} style={inputStyle} /></div>
-                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['instagram', 'youtube', 'tiktok', 'twitter', 'linkedin'].map(p => <option key={p}>{p}</option>)}</select></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['instagram', 'youtube', 'twitter', 'linkedin'].map(p => <option key={p}>{p}</option>)}</select></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Niche</label><input value={fields.niche} onChange={f('niche')} placeholder="fitness, tech, food..." className={inputClass} style={inputStyle} /></div>
                 <div><label className="block text-xs text-gray-400 mb-1">Tone</label><select value={fields.tone} onChange={f('tone') as any} className={inputClass} style={inputStyle}>{['casual', 'professional', 'hinglish', 'humorous', 'motivational'].map(t => <option key={t}>{t}</option>)}</select></div>
               </>}
               {activeTool === 'scorer' && <>
                 <div><label className="block text-xs text-gray-400 mb-1">Paste your content *</label><textarea value={fields.content} onChange={f('content')} rows={5} placeholder="Paste your caption, script, or any content to score..." className={inputClass + ' resize-none'} style={inputStyle} /></div>
-                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['instagram', 'youtube', 'tiktok', 'twitter', 'linkedin'].map(p => <option key={p}>{p}</option>)}</select></div>
+                <div><label className="block text-xs text-gray-400 mb-1">Platform</label><select value={fields.platform} onChange={f('platform') as any} className={inputClass} style={inputStyle}>{['instagram', 'youtube', 'twitter', 'linkedin'].map(p => <option key={p}>{p}</option>)}</select></div>
               </>}
               <button onClick={runTool} disabled={loading} className="w-full py-3 rounded-lg font-semibold text-white disabled:opacity-50 transition-all hover:scale-[1.01]" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
                 {loading ? '✨ Generating...' : '✨ Generate'}

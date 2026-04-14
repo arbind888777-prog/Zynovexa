@@ -11,7 +11,7 @@ const TOOLS = [
   {
     icon: '✍️',
     name: 'AI Caption Generator',
-    desc: 'Generate scroll-stopping captions for Instagram, TikTok, LinkedIn, and more in seconds.',
+    desc: 'Generate scroll-stopping captions for Instagram, LinkedIn, and more in seconds.',
     href: '/tools/ai-caption-generator',
     tag: 'AI',
     popular: true,

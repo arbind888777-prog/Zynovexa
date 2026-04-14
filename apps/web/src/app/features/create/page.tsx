@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 const TOOLS = [
   { icon: '✍️', title: 'AI Caption Writer', desc: 'Generate scroll-stopping captions for any platform. Just describe your post and let AI do the rest.', badge: 'Most Popular', href: '/tools/ai-caption-generator', cta: 'Open caption tool' },
-  { icon: '🎬', title: 'Video Script Generator', desc: 'Full YouTube/TikTok scripts with hooks, body, CTA — tailored to your niche and style.', badge: null, href: '/features/ai-assistant', cta: 'See AI assistant' },
+  { icon: '🎬', title: 'Video Script Generator', desc: 'Full YouTube/Reels scripts with hooks, body, CTA — tailored to your niche and style.', badge: null, href: '/features/ai-assistant', cta: 'See AI assistant' },
   { icon: '#️⃣', title: 'Hashtag Generator', desc: 'Data-driven hashtag sets that actually reach your target audience. Up to 30 tags per post.', badge: null, href: '/tools/hashtag-generator', cta: 'Open hashtag tool' },
   { icon: '🖼️', title: 'AI Image Creator', desc: 'Generate on-brand graphics, thumbnails, and post visuals with a single text prompt.', badge: 'New', href: '/features/ai-assistant', cta: 'See image workflow' },
   { icon: '🔁', title: 'Content Repurposer', desc: 'Turn one blog post into 10 social media posts. Turn YouTube videos into Threads threads.', badge: null, href: '#content-repurposing', cta: 'Jump to repurposing' },
@@ -18,7 +18,6 @@ const TOOLS = [
 
 const FORMATS = [
   { platform: 'Instagram', formats: ['Feed posts', 'Reels captions', 'Story ideas', 'Bio writer'], href: '/channels/instagram' },
-  { platform: 'TikTok', formats: ['Viral hooks', 'Video concepts', 'Sound suggestions', 'Trending sounds'], href: '/channels/tiktok' },
   { platform: 'YouTube', formats: ['Full scripts', 'Titles & descriptions', 'End-card CTAs', 'Chapter markers'], href: '/channels/youtube' },
   { platform: 'LinkedIn', formats: ['Thought leadership', 'Job posts', 'Company updates', 'Carousels'], href: '/channels/linkedin' },
   { platform: 'Twitter / X', formats: ['Tweet threads', 'Single tweets', 'Poll ideas', 'Reply templates'], href: '/channels/twitter' },
@@ -28,15 +27,15 @@ const FORMATS = [
 const HERO_STATS = [
   { icon: '⚡', title: '10x faster output', desc: 'From blank page to publish-ready copy in seconds.' },
   { icon: '🧠', title: 'Multi-format AI', desc: 'Captions, scripts, hashtags, visuals, and repurposing.' },
-  { icon: '🎯', title: 'Platform aware', desc: 'Built for Instagram, TikTok, YouTube, LinkedIn, and more.' },
+  { icon: '🎯', title: 'Platform aware', desc: 'Built for Instagram, YouTube, LinkedIn, Facebook, and more.' },
 ];
 
 const SEO_SECTIONS = [
   {
     title: 'Why creators need an AI content creation platform',
     paragraphs: [
-      'Modern content teams do not struggle because they lack ideas. They struggle because every platform demands a different format, a different hook, a different publishing rhythm, and a different level of polish. A creator may need an Instagram carousel caption in the morning, a TikTok hook at lunch, and a YouTube description before the day ends. That is exactly where an AI content creation platform becomes valuable. Instead of starting from zero every time, creators can use one workflow to plan, generate, refine, and repurpose content for every channel.',
-      'Zynovexa is built for that real workflow. Instead of giving you one generic AI writer, it combines an AI caption generator, script writing support, hashtag suggestions, AI image prompts, and repurposing tools in one place. This improves speed, but more importantly it improves consistency. Your voice, your message, and your publishing cadence become easier to maintain across Instagram, TikTok, YouTube, LinkedIn, Facebook, and X. That consistency is what helps creators grow reach, improve engagement, and build a recognizable brand over time.',
+      'Modern content teams do not struggle because they lack ideas. They struggle because every platform demands a different format, a different hook, a different publishing rhythm, and a different level of polish. A creator may need an Instagram carousel caption in the morning, a Reels hook at lunch, and a YouTube description before the day ends. That is exactly where an AI content creation platform becomes valuable. Instead of starting from zero every time, creators can use one workflow to plan, generate, refine, and repurpose content for every channel.',
+      'Zynovexa is built for that real workflow. Instead of giving you one generic AI writer, it combines an AI caption generator, script writing support, hashtag suggestions, AI image prompts, and repurposing tools in one place. This improves speed, but more importantly it improves consistency. Your voice, your message, and your publishing cadence become easier to maintain across Instagram, YouTube, LinkedIn, Facebook, and X. That consistency is what helps creators grow reach, improve engagement, and build a recognizable brand over time.',
     ],
   },
   {
@@ -50,7 +49,7 @@ const SEO_SECTIONS = [
     title: 'What makes Zynovexa different for SEO and growth',
     paragraphs: [
       'Many AI tools can generate copy, but very few are designed to support long-term discoverability. Zynovexa helps creators produce content that is easier to organize around topics, easier to repurpose into search-friendly assets, and easier to connect to monetization goals. When your content engine is structured, you can turn one campaign into social posts, evergreen landing page copy, educational email content, and video scripts without losing the core message. That improves both audience retention and topical authority.',
-      'If your goal is to rank for terms such as AI caption generator, social media content creation tool, TikTok script generator, or Instagram content planner, the page itself needs more than a flashy hero section. It needs useful explanation, problem-solving content, and strong internal navigation. This page now does that job more effectively while still pushing visitors toward action with links to the AI assistant, publishing workflow, and free tools inside the Zynovexa ecosystem.',
+      'If your goal is to rank for terms such as AI caption generator, social media content creation tool, or Instagram content planner, the page itself needs more than a flashy hero section. It needs useful explanation, problem-solving content, and strong internal navigation. This page now does that job more effectively while still pushing visitors toward action with links to the AI assistant, publishing workflow, and free tools inside the Zynovexa ecosystem.',
     ],
   },
 ];

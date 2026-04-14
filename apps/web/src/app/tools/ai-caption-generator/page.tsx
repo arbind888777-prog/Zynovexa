@@ -6,14 +6,13 @@ import CaptionGeneratorClient from './CaptionGeneratorClient';
 const APP_URL = 'https://zynovexa.com';
 
 export const metadata: Metadata = {
-  title: 'Free AI Caption Generator — Instagram, TikTok, YouTube & More | Zynovexa',
+  title: 'Free AI Caption Generator — Instagram, YouTube & More | Zynovexa',
   description:
-    'Generate scroll-stopping social media captions for Instagram, TikTok, LinkedIn, YouTube, Facebook and X. AI-powered, 100% free. No signup required.',
+    'Generate scroll-stopping social media captions for Instagram, LinkedIn, YouTube, Facebook and X. AI-powered, 100% free. No signup required.',
   keywords: [
     'ai caption generator',
     'free caption generator',
     'instagram caption generator',
-    'tiktok caption generator',
     'social media caption tool',
     'ai caption writer',
     'caption ideas for creators',
@@ -22,7 +21,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Free AI Caption Generator | Zynovexa',
     description:
-      'Generate viral captions for Instagram, TikTok, YouTube, LinkedIn & more. Powered by AI. 100% free.',
+      'Generate viral captions for Instagram, YouTube, LinkedIn & more. Powered by AI. 100% free.',
     url: `${APP_URL}/tools/ai-caption-generator`,
     type: 'website',
     siteName: 'Zynovexa',
@@ -39,8 +38,8 @@ const SEO_SECTIONS = [
   {
     title: 'What makes a strong AI caption generator useful',
     paragraphs: [
-      'A useful AI caption generator does more than rewrite a sentence with emojis. It helps creators find a stronger hook, a clearer message, a better CTA, and a style that fits the platform. Instagram captions often need story and emotion. TikTok captions need curiosity and momentum. LinkedIn copy usually needs a sharper point of view. A good generator understands that context and produces copy that feels native instead of robotic.',
-      'This free tool is designed as a fast starting point for that workflow. It gives creators a practical way to test ideas, explore tones, and move from a blank screen to usable copy quickly. That matters for SEO as well because users searching for free AI caption generator, Instagram caption generator, or TikTok caption writer are usually looking for a working tool plus clear guidance on how to use it effectively. This page now serves both needs.',
+      'A useful AI caption generator does more than rewrite a sentence with emojis. It helps creators find a stronger hook, a clearer message, a better CTA, and a style that fits the platform. Instagram captions often need story and emotion. LinkedIn copy usually needs a sharper point of view. A good generator understands that context and produces copy that feels native instead of robotic.',
+      'This free tool is designed as a fast starting point for that workflow. It gives creators a practical way to test ideas, explore tones, and move from a blank screen to usable copy quickly. That matters for SEO as well because users searching for free AI caption generator or Instagram caption generator are usually looking for a working tool plus clear guidance on how to use it effectively. This page now serves both needs.',
     ],
   },
   {
@@ -66,7 +65,7 @@ const FAQS = [
   },
   {
     q: 'Which platforms is this caption generator best for?',
-    a: 'It is useful for Instagram, TikTok, LinkedIn, Facebook, YouTube, and X. The strongest results come when you choose the platform first and adapt the hook to the audience expectation for that channel.',
+    a: 'It is useful for Instagram, LinkedIn, Facebook, YouTube, and X. The strongest results come when you choose the platform first and adapt the hook to the audience expectation for that channel.',
   },
   {
     q: 'How do I get better results from AI captions?',
@@ -92,7 +91,7 @@ function JsonLd() {
     operatingSystem: 'Web',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     url: `${APP_URL}/tools/ai-caption-generator`,
-    description: 'Free AI-powered caption generator for Instagram, TikTok, YouTube, LinkedIn, Facebook and X.',
+    description: 'Free AI-powered caption generator for Instagram, YouTube, LinkedIn, Facebook and X.',
   };
   return (
     <>

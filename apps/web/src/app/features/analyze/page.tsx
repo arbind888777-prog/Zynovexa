@@ -4,7 +4,7 @@ import MarketingLayout from '@/components/MarketingLayout';
 
 export const metadata: Metadata = {
   title: 'Analytics & Insights — Track Growth Across All Platforms | Zynovexa',
-  description: 'Deep social media analytics for Instagram, TikTok, YouTube, LinkedIn and more. Real-time engagement, competitor analysis, AI growth recommendations. Start free.',
+  description: 'Deep social media analytics for Instagram, YouTube, LinkedIn and more. Real-time engagement, competitor analysis, AI growth recommendations. Start free.',
   alternates: { canonical: 'https://zynovexa.com/features/analyze' },
 };
 
@@ -40,7 +40,7 @@ const SEO_SECTIONS = [
     title: 'Why social media analytics matter beyond vanity metrics',
     paragraphs: [
       'Many teams look at likes, comments, and follower counts, but those numbers only tell part of the story. Real growth comes from understanding which topics hold attention, which formats drive saves and shares, which channels deserve more effort, and which campaigns produce downstream results such as leads, signups, or purchases. A serious social media analytics platform should help you answer those questions quickly and clearly.',
-      'Zynovexa brings those signals together in one dashboard so creators and marketers do not have to bounce between platform-native tools. This matters for SEO as well because users searching for social media analytics software, Instagram analytics tools, TikTok performance dashboards, or AI marketing insights usually want decision support, not just charts. The stronger this explanation is on the page, the better the match between search intent and page value.',
+      'Zynovexa brings those signals together in one dashboard so creators and marketers do not have to bounce between platform-native tools. This matters for SEO as well because users searching for social media analytics software, Instagram analytics tools, or AI marketing insights usually want decision support, not just charts. The stronger this explanation is on the page, the better the match between search intent and page value.',
     ],
   },
   {

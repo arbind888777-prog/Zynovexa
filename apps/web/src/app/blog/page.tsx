@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://zynovexa.com/blog' },
 };
 
-const CATEGORIES = ['All', 'Instagram', 'TikTok', 'YouTube', 'LinkedIn', 'AI Tools', 'Analytics', 'Creator Economy'];
+const CATEGORIES = ['All', 'Instagram', 'YouTube', 'LinkedIn', 'AI Tools', 'Analytics', 'Creator Economy'];
 
 const POSTS = [
   {
@@ -34,10 +34,10 @@ const POSTS = [
     featured: true,
   },
   {
-    slug: 'tiktok-growth-strategy-2026',
-    category: 'TikTok',
-    title: '10 TikTok Growth Hacks That Are Working Right Now',
-    excerpt: 'From late-night posting windows to duet strategies that explode your following — these are the TikTok tactics working in 2026.',
+    slug: 'youtube-shorts-strategy',
+    category: 'YouTube',
+    title: '10 YouTube Shorts Growth Ideas That Are Working Right Now',
+    excerpt: 'From retention-first hooks to repeatable content systems — these are the YouTube Shorts tactics working in 2026.',
     readTime: '7 min read',
     date: 'Feb 20, 2026',
     author: 'Arjun Kapoor',

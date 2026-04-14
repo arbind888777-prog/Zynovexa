@@ -37,7 +37,7 @@ const planTone: Record<string, string> = {
   BUSINESS: 'bg-fuchsia-500/15 text-fuchsia-300',
 };
 
-export default function AdminUsersPage() {
+function UsersList() {
   const { user } = useAuthStore();
   const [rows, setRows] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,8 +45,17 @@ export default function AdminUsersPage() {
   const [searchDraft, setSearchDraft] = useState('');
   const [planFilter, setPlanFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) {
+      return;
+    }
+
     if (user?.role !== 'ADMIN') {
       setLoading(false);
       return;
@@ -69,6 +78,7 @@ export default function AdminUsersPage() {
       } catch (error: any) {
         if (!cancelled) {
           toast.error(error?.response?.data?.message || 'Failed to load admin users');
+          setRows([]);
         }
       } finally {
         if (!cancelled) {
@@ -82,7 +92,7 @@ export default function AdminUsersPage() {
     return () => {
       cancelled = true;
     };
-  }, [planFilter, query, roleFilter, user?.role]);
+  }, [isClient, planFilter, query, roleFilter, user?.role]);
 
   const totals = useMemo(() => {
     return rows.reduce(
@@ -94,6 +104,8 @@ export default function AdminUsersPage() {
       { total: 0, FREE: 0, STARTER: 0, PRO: 0, GROWTH: 0, BUSINESS: 0 } as Record<string, number>,
     );
   }, [rows]);
+
+  if (!isClient) return null;
 
   if (user?.role !== 'ADMIN') {
     return (
@@ -256,6 +268,13 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
+    </Suspense>
+  );
+}
+export default function AdminUsersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-white animate-pulse">Loading Zynovexa Admin...</div>}>
+      <UsersList />
     </Suspense>
   );
 }

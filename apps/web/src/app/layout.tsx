@@ -18,13 +18,12 @@ export const metadata: Metadata = {
     template: '%s | Zynovexa',
   },
   description:
-    'Zynovexa is the #1 AI-powered social media management platform for creators. Schedule posts, generate viral captions, track analytics, and grow across Instagram, YouTube, TikTok, Twitter, LinkedIn & more — all in one place.',
+    'Zynovexa is the #1 AI-powered social media management platform for creators. Schedule posts, generate viral captions, track analytics, and grow across Instagram, YouTube, Twitter, LinkedIn, Facebook, and more — all in one place.',
   keywords: [
     'AI social media manager',
     'social media scheduler',
     'AI content generator for creators',
     'Instagram scheduler',
-    'TikTok scheduler',
     'YouTube content planner',
     'viral caption generator',
     'AI hashtag generator',
@@ -122,10 +121,10 @@ const structuredData = {
       operatingSystem: 'Web',
       applicationCategory: 'BusinessApplication',
       offers: [
-        { '@type': 'Offer', name: 'Free Plan', price: '0', priceCurrency: 'USD' },
-        { '@type': 'Offer', name: 'Starter Plan', price: '5', priceCurrency: 'USD' },
-        { '@type': 'Offer', name: 'Pro Plan', price: '9', priceCurrency: 'USD' },
-        { '@type': 'Offer', name: 'Growth Plan', price: '19', priceCurrency: 'USD' },
+        { '@type': 'Offer', name: 'Free Plan', price: '0', priceCurrency: 'INR' },
+        { '@type': 'Offer', name: 'Starter Plan', price: '299', priceCurrency: 'INR' },
+        { '@type': 'Offer', name: 'Pro Plan', price: '699', priceCurrency: 'INR' },
+        { '@type': 'Offer', name: 'Growth Plan', price: '1299', priceCurrency: 'INR' },
       ],
       aggregateRating: {
         '@type': 'AggregateRating',

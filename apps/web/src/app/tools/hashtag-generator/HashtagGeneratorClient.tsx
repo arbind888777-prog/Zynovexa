@@ -2,7 +2,7 @@
 import { useState } from 'react';
 
 const NICHES = ['Fashion', 'Fitness', 'Food', 'Travel', 'Tech', 'Finance', 'Business', 'Beauty', 'Gaming', 'Education', 'Lifestyle', 'Photography'];
-const PLATFORMS = ['Instagram', 'TikTok', 'Twitter/X', 'LinkedIn', 'YouTube'];
+const PLATFORMS = ['Instagram', 'Twitter/X', 'LinkedIn', 'YouTube'];
 
 /* ── Niche hashtag pools (30 each) ────────────────────────────── */
 
@@ -25,7 +25,6 @@ const NICHE_TAGS: Record<string, string[]> = {
 
 const PLATFORM_TAGS: Record<string, string[]> = {
   Instagram: ['#Reels', '#InstaDaily', '#InstaMood', '#IGers', '#InstaLove', '#ExplorePage', '#InstaViral', '#IGReels'],
-  TikTok: ['#TikTok', '#FYP', '#ForYouPage', '#Viral', '#TikTokTrend', '#TikTokCreator', '#Trending', '#TikTokViral'],
   'Twitter/X': ['#Thread', '#XPost', '#TwitterTips', '#Quote', '#HotTake', '#MustRead', '#TwitterSpace', '#Discourse'],
   LinkedIn: ['#LinkedInCreator', '#CareerTips', '#ProfessionalGrowth', '#Hiring', '#ThoughtLeadership', '#Networking', '#OpenToWork', '#LinkedInTop'],
   YouTube: ['#YouTuber', '#Subscribe', '#YouTubeVideo', '#WatchNow', '#YouTubeShorts', '#YouTubeCreator', '#VideoOfTheDay', '#NewVideo'],

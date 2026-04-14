@@ -17,14 +17,8 @@ function SettingsPageContent() {
   const [profile, setProfile] = useState({ name: user?.name || '', bio: user?.bio || '', website: user?.website || '' });
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [currency, setCurrency] = useState<'inr' | 'usd'>('usd');
-
-  useEffect(() => {
-    const host = window.location.hostname;
-    setCurrency(host.endsWith('.in') ? 'inr' : 'usd');
-  }, []);
-
-  const sym = currency === 'inr' ? '₹' : '$';
+  const currency = 'inr' as const;
+  const sym = '₹';
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
@@ -71,9 +65,9 @@ function SettingsPageContent() {
     mutationFn: (opts: { plan: string }) =>
       subscriptionsApi.createCheckout({ plan: opts.plan, billingCycle }),
     onSuccess: (res) => {
-      const payload = unwrapApiResponse<{ demoMode?: boolean; url?: string }>(res);
+      const payload = unwrapApiResponse<{ demoMode?: boolean; url?: string; razorpayMode?: boolean; message?: string }>(res);
       if (payload.demoMode) {
-        toast.error('⚠️ Payment gateway not configured. Add STRIPE_SECRET_KEY to .env file.', { duration: 5000 });
+        toast.error('⚠️ Payment gateway not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env file.', { duration: 5000 });
         return;
       }
       if (payload.url) {
@@ -81,17 +75,6 @@ function SettingsPageContent() {
       }
     },
     onError: () => toast.error('Checkout failed'),
-  });
-
-  const portal = useMutation({
-    mutationFn: () => subscriptionsApi.createPortal(),
-    onSuccess: (res) => {
-      const payload = unwrapApiResponse<{ demoMode?: boolean; url?: string }>(res);
-      if (payload.demoMode) { toast.error('⚠️ Payment gateway not configured.'); return; }
-      if (payload.url) {
-        window.location.href = payload.url;
-      }
-    },
   });
 
   const inputClass = "w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-purple-500";
@@ -163,7 +146,7 @@ function SettingsPageContent() {
                 <p className="mt-1 text-xs text-slate-400">Subscription state, renewal timing aur billing controls ek view me.</p>
               </div>
               <div className="dashboard-inline-stat px-3 py-2 text-xs text-slate-300">
-                {currency === 'inr' ? 'INR billing view' : 'USD billing view'}
+                INR billing view
               </div>
             </div>
             <div className="flex items-center justify-between">
@@ -174,10 +157,8 @@ function SettingsPageContent() {
                   {subscription?.currentPeriodEnd ? ` · Renews ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}` : ''}
                 </p>
               </div>
-              {subscription?.stripeCustomerId && (
-                <button onClick={() => portal.mutate()} className="dashboard-surface-muted px-4 py-2 text-sm text-gray-300 card-hover">
-                  Manage Billing →
-                </button>
+              {subscription?.stripeSubscriptionId && (
+                <p className="text-xs text-gray-500">To cancel, check your Razorpay email or contact support.</p>
               )}
             </div>
           </div>
@@ -197,17 +178,10 @@ function SettingsPageContent() {
             </span>
           </div>
 
-          {/* Currency switcher */}
+          {/* Currency: INR only */}
           <div className="flex justify-center">
             <div className="inline-flex items-center gap-2 text-xs text-gray-500">
-              <span>Prices in {currency === 'inr' ? 'INR (₹)' : 'USD ($)'}</span>
-              <button
-                type="button"
-                onClick={() => setCurrency(currency === 'inr' ? 'usd' : 'inr')}
-                className="text-purple-400 hover:text-purple-300 underline transition-colors"
-              >
-                Switch to {currency === 'inr' ? 'USD ($)' : 'INR (₹)'}
-              </button>
+              <span>Prices in INR (₹) &bull; Payments via Razorpay</span>
             </div>
           </div>
 
@@ -215,7 +189,7 @@ function SettingsPageContent() {
           {plans && (
             <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
               {Object.entries(plans).map(([key, plan]: any) => {
-                const priceData = plan.price?.[currency] || plan.price;
+                const priceData = plan.price?.inr || plan.price;
                 const monthlyPrice = priceData?.monthly ?? 0;
                 const yearlyPrice = priceData?.yearly ?? 0;
                 const displayPrice = billingCycle === 'yearly' && key !== 'FREE'
@@ -275,7 +249,7 @@ function SettingsPageContent() {
               <span className="w-2 h-2 rounded-full bg-green-400" /> No hidden charges
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-400" /> {currency === 'inr' ? 'Secure payments via Razorpay' : 'Secure payments via Stripe'}
+              <span className="w-2 h-2 rounded-full bg-green-400" /> Secure payments via Razorpay
             </span>
           </div>
 
@@ -297,7 +271,7 @@ function SettingsPageContent() {
                       <p className="text-xs text-gray-500">{inv.status}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-mono text-white">{sym}{(inv.amount / 100).toFixed(2)}</span>
+                      <span className="text-sm font-mono text-white">₹{(inv.amount / 100).toFixed(2)}</span>
                       {inv.invoiceUrl && <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-400">View →</a>}
                     </div>
                   </div>
