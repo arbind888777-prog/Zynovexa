@@ -35,7 +35,7 @@ jobs:
           deploy_username="${RAW_DEPLOY_USERNAME:-${RAW_DEPLOY_USERNAME_ALT_1:-${RAW_DEPLOY_USERNAME_ALT_2:-}}}"
           deploy_key="${RAW_DEPLOY_KEY:-${RAW_DEPLOY_KEY_ALT_1:-${RAW_DEPLOY_KEY_ALT_2:-}}}"
           deploy_password="${RAW_DEPLOY_PASSWORD:-${RAW_DEPLOY_PASSWORD_ALT_1:-${RAW_DEPLOY_PASSWORD_ALT_2:-}}}"
-          deploy_path="${RAW_DEPLOY_PATH:-${RAW_DEPLOY_PATH_ALT_1:-/root/Zynovexa}}"
+          deploy_path="${RAW_DEPLOY_PATH:-${RAW_DEPLOY_PATH_ALT_1:-/var/www/zynovexa}}"
 
           if [ -z "$deploy_host" ]; then
             echo "::error::Missing SSH host secret. Set one of: HOST, SSH_HOST, VPS_HOST"
@@ -77,40 +77,33 @@ jobs:
 
             echo "=== Starting Zynovexa Deployment ==="
             DEPLOY_PATH="${{ steps.resolve.outputs.deploy_path }}"
+            DEPLOY_USER="${{ steps.resolve.outputs.deploy_username }}"
 
             if [ ! -d "$DEPLOY_PATH" ]; then
-              echo "ERROR: $DEPLOY_PATH folder not found!"
+              echo "Configured deploy path not found: $DEPLOY_PATH"
+              for candidate in \
+                "/var/www/zynovexa" \
+                "/root/Zynovexa" \
+                "/home/$DEPLOY_USER/Zynovexa" \
+                "/home/$DEPLOY_USER/zynovexa" \
+                "/opt/zynovexa"; do
+                if [ -d "$candidate" ]; then
+                  DEPLOY_PATH="$candidate"
+                  echo "Auto-detected existing app directory: $DEPLOY_PATH"
+                  break
+                fi
+              done
+            fi
+
+            if [ ! -d "$DEPLOY_PATH" ]; then
+              echo "ERROR: Deployment folder not found. Set GitHub secret APP_DIR or DEPLOY_PATH to the correct VPS repo path."
               exit 1
             fi
 
-            cd $DEPLOY_PATH
-
-            echo "=== Syncing Code ==="
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo "=== Fixing Database & Dependencies ==="
-            cd apps/api
-            touch .env
-            
-            npm install
-            
-            echo "=== Resolving All Migrations Automatically ==="
-            # Ek-ek karne ki bajaye saari 9 migrations ko ek baar mein pass kar rahe hain
-            for dir in prisma/migrations/*/; do
-              if [ -d "$dir" ]; then
-                migration=$(basename "$dir")
-                npx prisma migrate resolve --applied "$migration" || echo "Already resolved: $migration"
-              fi
-            done
-            
-            npx prisma generate
-
-            echo "=== Building & Restarting Services ==="
-            cd $DEPLOY_PATH
+            cd "$DEPLOY_PATH"
             chmod +x deploy.sh
-            
-            # Running the main deployment script
-            ./deploy.sh --branch=main
+
+            echo "=== Deploying from $DEPLOY_PATH ==="
+            APP_DIR="$DEPLOY_PATH" ./deploy.sh --branch=main
 
             echo "=== Deployment Successfully Completed ==="
