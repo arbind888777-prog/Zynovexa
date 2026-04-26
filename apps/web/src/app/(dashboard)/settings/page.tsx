@@ -2,6 +2,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi, subscriptionsApi, unwrapApiData, unwrapApiResponse } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -271,7 +272,7 @@ function SettingsPageContent() {
                       <p className="text-xs text-gray-500">{inv.status}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-mono text-white">₹{(inv.amount / 100).toFixed(2)}</span>
+                      <span className="text-sm font-mono text-white">{formatMoneyFromMinor(inv.amount, currency)}</span>
                       {inv.invoiceUrl && <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-400">View →</a>}
                     </div>
                   </div>

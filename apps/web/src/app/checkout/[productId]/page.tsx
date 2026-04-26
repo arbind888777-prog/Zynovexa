@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api, commerceApi } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth.store';
@@ -12,10 +13,18 @@ interface Product {
   title: string;
   description: string;
   price: number;
+  currency?: string;
   originalPrice?: number;
   type?: string;
   coverImageUrl?: string;
-  store?: { name: string; slug: string };
+  store?: {
+    name: string;
+    slug: string;
+    promoCode?: string;
+    promoLabel?: string;
+    promoDiscountPercent?: number;
+    promoExpiresAt?: string;
+  };
   creator?: { name: string };
 }
 
@@ -32,6 +41,9 @@ function CheckoutPageContent() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'stripe'>('razorpay');
+  const [promoInput, setPromoInput] = useState('');
+  const [promoError, setPromoError] = useState('');
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -55,6 +67,7 @@ function CheckoutPageContent() {
         itemType,
         productId: itemType === 'PRODUCT' ? productId : undefined,
         courseId: itemType === 'COURSE' ? productId : undefined,
+        promoCode: appliedPromoCode || undefined,
       };
 
       if (paymentMethod === 'razorpay') {
@@ -126,6 +139,38 @@ function CheckoutPageContent() {
   const discount = product.originalPrice && product.originalPrice > product.price
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
+  const activePromo = product.store?.promoCode && product.store?.promoDiscountPercent && (!product.store?.promoExpiresAt || new Date(product.store.promoExpiresAt).getTime() > Date.now())
+    ? {
+        code: product.store.promoCode,
+        label: product.store.promoLabel || 'Limited-time offer',
+        discountPercent: product.store.promoDiscountPercent,
+        expiresAt: product.store.promoExpiresAt,
+      }
+    : null;
+  const effectivePromo = appliedPromoCode && activePromo?.code === appliedPromoCode ? activePromo : null;
+  const discountedAmount = effectivePromo ? Math.round(product.price * (100 - effectivePromo.discountPercent) / 100) : product.price;
+  const priceText = formatMoneyFromMinor(product.price, product.currency);
+  const originalPriceText = formatMoneyFromMinor(product.originalPrice || 0, product.currency);
+  const discountedPriceText = formatMoneyFromMinor(discountedAmount, product.currency);
+
+  const applyPromo = () => {
+    const normalized = promoInput.trim().toUpperCase();
+    if (!normalized) {
+      setAppliedPromoCode(null);
+      setPromoError('');
+      return;
+    }
+
+    if (!activePromo || activePromo.code !== normalized) {
+      setAppliedPromoCode(null);
+      setPromoError('Promo code invalid ya expire ho chuka hai.');
+      return;
+    }
+
+    setAppliedPromoCode(normalized);
+    setPromoError('');
+    toast.success(`${activePromo.discountPercent}% discount applied`);
+  };
 
   return (
     <div className="min-h-screen hero-bg flex items-center justify-center px-4 py-12">
@@ -152,15 +197,39 @@ function CheckoutPageContent() {
           <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 mb-6">
             <span className="text-sm text-slate-300 font-medium">Total</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-white">₹{(product.price / 100).toFixed(0)}</span>
+              <span className="text-2xl font-bold text-white">{effectivePromo ? discountedPriceText : priceText}</span>
+              {effectivePromo && <span className="text-sm text-slate-500 line-through">{priceText}</span>}
               {discount > 0 && (
                 <>
-                  <span className="text-sm text-slate-500 line-through">₹{((product.originalPrice || 0) / 100).toFixed(0)}</span>
+                  <span className="text-sm text-slate-500 line-through">{originalPriceText}</span>
                   <span className="text-xs font-bold text-green-400">{discount}% OFF</span>
                 </>
               )}
             </div>
           </div>
+
+          {activePromo && (
+            <div className="mb-6 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-left">
+              <p className="text-sm font-semibold text-amber-200">{activePromo.label}</p>
+              <p className="mt-1 text-xs text-amber-100/80">Use code <span className="font-mono text-white">{activePromo.code}</span> for {activePromo.discountPercent}% off.</p>
+              {activePromo.expiresAt && (
+                <p className="mt-1 text-[11px] text-amber-100/70">Ends {new Date(activePromo.expiresAt).toLocaleString('en-IN')}</p>
+              )}
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  placeholder="Enter promo code"
+                  className="flex-1 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                />
+                <button onClick={applyPromo} type="button" className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 transition-colors">
+                  Apply
+                </button>
+              </div>
+              {promoError && <p className="mt-2 text-xs text-red-300">{promoError}</p>}
+            </div>
+          )}
 
           {/* Payment Method Selection */}
           <div className="mb-6">
@@ -180,7 +249,7 @@ function CheckoutPageContent() {
           {/* Checkout Button */}
           <button onClick={handleCheckout} disabled={processing}
             className="w-full py-3.5 rounded-xl text-white font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-opacity disabled:opacity-50 mb-4">
-            {processing ? 'Processing...' : `💳 Pay ₹${(product.price / 100).toFixed(0)}`}
+            {processing ? 'Processing...' : `💳 Pay ${effectivePromo ? discountedPriceText : priceText}`}
           </button>
 
           {/* Trust badges */}

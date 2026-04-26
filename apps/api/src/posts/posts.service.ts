@@ -10,6 +10,8 @@ import { basename, join } from 'path';
 import { readFile, stat } from 'fs/promises';
 import { resolveUploadCategory } from '../uploads/upload-category';
 
+import { GamificationService } from '../gamification/gamification.service';
+
 @Injectable()
 export class PostsService {
   private readonly logger = new Logger(PostsService.name);
@@ -18,6 +20,7 @@ export class PostsService {
     private prisma: PrismaService,
     private accountsService: AccountsService,
     private config: ConfigService,
+    private gamification: GamificationService,
   ) {}
 
   private isYoutubeVideoPost(post: { mediaType?: string; mediaUrls?: string[] }) {
@@ -287,6 +290,11 @@ export class PostsService {
 
     await this.buildPostAccountLinks(userId, post.id, dto.platforms);
 
+    // Record action for gamification without blocking the response
+    this.gamification.recordAction(userId, 'post_created').catch(err => 
+      this.logger.error(`Failed to record gamification action: ${err.message}`)
+    );
+
     return post;
   }
 
@@ -303,6 +311,23 @@ export class PostsService {
       this.prisma.post.findMany({
         where, skip, take: limit,
         orderBy: { createdAt: 'desc' },
+        // Select only fields needed for list view — avoids fetching large
+        // publishResults JSON / full payload unnecessarily
+        select: {
+          id: true,
+          title: true,
+          caption: true,
+          status: true,
+          platforms: true,
+          mediaType: true,
+          mediaUrls: true,
+          hashtags: true,
+          scheduledAt: true,
+          publishedAt: true,
+          viralScore: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       }),
       this.prisma.post.count({ where }),
     ]);
@@ -428,6 +453,12 @@ export class PostsService {
         scheduledAt: onlyManualRequired ? null : undefined,
       },
     });
+
+    if (successfulPlatforms.length > 0) {
+      this.gamification.recordAction(userId, 'post_published').catch(err => 
+        this.logger.error(`Failed to record publish action: ${err.message}`)
+      );
+    }
 
     if (onlyManualRequired && post.status === PostStatus.SCHEDULED) {
       await this.prisma.notification.create({

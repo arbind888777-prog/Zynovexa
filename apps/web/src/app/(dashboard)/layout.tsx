@@ -18,7 +18,7 @@ const NAV_GROUPS = [
     label: 'Content',
     items: [
       { href: '/create',  icon: '✏️', label: 'Create Post' },
-      { href: '/video',   icon: '🎬', label: 'Video Studio' },
+      { href: '/video',   icon: '🎬', label: 'Video Studio', locked: true },
       { href: '/posts',   icon: '📋', label: 'My Posts' },
     ],
   },
@@ -37,18 +37,21 @@ const NAV_GROUPS = [
     label: 'Analytics',
     items: [
       { href: '/analytics',     icon: '📈', label: 'Analytics' },
+      { href: '/seo',           icon: '🔍', label: 'SEO Scanner' },
     ],
   },
   {
     label: 'AI Tools',
     items: [
       { href: '/ai',           icon: '🤖', label: 'AI Studio' },
+      { href: '/image-editor', icon: '🎨', label: 'Image Editor' },
       { href: '/growth-coach', icon: '🧠', label: 'Growth Coach' },
     ],
   },
   {
     label: 'Connect',
     items: [
+      { href: '/brand-deals',  icon: '🤝', label: 'Brand Deals' },
       { href: '/accounts',     icon: '🔗', label: 'Accounts' },
       { href: '/gamification', icon: '🎮', label: 'Gamification' },
     ],
@@ -134,6 +137,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const restoreAuth = async () => {
       const state = useAuthStore.getState();
       if (state.isAuthenticated) {
+        if (!state.user) {
+          try {
+            await fetchMe();
+          } catch {}
+
+          if (cancelled) return;
+
+          const nextState = useAuthStore.getState();
+          if (!nextState.isAuthenticated || !nextState.user) {
+            router.replace('/login');
+            return;
+          }
+        }
+
         if (!cancelled) setReady(true);
         return;
       }
@@ -258,6 +275,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="space-y-0.5">
               {group.items.map(item => {
                 const active = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+                
+                if ('locked' in item && item.locked) {
+                  return (
+                    <div key={item.href} className="dashboard-nav-item flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all text-slate-500 opacity-60 cursor-not-allowed select-none" title="Coming soon">
+                      <span className="text-base leading-none grayscale opacity-50">{item.icon}</span>
+                      <span>{item.label}</span>
+                      <span className="ml-auto text-xs" title="Locked feature">🔒</span>
+                    </div>
+                  );
+                }
+
                 return (
                   <Link key={item.href} href={item.href}
                     className={`dashboard-nav-item flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${

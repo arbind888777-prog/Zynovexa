@@ -28,7 +28,7 @@ export class EmailProcessor {
     });
   }
 
-  @Process('send')
+  @Process({ name: 'send', concurrency: 5 })
   async handleSend(job: Job<EmailJobData>) {
     const { to, subject, template, context } = job.data;
     this.logger.log(`Sending email: ${subject} -> ${to}`);

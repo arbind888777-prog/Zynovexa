@@ -75,6 +75,27 @@ export class SupabaseService {
     }
   }
 
+  /**
+   * Generate a short-lived signed URL for a private file.
+   * @param objectPath  Path inside the storage bucket (e.g. "products/file.pdf")
+   * @param expiresInSeconds  Default 60 seconds — link expires quickly to prevent sharing
+   */
+  async createSignedUrl(objectPath: string, expiresInSeconds = 60): Promise<string | null> {
+    if (!this.client) return null;
+
+    const { data, error } = await this.client.storage
+      .from(this.storageBucket)
+      .createSignedUrl(objectPath, expiresInSeconds);
+
+    if (error) {
+      this.logger.warn(`Supabase signed URL failed for ${objectPath}: ${error.message}`);
+      return null;
+    }
+
+    return data?.signedUrl ?? null;
+  }
+
+
   getObjectPathFromPublicUrl(fileUrl: string): string | null {
     if (!this.projectUrl) return null;
 

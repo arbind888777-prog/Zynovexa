@@ -111,18 +111,28 @@ async function bootstrap() {
   // Graceful shutdown
   app.enableShutdownHooks();
 
-  const port = process.env.PORT || 4000;
-  await app.listen(port, '0.0.0.0');
-
+  // ─── Worker vs API Mode ────────────────────────────────────────
+  // Set PROCESS_TYPE=WORKER in PM2 or Docker to run as a background
+  // worker that only processes Bull queues — no HTTP traffic.
+  // Default (unset or 'API') runs the full HTTP + queue setup.
+  const processType = process.env.PROCESS_TYPE || 'API';
   const logger = new Logger('Bootstrap');
-  logger.log(`Zynovexa API running on http://localhost:${port}/api`);
-  if (!isProduction) {
-    logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
-    logger.log(`WebSocket: ws://localhost:${port}/ws`);
+
+  if (processType === 'WORKER') {
+    await app.init();
+    logger.log('⚙️  Zynovexa Worker started — queue processing only, no HTTP server');
+  } else {
+    const port = process.env.PORT || 4000;
+    await app.listen(port, '0.0.0.0');
+    logger.log(`🚀 Zynovexa API running on http://localhost:${port}/api`);
+    if (!isProduction) {
+      logger.log(`📖 Swagger docs: http://localhost:${port}/api/docs`);
+      logger.log(`🔌 WebSocket: ws://localhost:${port}/ws`);
+    }
   }
 }
 
 bootstrap().catch((err) => {
-  console.error('Failed to start Zynovexa API:', err);
+  console.error('Failed to start Zynovexa:', err);
   process.exit(1);
 });

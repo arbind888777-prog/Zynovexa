@@ -30,6 +30,7 @@ import { RetentionModule } from './retention/retention.module';
 import { AiEngineModule } from './ai-engine/ai-engine.module';
 import { ProAnalyticsModule } from './pro-analytics/pro-analytics.module';
 import { SupabaseModule } from './supabase/supabase.module';
+import { QueueModule } from './queue/queue.module';
 import * as net from 'net';
 
 const appLogger = new Logger('AppModule');
@@ -67,6 +68,7 @@ async function isRedisAvailable(host = 'localhost', port = 6379): Promise<boolea
     SupabaseModule,
 
     // Infrastructure (QueueModule loaded dynamically — see onModuleInit)
+    QueueModule,
     MailModule,
     UploadsModule,
     EventsModule,

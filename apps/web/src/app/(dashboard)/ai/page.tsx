@@ -337,9 +337,19 @@ export default function AIStudioPage() {
           </div>
         </div>
         {usage && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
-            <p className="text-sm text-gray-400">AI Usage: <span className="text-white font-mono">{usage.used} / {usage.limit ?? '∞'}</span></p>
-            <p className="text-xs text-purple-400">{usage.plan === 'DEV' ? 'Local mode' : usage.plan}</p>
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 min-w-[200px]">
+            <div className="flex justify-between items-center mb-1">
+              <p className="text-sm text-gray-400">AI Usage <span className="text-xs text-purple-400 ml-1">({usage.plan === 'DEV' ? 'Local mode' : usage.plan})</span></p>
+              <p className="text-sm font-mono text-white">{usage.used} <span className="text-gray-500">/ {usage.limit ?? '∞'}</span></p>
+            </div>
+            {usage.limit !== null && (
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${usage.used >= usage.limit ? 'bg-red-500' : usage.used >= usage.limit * 0.8 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                  style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -421,6 +431,24 @@ export default function AIStudioPage() {
               </>}
               {activeTool === 'image' && <>
                 <div><label className="block text-xs text-gray-400 mb-1">Image Prompt *</label><textarea value={fields.prompt} onChange={f('prompt')} rows={4} placeholder="A stunning sunset over mountains, professional photography, cinematic..." className={inputClass + ' resize-none'} style={inputStyle} /></div>
+                <div className="mt-2">
+                  <label className="block text-xs text-gray-400 mb-2">Ya apne device se image upload karke edit karo</label>
+                  <label style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:8, border:'1px dashed rgba(99,102,241,0.5)', background:'rgba(99,102,241,0.05)', cursor:'pointer', fontSize:13, color:'#a78bfa' }}>
+                    <input type="file" accept="image/*" style={{ display:'none' }} onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => {
+                        if (ev.target?.result) {
+                          const url = encodeURIComponent(ev.target.result as string);
+                          router.push(`/image-editor?imageUrl=${url}&source=upload`);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }} />
+                    📁 Upload Image from Device → Edit
+                  </label>
+                </div>
               </>}
               {activeTool === 'video' && <>
                 <div><label className="block text-xs text-gray-400 mb-1">Video Prompt *</label><textarea value={fields.prompt} onChange={f('prompt')} rows={4} placeholder="Cinematic product ad, smooth camera motion, realistic lighting, synced ambience..." className={inputClass + ' resize-none'} style={inputStyle} /></div>
@@ -540,8 +568,14 @@ export default function AIStudioPage() {
                 <div>
                   <img src={result.imageUrl} alt="Generated" className="w-full rounded-xl mb-3" />
                   {result.revisedPrompt && <p className="text-xs text-gray-500 mb-2">Revised: {result.revisedPrompt}</p>}
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <button onClick={() => { fetch(result.imageUrl).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'zynovexa-ai-image.png'; a.click(); URL.revokeObjectURL(a.href); }); }} className="text-sm text-purple-400 hover:text-purple-300">↓ Download</button>
+                    <button
+                      onClick={() => router.push(`/image-editor?imageUrl=${encodeURIComponent(result.imageUrl)}&source=ai`)}
+                      className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+                    >
+                      ✏️ Edit in Editor
+                    </button>
                     <button
                       onClick={() => sendToCreatePost({
                         caption: fields.description || fields.prompt,

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -24,8 +25,6 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [purchasing, setPurchasing] = useState(false);
-
   useEffect(() => {
     api.get(`/commerce/public/product/${productId}`)
       .then(res => {
@@ -42,52 +41,7 @@ export default function ProductDetailPage() {
       return;
     }
 
-    setPurchasing(true);
-    try {
-      // Try Razorpay first, fallback to Stripe
-      const { data } = await api.post('/commerce/checkout/razorpay', {
-        itemType: product.type === 'COURSE' ? 'COURSE' : 'PRODUCT',
-        productId: product.type !== 'COURSE' ? product.id : undefined,
-        courseId: product.type === 'COURSE' ? product.id : undefined,
-      });
-
-      const result = data?.data || data;
-      if (result.provider === 'razorpay') {
-        // Load Razorpay SDK
-        const options = {
-          key: result.keyId,
-          amount: result.amount,
-          currency: result.currency,
-          name: 'Zynovexa',
-          description: result.itemTitle,
-          order_id: result.orderId,
-          prefill: { name: result.buyerName, email: result.buyerEmail },
-          theme: { color: '#6366f1' },
-          handler: () => {
-            router.push('/purchases?success=true');
-          },
-        };
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      }
-    } catch (err: any) {
-      // Fallback to Stripe
-      try {
-        const { data } = await api.post('/commerce/checkout', {
-          itemType: 'PRODUCT',
-          productId: product.id,
-        });
-        const result = data?.data || data;
-        if (result.url) {
-          window.location.href = result.url;
-          return;
-        }
-      } catch {
-        setError('Payment failed. Please try again.');
-      }
-    } finally {
-      setPurchasing(false);
-    }
+    router.push(`/checkout/${product.id}${product.type === 'COURSE' ? '?type=COURSE' : ''}`);
   };
 
   if (loading) {
@@ -113,6 +67,7 @@ export default function ProductDetailPage() {
   const discount = product.originalPrice && product.originalPrice > product.price
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
+  const currency = product.currency || 'INR';
 
   return (
     <div className="min-h-screen hero-bg">
@@ -166,10 +121,10 @@ export default function ProductDetailPage() {
 
             {/* Price */}
             <div className="flex items-baseline gap-3 mb-6">
-              <span className="text-3xl font-bold text-white">₹{(product.price / 100).toFixed(0)}</span>
+              <span className="text-3xl font-bold text-white">{formatMoneyFromMinor(product.price, currency)}</span>
               {product.originalPrice && product.originalPrice > product.price && (
                 <>
-                  <span className="text-lg text-slate-500 line-through">₹{(product.originalPrice / 100).toFixed(0)}</span>
+                  <span className="text-lg text-slate-500 line-through">{formatMoneyFromMinor(product.originalPrice, currency)}</span>
                   <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500/20 text-green-400">{discount}% OFF</span>
                 </>
               )}
@@ -187,13 +142,13 @@ export default function ProductDetailPage() {
             )}
 
             {/* Buy Button */}
-            <button onClick={handleBuyNow} disabled={purchasing}
+            <button onClick={handleBuyNow}
               className="w-full py-3.5 rounded-xl text-base font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-opacity disabled:opacity-50">
-              {purchasing ? 'Processing...' : 'Buy Now'}
+              Continue to Checkout
             </button>
 
             <p className="text-xs text-slate-500 text-center mt-3">
-              Secure payment via Razorpay/Stripe. Instant access after purchase.
+              Secure payment, promo code support, and instant access after purchase.
             </p>
           </div>
         </div>
@@ -205,9 +160,6 @@ export default function ProductDetailPage() {
           Powered by <Link href="/" className="text-purple-400 hover:text-purple-300">Zynovexa</Link>
         </p>
       </div>
-
-      {/* Razorpay SDK Script */}
-      <script src="https://checkout.razorpay.com/v1/checkout.js" async />
     </div>
   );
 }

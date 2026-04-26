@@ -36,7 +36,22 @@ export class GamificationService {
   ) {}
 
   async getProfile(userId: string) {
-    const streak = await this.getOrCreateStreak(userId);
+    let streak = await this.getOrCreateStreak(userId);
+    
+    // Check if we need to record a streak day (first fetch of the day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const lastActive = streak.lastActiveDate ? new Date(streak.lastActiveDate) : null;
+    if (lastActive) lastActive.setHours(0, 0, 0, 0);
+    
+    if (!lastActive || lastActive.getTime() < today.getTime()) {
+      await this.recordAction(userId, 'streak_day').catch(err => 
+        this.logger.error(`Failed to record daily streak: ${err.message}`)
+      );
+      // Refresh streak after update
+      streak = await this.getOrCreateStreak(userId);
+    }
+
     const badges = await this.prisma.userBadge.findMany({
       where: { streakId: streak.id },
       orderBy: { earnedAt: 'desc' },

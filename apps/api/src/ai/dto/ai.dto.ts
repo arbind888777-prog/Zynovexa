@@ -113,6 +113,11 @@ export class GenerateImageDto {
   @ApiProperty({ example: 'A stunning sunset over mountains, professional photography style' })
   @IsString()
   prompt: string;
+  
+  @ApiPropertyOptional({ enum: ['1:1', '4:5', '16:9', '9:16', '4:3', '3:4', '21:9'], example: '1:1' })
+  @IsOptional()
+  @IsString()
+  aspectRatio?: string;
 
   @ApiPropertyOptional({ enum: ['1024x1024', '1792x1024', '1024x1792'] })
   @IsOptional()

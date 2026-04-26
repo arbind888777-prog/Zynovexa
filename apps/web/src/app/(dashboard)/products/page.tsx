@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { commerceApi, unwrapApiResponse } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -38,8 +39,9 @@ export default function ProductsPage() {
   const list = (Array.isArray(products) ? products : (products as any)?.products || []) as any[];
   const filtered = filter ? list.filter((p: any) => p.status === filter) : list;
 
-  const totalRevenue = (revenue as any)?.totalRevenue || 0;
-  const totalSales = (revenue as any)?.totalSales || 0;
+  const revenueCurrency = (revenue as any)?.currency || list[0]?.currency || 'INR';
+  const totalRevenue = (revenue as any)?.grossRevenue || 0;
+  const totalSales = (revenue as any)?.orderCount || 0;
 
   return (
     <div className="p-6 md:p-8 animate-fade-in">
@@ -67,7 +69,7 @@ export default function ProductsPage() {
         </div>
         <div className="card p-4">
           <div className="text-xs text-slate-400 mb-1">Revenue (30d)</div>
-          <div className="text-2xl font-bold text-purple-400">${(totalRevenue / 100).toFixed(2)}</div>
+          <div className="text-2xl font-bold text-purple-400">{formatMoneyFromMinor(totalRevenue, revenueCurrency)}</div>
         </div>
         <div className="card p-4">
           <div className="text-xs text-slate-400 mb-1">Sales (30d)</div>
@@ -120,9 +122,7 @@ export default function ProductsPage() {
                     style={{ background: style.bg, color: style.color }}>
                     {style.label}
                   </span>
-                  <span className="text-lg font-bold text-white">
-                    ${(product.price / 100).toFixed(2)}
-                  </span>
+                  <span className="text-lg font-bold text-white">{formatMoneyFromMinor(product.price, product.currency || revenueCurrency)}</span>
                 </div>
 
                 {/* Title + Description */}
@@ -131,13 +131,13 @@ export default function ProductsPage() {
 
                 {/* Sales Stats */}
                 <div className="flex items-center gap-4 mb-4 text-xs text-slate-500">
-                  <span>📦 {product._count?.purchases || product.salesCount || 0} sales</span>
-                  <span>💰 ${((product.revenueTotal || 0) / 100).toFixed(2)}</span>
+                  <span>📦 {product.totalSales || 0} sales</span>
+                  <span>💰 {formatMoneyFromMinor(product.totalRevenue || 0, product.currency || revenueCurrency)}</span>
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <Link href={`/products/${product.id}/edit`}
+                  <Link href={`/products/${product.id}`}
                     className="flex-1 text-center px-3 py-2 rounded-lg text-xs font-medium text-white hover:bg-white/10 transition-colors"
                     style={{ border: '1px solid var(--border)' }}>
                     ✏️ Edit

@@ -242,6 +242,14 @@ export class CommerceController {
   }
 
   @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('buyer/orders/:orderId')
+  @ApiOperation({ summary: 'Get a buyer-owned commerce order receipt with access actions' })
+  getBuyerOrder(@Request() req, @Param('orderId') orderId: string) {
+    return this.commerceService.getBuyerOrder(orderId, req.user.id);
+  }
+
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, ProductAccessGuard)
   @Get('buyer/products/:productId/download')
   @ApiOperation({ summary: 'Get a gated download URL for a purchased digital product' })

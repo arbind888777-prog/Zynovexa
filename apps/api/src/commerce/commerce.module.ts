@@ -5,9 +5,11 @@ import { CommerceController } from './commerce.controller';
 import { StoreOwnerGuard } from './guards/store-owner.guard';
 import { ProductAccessGuard } from './guards/product-access.guard';
 import { CourseAccessGuard } from './guards/course-access.guard';
+import { MailModule } from '../mail/mail.module';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
-  imports: [JwtModule.register({})],
+  imports: [JwtModule.register({}), MailModule, SupabaseModule],
   providers: [CommerceService, StoreOwnerGuard, ProductAccessGuard, CourseAccessGuard],
   controllers: [CommerceController],
   exports: [CommerceService],

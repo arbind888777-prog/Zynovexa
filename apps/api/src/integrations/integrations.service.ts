@@ -96,7 +96,7 @@ export class IntegrationsService {
       connected: connectedMap.has(key as Platform),
       active: connectedMap.get(key as Platform) ?? false,
       scopes: config.scopes,
-      oauthSupported: this.isPlatformConfigured(config) && ENABLED_DIRECT_OAUTH_PLATFORMS.has(key as Platform),
+      oauthSupported: this.isPlatformOAuthAvailable(key as Platform, config),
       connectAvailable: availability[key as Platform]?.connectAvailable ?? false,
       connectMode: availability[key as Platform]?.connectMode ?? 'unavailable',
       statusMessage: availability[key as Platform]?.statusMessage,
@@ -107,16 +107,16 @@ export class IntegrationsService {
     const platKey = platform.toUpperCase();
     const config = PLATFORM_CONFIGS[platKey];
     if (!config) throw new BadRequestException(`Unsupported platform: ${platform}`);
-    if (!ENABLED_DIRECT_OAUTH_PLATFORMS.has(platKey as Platform)) {
+    if (!this.isPlatformOAuthAvailable(platKey as Platform, config)) {
       throw new BadRequestException(`${config.name} direct OAuth connect is not available yet.`);
     }
-    if (!this.isPlatformConfigured(config)) {
-      throw new BadRequestException(`${config.name} OAuth is not configured yet. Add ${config.clientIdEnv}${config.clientSecretEnv ? ` and ${config.clientSecretEnv}` : ''} in the API env.`);
+    if (!this.isPlatformConfigured(config, platKey as Platform)) {
+      throw new BadRequestException(this.getPlatformConfigurationMessage(platKey as Platform, config));
     }
 
     const safeFrontendUrl = sanitizeFrontendUrl(frontendUrl, this.config.get<string>('FRONTEND_URL'));
     const state = this.createSignedState(userId, platKey, safeFrontendUrl);
-    const clientId = this.config.get(config.clientIdEnv) || `ZYNOVEXA_${platKey}_CLIENT_ID`;
+    const clientId = this.getPlatformClientId(platKey as Platform, config) || `ZYNOVEXA_${platKey}_CLIENT_ID`;
     const redirectUri = buildApiCallbackUrl(
       safeFrontendUrl,
       `/api/integrations/callback/${platform.toLowerCase()}`,
@@ -269,10 +269,102 @@ export class IntegrationsService {
     }
   }
 
-  private isPlatformConfigured(config: PlatformConfig) {
-    const clientId = this.config.get(config.clientIdEnv);
-    const clientSecret = config.clientSecretEnv ? this.config.get(config.clientSecretEnv) : 'configured';
+  private isPlatformConfigured(config: PlatformConfig, platform?: Platform) {
+    const clientId = this.getPlatformClientId(platform, config);
+    const clientSecret = config.clientSecretEnv ? this.getPlatformClientSecret(platform, config) : 'configured';
     return Boolean(clientId && clientSecret);
+  }
+
+  private isPlatformOAuthAvailable(platform: Platform, config: PlatformConfig) {
+    if (platform === 'TWITTER') {
+      return this.hasTwitterOAuthCredentials();
+    }
+
+    return this.isPlatformConfigured(config, platform) && ENABLED_DIRECT_OAUTH_PLATFORMS.has(platform);
+  }
+
+  private getPlatformClientId(platform: Platform | undefined, config: PlatformConfig) {
+    if (platform === 'TWITTER' || config.clientIdEnv === 'TWITTER_CLIENT_ID') {
+      return this.getTwitterOAuthClientId();
+    }
+
+    return this.config.get<string>(config.clientIdEnv) || '';
+  }
+
+  private getPlatformClientSecret(platform: Platform | undefined, config: PlatformConfig) {
+    if (platform === 'TWITTER' || config.clientSecretEnv === 'TWITTER_CLIENT_SECRET') {
+      return this.getTwitterOAuthClientSecret();
+    }
+
+    return (config.clientSecretEnv ? this.config.get<string>(config.clientSecretEnv) : '') || '';
+  }
+
+  private getPlatformConfigurationMessage(platform: Platform, config: PlatformConfig) {
+    if (platform === 'TWITTER') {
+      return this.getTwitterAvailability().statusMessage || 'X / Twitter OAuth is not configured yet.';
+    }
+
+    return `${config.name} OAuth is not configured yet. Add ${config.clientIdEnv}${config.clientSecretEnv ? ` and ${config.clientSecretEnv}` : ''} in the API env.`;
+  }
+
+  private getEnvValue(keys: string[]) {
+    for (const key of keys) {
+      const value = this.config.get<string>(key)?.trim();
+      if (value) return value;
+    }
+
+    return '';
+  }
+
+  private getTwitterOAuthClientId() {
+    return this.getEnvValue(['TWITTER_OAUTH_CLIENT_ID']);
+  }
+
+  private getTwitterOAuthClientSecret() {
+    return this.getEnvValue(['TWITTER_OAUTH_CLIENT_SECRET']);
+  }
+
+  private getTwitterConsumerKey() {
+    return this.getEnvValue(['TWITTER_CONSUMER_KEY', 'TWITTER_CLIENT_ID']);
+  }
+
+  private getTwitterConsumerSecret() {
+    return this.getEnvValue(['TWITTER_CONSUMER_SECRET', 'TWITTER_CLIENT_SECRET']);
+  }
+
+  private getTwitterBearerToken() {
+    return this.getEnvValue(['TWITTER_BEARER_TOKEN']);
+  }
+
+  private hasTwitterOAuthCredentials() {
+    return Boolean(this.getTwitterOAuthClientId() && this.getTwitterOAuthClientSecret());
+  }
+
+  private getTwitterAvailability(): PlatformAvailability {
+    if (this.hasTwitterOAuthCredentials()) {
+      return {
+        connectAvailable: true,
+        connectMode: 'oauth',
+        statusMessage: 'X / Twitter OAuth is configured and ready to connect.',
+      };
+    }
+
+    const hasConsumerPair = Boolean(this.getTwitterConsumerKey() && this.getTwitterConsumerSecret());
+    const hasBearerToken = Boolean(this.getTwitterBearerToken());
+
+    if (hasConsumerPair || hasBearerToken) {
+      return {
+        connectAvailable: false,
+        connectMode: 'unavailable',
+        statusMessage: 'X credentials are saved, but account connect still needs a real OAuth 2.0 Client ID and Client Secret from X app authentication settings. API key/secret or bearer token alone cannot connect a user account.',
+      };
+    }
+
+    return {
+      connectAvailable: false,
+      connectMode: 'unavailable',
+      statusMessage: 'Add X OAuth credentials to enable account connection.',
+    };
   }
 
   private async getPlatformAvailability(): Promise<Record<Platform, PlatformAvailability>> {
@@ -307,11 +399,7 @@ export class IntegrationsService {
         connectMode: 'unavailable',
         statusMessage: 'TikTok direct connect is not enabled yet.',
       },
-      TWITTER: {
-        connectAvailable: false,
-        connectMode: 'unavailable',
-        statusMessage: 'X / Twitter connect is not enabled yet.',
-      },
+      TWITTER: this.getTwitterAvailability(),
       LINKEDIN: {
         connectAvailable: false,
         connectMode: 'unavailable',

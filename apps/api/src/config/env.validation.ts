@@ -85,6 +85,10 @@ export const envValidationSchema = Joi.object({
   TWITTER_CLIENT_ID: Joi.string().optional(),
   TWITTER_CLIENT_SECRET: Joi.string().optional(),
   TWITTER_BEARER_TOKEN: Joi.string().optional(),
+  TWITTER_OAUTH_CLIENT_ID: Joi.string().optional(),
+  TWITTER_OAUTH_CLIENT_SECRET: Joi.string().optional(),
+  TWITTER_CONSUMER_KEY: Joi.string().optional(),
+  TWITTER_CONSUMER_SECRET: Joi.string().optional(),
   PINTEREST_APP_ID: Joi.string().optional(),
   PINTEREST_APP_SECRET: Joi.string().optional(),
   FACEBOOK_GRAPH_API_TOKEN: Joi.string().optional(),
@@ -101,6 +105,7 @@ export const envValidationSchema = Joi.object({
   SMTP_PASS: Joi.string().optional(),
   EMAIL_FROM: Joi.string().optional(),
   MAIL_FROM: Joi.string().optional(),
+  WHATSAPP_SUPPORT_NUMBER: Joi.string().optional(),
 
   // ── Resend Audience Sync (optional) ────────────────────────
   RESEND_API_KEY: Joi.string().optional(),

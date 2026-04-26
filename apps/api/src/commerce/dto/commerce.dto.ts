@@ -51,6 +51,31 @@ export class UpsertStoreDto {
   @MaxLength(10)
   currency?: string;
 
+  @ApiPropertyOptional({ example: 'LAUNCH20' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  promoCode?: string;
+
+  @ApiPropertyOptional({ example: 'Launch week offer' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  promoLabel?: string;
+
+  @ApiPropertyOptional({ example: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  promoDiscountPercent?: number;
+
+  @ApiPropertyOptional({ example: '2026-04-30T23:59:59.000Z' })
+  @IsOptional()
+  @IsString()
+  promoExpiresAt?: string;
+
   @ApiPropertyOptional({ default: false })
   @IsOptional()
   @IsBoolean()
@@ -259,6 +284,12 @@ export class CreateCommerceCheckoutDto {
   @IsOptional()
   @IsString()
   courseId?: string;
+
+  @ApiPropertyOptional({ example: 'LAUNCH20' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  promoCode?: string;
 }
 
 export class RevenueQueryDto {

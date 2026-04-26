@@ -41,6 +41,20 @@ interface AuthState {
   clear: () => void;
 }
 
+async function hydrateCanonicalUserSession(tokens: { accessToken: string; refreshToken: string }) {
+  localStorage.setItem('access_token', tokens.accessToken);
+  localStorage.setItem('refresh_token', tokens.refreshToken);
+  setAuthCookie(true);
+
+  try {
+    const meResponse = await authApi.me();
+    const user = unwrapApiResponse<User>(meResponse);
+    return { user, ...tokens };
+  } catch {
+    return { user: null, ...tokens };
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -56,10 +70,16 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await authApi.login({ email, password });
           const data = unwrapApiResponse<{ user: User; accessToken: string; refreshToken: string }>(response);
-          localStorage.setItem('access_token', data.accessToken);
-          localStorage.setItem('refresh_token', data.refreshToken);
-          setAuthCookie(true);
-          set({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken, isAuthenticated: true });
+          const session = await hydrateCanonicalUserSession({
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+          });
+          set({
+            user: session.user || data.user,
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            isAuthenticated: true,
+          });
         } finally {
           set({ isLoading: false });
         }
@@ -70,10 +90,16 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await authApi.exchangeSupabaseToken(accessToken);
           const data = unwrapApiResponse<{ user: User; accessToken: string; refreshToken: string }>(response);
-          localStorage.setItem('access_token', data.accessToken);
-          localStorage.setItem('refresh_token', data.refreshToken);
-          setAuthCookie(true);
-          set({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken, isAuthenticated: true });
+          const session = await hydrateCanonicalUserSession({
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+          });
+          set({
+            user: session.user || data.user,
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            isAuthenticated: true,
+          });
         } finally {
           set({ isLoading: false });
         }
@@ -102,10 +128,16 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await authApi.signup({ name, email, password });
           const data = unwrapApiResponse<{ user: User; accessToken: string; refreshToken: string }>(response);
-          localStorage.setItem('access_token', data.accessToken);
-          localStorage.setItem('refresh_token', data.refreshToken);
-          setAuthCookie(true);
-          set({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken, isAuthenticated: true });
+          const session = await hydrateCanonicalUserSession({
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+          });
+          set({
+            user: session.user || data.user,
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            isAuthenticated: true,
+          });
         } finally {
           set({ isLoading: false });
         }

@@ -13,7 +13,7 @@ export class PostSchedulerProcessor {
     private postsService: PostsService,
   ) {}
 
-  @Process('publish')
+  @Process({ name: 'publish', concurrency: 3 })
   async handlePublish(job: Job<{ postId: string; userId: string }>) {
     const { postId, userId } = job.data;
     this.logger.log(`Publishing post ${postId} for user ${userId}`);

@@ -299,6 +299,7 @@ export const commerceApi = {
 
   // Buyer
   getBuyerDashboard: () => api.get('/commerce/buyer/dashboard'),
+  getBuyerOrder: (orderId: string) => api.get(`/commerce/buyer/orders/${orderId}`),
 };
 
 // ─── Monetization API ──────────────────────────────────────────────────────

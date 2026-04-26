@@ -26,6 +26,7 @@ export default function VideoStudioPage() {
   const [videoGenerationLoading, setVideoGenerationLoading] = useState(false);
   const [videoGenerationStatus, setVideoGenerationStatus] = useState('');
   const [videoOperationName, setVideoOperationName] = useState('');
+  const [videoReady, setVideoReady] = useState(false);
 
   const [form, setForm] = useState({
     title: '',
@@ -134,16 +135,23 @@ export default function VideoStudioPage() {
 
       if (payload?.status === 'COMPLETED' && payload?.videoUrl) {
         setForm((prev) => ({ ...prev, videoUrl: payload.videoUrl }));
-        setVideoGenerationStatus('Video ready');
-        toast.success('AI video generate ho gaya.');
+        setVideoGenerationStatus('✅ Your AI video is ready!');
+        setVideoReady(true);
+        toast.success('AI video ready! You can now preview and use it.');
         return;
       }
 
-      setVideoGenerationStatus(payload?.message || 'Video generate ho raha hai...');
+      if (payload?.status === 'FAILED') {
+        setVideoGenerationStatus(`❌ ${payload?.message || 'Video generation failed.'}`);
+        setVideoReady(false);
+        throw new Error(payload?.message || 'Video generation failed.');
+      }
+
+      setVideoGenerationStatus('⏳ Still generating... AI is rendering your video (usually 2–3 min)');
       await new Promise((resolve) => window.setTimeout(resolve, 5000));
     }
 
-    setVideoGenerationStatus('Video abhi processing me hai. Baad me Check Status dubara chalao.');
+    setVideoGenerationStatus('⏳ Video processing timed out. Click "Check Status" to try again in a minute.');
   };
 
   const handleGenerateVideo = async () => {
@@ -154,7 +162,8 @@ export default function VideoStudioPage() {
     }
 
     setVideoGenerationLoading(true);
-    setVideoGenerationStatus('Video generation start ho raha hai...');
+    setVideoGenerationStatus('🚀 Sending request to Google Veo 3...');
+    setVideoReady(false);
 
     try {
       const res = await aiApi.generateVideo({
@@ -170,10 +179,10 @@ export default function VideoStudioPage() {
       }
 
       setVideoOperationName(operationName);
-      setVideoGenerationStatus(payload?.message || 'Video processing...');
+      setVideoGenerationStatus('⏳ Video queued! AI is now generating it — this takes about 2–3 minutes...');
       await pollVideoStatus(operationName);
     } catch (e: any) {
-      setVideoGenerationStatus('Video generation failed');
+      setVideoGenerationStatus('❌ Video generation failed. Check your API key or try again.');
       toast.error(e?.response?.data?.message || e?.message || 'Video generation failed');
     } finally {
       setVideoGenerationLoading(false);
@@ -182,7 +191,7 @@ export default function VideoStudioPage() {
 
   const handleCheckVideoStatus = async () => {
     if (!videoOperationName.trim()) {
-      toast.error('Pehle video generate karo.');
+      toast.error('Please generate a video first.');
       return;
     }
 
@@ -195,6 +204,8 @@ export default function VideoStudioPage() {
       setVideoGenerationLoading(false);
     }
   };
+
+  const hasVideoPrompt = !!(videoPrompt.trim() || scriptInputs.topic.trim() || form.description.trim());
 
   const handleSendToCreatePost = () => {
     if (!form.videoUrl.trim()) {
@@ -219,44 +230,98 @@ export default function VideoStudioPage() {
     router.push('/create?source=studio');
   };
 
+  const isLocked = true;
+  if (isLocked) {
+    return (
+      <div className="dashboard-content-shell max-w-6xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+        <div className="relative w-20 h-20 bg-black/20 rounded-full flex items-center justify-center mb-6 mx-auto border border-white/5">
+          <span className="text-4xl grayscale opacity-50">🎬</span>
+          <span className="absolute bottom-0 right-0 text-xl translate-x-1 translate-y-1">🔒</span>
+        </div>
+        <h1 className="text-3xl font-bold text-white mb-3">Video Studio is Locked</h1>
+        <p className="text-slate-400 max-w-md mx-auto mb-8">
+          This feature is currently locked. You can upgrade your plan later to unlock AI-powered video generation and scripts.
+        </p>
+        <button 
+          onClick={() => router.push('/dashboard')}
+          className="px-6 py-3 rounded-xl text-white font-semibold transition-all hover:scale-105"
+          style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}
+        >
+          ← Back to Dashboard
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-content-shell max-w-6xl mx-auto">
       {/* Header */}
       <div className="dashboard-headerband mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Short-Form Production</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">AI-Powered Video Creation</p>
           <h1 className="mt-2 text-3xl font-bold text-white">🎬 Video Studio</h1>
-          <p className="mt-2 text-gray-400">Advanced video formats, AI script workflow, aur Create Post ke liye clean production handoff.</p>
+          <p className="mt-2 text-gray-400">Create AI videos, write scripts, and schedule them — step by step.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {['type', 'details', 'script', 'publish'].map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <button
-                onClick={() => step !== 'type' && setStep(s as any)}
-                className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center transition-all ${
-                  step === s ? 'text-white' :
-                  ['type','details','script','publish'].indexOf(step) > i ? 'text-white opacity-70' : 'text-gray-500'
-                }`}
-                style={{ background: step === s ? 'linear-gradient(135deg, #6366f1, #a855f7)' :
-                  ['type','details','script','publish'].indexOf(step) > i ? 'rgba(99,102,241,0.3)' : 'var(--surface)',
-                  border: '1px solid var(--border)' }}>
-                {i + 1}
-              </button>
-              {i < 3 && <div className="w-6 h-0.5" style={{ background: ['type','details','script','publish'].indexOf(step) > i ? '#6366f1' : 'var(--border)' }} />}
-            </div>
-          ))}
+        {/* Step indicator with labels */}
+        <div className="flex flex-wrap items-center gap-1">
+          {([
+            { key: 'type', label: 'Format' },
+            { key: 'details', label: 'Details' },
+            { key: 'script', label: 'Script' },
+            { key: 'publish', label: 'Publish' },
+          ] as const).map(({ key, label }, i) => {
+            const steps = ['type', 'details', 'script', 'publish'] as const;
+            const currentIdx = steps.indexOf(step);
+            const isActive = step === key;
+            const isDone = currentIdx > i;
+            return (
+              <div key={key} className="flex items-center gap-1">
+                <button
+                  onClick={() => step !== 'type' && setStep(key)}
+                  className="flex flex-col items-center gap-1 px-2"
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center transition-all ${isActive ? 'text-white' : isDone ? 'text-white opacity-70' : 'text-gray-500'}`}
+                    style={{
+                      background: isActive ? 'linear-gradient(135deg, #6366f1, #a855f7)' : isDone ? 'rgba(99,102,241,0.3)' : 'var(--surface)',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    {isDone ? '✓' : i + 1}
+                  </div>
+                  <span className={`text-[10px] font-medium ${isActive ? 'text-purple-400' : isDone ? 'text-slate-500' : 'text-gray-600'}`}>{label}</span>
+                </button>
+                {i < 3 && <div className="w-5 h-0.5 mb-4" style={{ background: isDone ? '#6366f1' : 'var(--border)' }} />}
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* STEP 1: Video Type Selection */}
       {step === 'type' && (
-        <VideoSelector
-          title="Choose advanced video format 📱"
-          description="Yahan Reels, Shorts aur long-form video prep hoga. Final scheduling Create Post page par hoga."
-          options={VIDEO_TYPES}
-          selectedId={selectedType}
-          onSelect={selectVideoType}
-        />
+        <div className="space-y-6">
+          {/* Beginner guide */}
+          <div className="rounded-2xl p-4 flex gap-3 items-start" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+            <span className="text-2xl mt-0.5">💡</span>
+            <div>
+              <p className="text-sm font-semibold text-white mb-1">How Video Studio works</p>
+              <ol className="text-xs text-slate-400 space-y-1 list-decimal list-inside">
+                <li><span className="text-slate-300 font-medium">Pick a format</span> — Reel, Short, Story, or YouTube Video</li>
+                <li><span className="text-slate-300 font-medium">Generate video with AI</span> — just type a description, Veo 3 creates it</li>
+                <li><span className="text-slate-300 font-medium">Write a script</span> (optional) — AI writes hook, body, and CTA for you</li>
+                <li><span className="text-slate-300 font-medium">Send to Create Post</span> — schedule and publish to your platforms</li>
+              </ol>
+            </div>
+          </div>
+          <VideoSelector
+            title="Step 1 — What kind of video are you making? 📱"
+            description="Choose the format below. Each format is optimized for a specific platform and length."
+            options={VIDEO_TYPES}
+            selectedId={selectedType}
+            onSelect={selectVideoType}
+          />
+        </div>
       )}
 
       {/* STEP 2: Video Details */}
@@ -341,7 +406,8 @@ export default function VideoStudioPage() {
           {/* Quick AI panel */}
           <div className="space-y-4">
             <div className="dashboard-surface p-5">
-              <h3 className="text-white font-semibold mb-4">⚡ Quick AI Tools</h3>
+              <h3 className="text-white font-semibold mb-1">⚡ AI Tools</h3>
+              <p className="text-xs text-slate-400 mb-4">Use these to generate captions, hashtags, and your actual video.</p>
 
               <div className="space-y-3">
                 <div>
@@ -387,58 +453,80 @@ export default function VideoStudioPage() {
                 <div className="rounded-2xl p-4" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.22)' }}>
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <div>
-                      <p className="text-sm font-semibold text-white">🎥 AI Video Generator</p>
-                      <p className="text-xs text-slate-400">Google Veo 3.1 se direct preview video banao.</p>
+                      <p className="text-sm font-semibold text-white">🎥 Generate Video with AI</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Powered by Google Veo 3 — just describe your video idea</p>
                     </div>
                     <span className="text-[11px] rounded-full px-2 py-1 text-emerald-300 border border-emerald-500/30">{getAspectRatio()}</span>
+                  </div>
+
+                  {/* Prompt examples */}
+                  <div className="mb-3 flex flex-wrap gap-1">
+                    {['Product launch ad', 'Gym motivation reel', 'Tutorial intro'].map(eg => (
+                      <button key={eg} onClick={() => setVideoPrompt(eg + ', cinematic lighting, smooth camera')}
+                        className="text-[11px] text-emerald-300 px-2 py-1 rounded-full hover:bg-emerald-900/30 transition-colors"
+                        style={{ border: '1px solid rgba(16,185,129,0.2)' }}>
+                        {eg} →
+                      </button>
+                    ))}
                   </div>
 
                   <textarea
                     value={videoPrompt}
                     onChange={(e) => setVideoPrompt(e.target.value)}
-                    rows={4}
-                    placeholder="Cinematic product ad, soft lighting, smooth camera motion, realistic motion..."
+                    rows={3}
+                    placeholder="Describe your video... e.g. 'Cinematic product ad with soft lighting, smooth camera motion, modern aesthetic'"
                     className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                     style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
                   />
 
                   <div className="mt-3 grid grid-cols-2 gap-3">
-                    <select
-                      value={videoDuration}
-                      onChange={(e) => setVideoDuration(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none"
-                      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-                    >
-                      <option value="4">4 seconds</option>
-                      <option value="6">6 seconds</option>
-                      <option value="8">8 seconds</option>
-                    </select>
-                    <button
-                      onClick={handleGenerateVideo}
-                      disabled={videoGenerationLoading}
-                      className="w-full py-3 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                      style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}
-                    >
-                      {videoGenerationLoading ? '⏳ Generating...' : 'Generate Video'}
-                    </button>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Duration</label>
+                      <select
+                        value={videoDuration}
+                        onChange={(e) => setVideoDuration(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-lg text-white text-sm outline-none"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                      >
+                        <option value="4">4 seconds</option>
+                        <option value="6">6 seconds</option>
+                        <option value="8">8 seconds</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col justify-end">
+                      <button
+                        onClick={handleGenerateVideo}
+                        disabled={videoGenerationLoading || !hasVideoPrompt}
+                        className="w-full py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50 transition-opacity"
+                        style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}
+                      >
+                        {videoGenerationLoading ? '⏳ Generating...' : '✨ Generate Video'}
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="mt-3 flex gap-3">
+                  {/* Status display */}
+                  {videoGenerationStatus && (
+                    <div className={`mt-3 rounded-lg px-3 py-2 text-xs ${videoReady ? 'text-emerald-300 bg-emerald-900/20' : 'text-slate-400 bg-black/20'}`}>
+                      {videoGenerationStatus}
+                    </div>
+                  )}
+
+                  {/* Check status button — shown only while in progress */}
+                  {videoOperationName && !videoReady && !videoGenerationLoading && (
                     <button
                       onClick={handleCheckVideoStatus}
-                      disabled={videoGenerationLoading || !videoOperationName}
-                      className="text-xs text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
+                      className="mt-2 w-full py-2 rounded-lg text-xs font-medium text-emerald-300 hover:text-white transition-colors"
+                      style={{ border: '1px solid rgba(16,185,129,0.3)' }}
                     >
-                      Check Status
+                      🔄 Check if video is ready
                     </button>
-                    {videoOperationName && <span className="text-xs text-slate-500 truncate">{videoOperationName}</span>}
-                  </div>
+                  )}
 
-                  {videoGenerationStatus && <p className="mt-2 text-xs text-slate-400">{videoGenerationStatus}</p>}
                   {form.videoUrl && (
                     <div className="mt-3 space-y-2">
                       <video controls className="w-full rounded-xl" src={form.videoUrl} />
-                      <p className="text-xs text-emerald-300 break-all">Ready: {form.videoUrl}</p>
+                      <p className="text-xs text-emerald-400 text-center font-medium">✅ Video ready! Scroll down to continue →</p>
                     </div>
                   )}
                 </div>

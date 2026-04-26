@@ -127,6 +127,7 @@ fi
 
 pm2_delete_if_exists zynovexa-web
 pm2_delete_if_exists zynovexa-api
+pm2_delete_if_exists zynovexa-worker
 run_step "Starting PM2 processes from ecosystem config" pm2 start ecosystem.config.cjs --env production
 
 run_step "Saving PM2 process list" pm2 save

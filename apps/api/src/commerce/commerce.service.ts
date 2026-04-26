@@ -7,6 +7,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import Stripe from 'stripe';
 import {
   CreateCommerceCheckoutDto,
@@ -25,11 +27,96 @@ import {
 export class CommerceService {
   private stripe: Stripe | null = null;
 
-  constructor(private prisma: PrismaService, private config: ConfigService, private jwt: JwtService) {
+  constructor(
+    private prisma: PrismaService,
+    private config: ConfigService,
+    private jwt: JwtService,
+    private mail: MailService,
+    private supabase: SupabaseService,
+  ) {
     const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY');
     if (stripeKey) {
       this.stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
     }
+  }
+
+  private getActiveStorePromotion(store?: { promoCode?: string | null; promoLabel?: string | null; promoDiscountPercent?: number | null; promoExpiresAt?: Date | null } | null) {
+    if (!store?.promoCode || !store.promoDiscountPercent) return null;
+    if (store.promoExpiresAt && store.promoExpiresAt.getTime() < Date.now()) return null;
+
+    return {
+      code: store.promoCode.toUpperCase(),
+      label: store.promoLabel || 'Limited-time offer',
+      discountPercent: store.promoDiscountPercent,
+      expiresAt: store.promoExpiresAt || null,
+    };
+  }
+
+  private resolvePromotion(store: { promoCode?: string | null; promoLabel?: string | null; promoDiscountPercent?: number | null; promoExpiresAt?: Date | null }, promoCode?: string) {
+    const activePromotion = this.getActiveStorePromotion(store);
+    if (!promoCode) return null;
+    if (!activePromotion || activePromotion.code !== promoCode.trim().toUpperCase()) {
+      throw new BadRequestException('Invalid or expired promo code');
+    }
+
+    return activePromotion;
+  }
+
+  private calculateDiscountedAmount(amount: number, discountPercent?: number | null) {
+    if (!discountPercent) return amount;
+    return Math.max(0, Math.round(amount * (100 - discountPercent) / 100));
+  }
+
+  private async sendCommerceOrderConfirmation(purchaseId: string) {
+    try {
+      const purchase = await this.prisma.commercePurchase.findUnique({
+        where: { id: purchaseId },
+        include: {
+          buyer: { select: { email: true, name: true } },
+          creator: { select: { name: true, handle: true } },
+          store: { select: { name: true } },
+          items: true,
+        },
+      });
+
+      if (!purchase?.buyer?.email) return;
+
+      const supportNumber = this.config.get<string>('WHATSAPP_SUPPORT_NUMBER');
+      const itemLines = purchase.items
+        .map((item) => `<li><strong>${this.escapeHtml(item.titleSnapshot)}</strong> - ${(item.itemType === 'COURSE' ? 'Course access unlocked' : 'Download ready')}</li>`)
+        .join('');
+      const orderUrl = `${this.config.get<string>('FRONTEND_URL') || 'http://localhost:3001'}/order-success/${purchase.id}`;
+      const whatsappHref = supportNumber
+        ? `https://wa.me/${supportNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, please confirm my Zynovexa order ${purchase.id}.`)}`
+        : '';
+
+      await this.mail.send({
+        to: purchase.buyer.email,
+        subject: `Your Zynovexa order is ready: ${purchase.store.name}`,
+        text: `Hi ${purchase.buyer.name}, your purchase is confirmed. Open ${orderUrl} to access your items.`,
+        html: `
+          <div>
+            <h2>Your purchase is confirmed</h2>
+            <p>Hi ${this.escapeHtml(purchase.buyer.name || 'there')}, your order from <strong>${this.escapeHtml(purchase.store.name)}</strong> is now ready.</p>
+            <ul>${itemLines}</ul>
+            <p><strong>Total paid:</strong> ${(purchase.totalAmount / 100).toFixed(2)} ${purchase.currency.toUpperCase()}</p>
+            <p><a href="${orderUrl}">Open your receipt and access items</a></p>
+            ${whatsappHref ? `<p><a href="${whatsappHref}">Need help? Confirm on WhatsApp</a></p>` : ''}
+            <p>Creator: ${this.escapeHtml(purchase.creator.name || 'Creator')}</p>
+          </div>
+        `,
+      });
+    } catch {
+      // Order delivery confirmation should not block fulfillment.
+    }
+  }
+
+  private escapeHtml(value: string) {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   /** Calculate platform fee based on creator's plan */
@@ -69,6 +156,10 @@ export class CommerceService {
         logoUrl: dto.logoUrl,
         bannerUrl: dto.bannerUrl,
         currency: (dto.currency || 'usd').toLowerCase(),
+        promoCode: dto.promoCode?.trim().toUpperCase() || null,
+        promoLabel: dto.promoLabel?.trim() || null,
+        promoDiscountPercent: dto.promoDiscountPercent,
+        promoExpiresAt: dto.promoExpiresAt ? new Date(dto.promoExpiresAt) : null,
         isPublished: dto.isPublished ?? false,
       },
       update: {
@@ -78,6 +169,10 @@ export class CommerceService {
         logoUrl: dto.logoUrl,
         bannerUrl: dto.bannerUrl,
         currency: (dto.currency || 'usd').toLowerCase(),
+        promoCode: dto.promoCode?.trim().toUpperCase() || null,
+        promoLabel: dto.promoLabel?.trim() || null,
+        promoDiscountPercent: dto.promoDiscountPercent,
+        promoExpiresAt: dto.promoExpiresAt ? new Date(dto.promoExpiresAt) : null,
         isPublished: dto.isPublished ?? false,
       },
     });
@@ -280,12 +375,12 @@ export class CommerceService {
         products: {
           where: { status: 'PUBLISHED' },
           orderBy: { createdAt: 'desc' },
-          select: { id: true, title: true, slug: true, description: true, price: true, coverImageUrl: true, status: true, createdAt: true },
+          select: { id: true, title: true, slug: true, description: true, price: true, currency: true, coverImageUrl: true, status: true, createdAt: true },
         },
         courses: {
           where: { status: 'PUBLISHED' },
           orderBy: { createdAt: 'desc' },
-          select: { id: true, title: true, slug: true, description: true, price: true, coverImageUrl: true, status: true, createdAt: true },
+          select: { id: true, title: true, slug: true, description: true, price: true, currency: true, coverImageUrl: true, status: true, createdAt: true },
         },
       },
     });
@@ -306,7 +401,7 @@ export class CommerceService {
               orderBy: { createdAt: 'desc' },
               select: {
                 id: true, title: true, slug: true, description: true, shortDescription: true,
-                type: true, price: true, originalPrice: true, coverImageUrl: true,
+                type: true, price: true, originalPrice: true, currency: true, coverImageUrl: true,
                 status: true, tags: true, totalSales: true, createdAt: true,
               },
             },
@@ -315,7 +410,7 @@ export class CommerceService {
               orderBy: { createdAt: 'desc' },
               select: {
                 id: true, title: true, slug: true, description: true, shortDescription: true,
-                price: true, coverImageUrl: true, status: true, createdAt: true,
+                price: true, currency: true, coverImageUrl: true, status: true, createdAt: true,
                 _count: { select: { lessons: true, enrollments: true } },
               },
             },
@@ -345,7 +440,7 @@ export class CommerceService {
     const product = await this.prisma.product.findFirst({
       where: { id: productId, status: 'PUBLISHED', store: { isPublished: true } },
       include: {
-        store: { select: { id: true, name: true, slug: true } },
+        store: { select: { id: true, name: true, slug: true, promoCode: true, promoLabel: true, promoDiscountPercent: true, promoExpiresAt: true } },
         creator: { select: { id: true, name: true } },
       },
     });
@@ -434,6 +529,8 @@ export class CommerceService {
       : await this.prisma.courseEnrollment.findUnique({ where: { courseId_buyerId: { courseId: item.id, buyerId: userId } } });
     if (existingAccess) throw new BadRequestException('You already own this item');
 
+    const promotion = this.resolvePromotion(item.store, dto.promoCode);
+    const finalAmount = this.calculateDiscountedAmount(item.price, promotion?.discountPercent);
     const razorpayKeyId = this.config.get<string>('RAZORPAY_KEY_ID');
     const razorpaySecret = this.config.get<string>('RAZORPAY_KEY_SECRET');
 
@@ -446,7 +543,7 @@ export class CommerceService {
     const rzp = new Razorpay({ key_id: razorpayKeyId, key_secret: razorpaySecret });
 
     const order = await rzp.orders.create({
-      amount: item.price, // Razorpay expects paisa for INR or smallest unit
+      amount: finalAmount,
       currency: (item.currency || 'INR').toUpperCase(),
       receipt: `order_${Date.now()}`,
       notes: {
@@ -455,6 +552,8 @@ export class CommerceService {
         storeId: item.storeId,
         creatorId: item.creatorId,
         buyerId: userId,
+        promoCode: promotion?.code || '',
+        promoDiscountPercent: String(promotion?.discountPercent || ''),
       },
     });
 
@@ -462,6 +561,10 @@ export class CommerceService {
       provider: 'razorpay',
       orderId: order.id,
       amount: order.amount,
+      originalAmount: item.price,
+      appliedDiscountPercent: promotion?.discountPercent || 0,
+      promoCode: promotion?.code || null,
+      promoLabel: promotion?.label || null,
       currency: order.currency,
       keyId: razorpayKeyId,
       buyerName: buyer.name,
@@ -528,7 +631,7 @@ export class CommerceService {
             productId: notes.itemType === 'PRODUCT' ? item.id : null,
             courseId: notes.itemType === 'COURSE' ? item.id : null,
             titleSnapshot: item.title,
-            priceSnapshot: item.price,
+            priceSnapshot: totalAmount,
           },
         });
 
@@ -546,6 +649,11 @@ export class CommerceService {
           });
         }
       });
+
+      const purchase = await this.prisma.commercePurchase.findFirst({ where: { razorpayPayId: payment.id }, select: { id: true } });
+      if (purchase?.id) {
+        await this.sendCommerceOrderConfirmation(purchase.id);
+      }
     }
 
     return { received: true };
@@ -627,6 +735,47 @@ export class CommerceService {
     };
   }
 
+  async getBuyerOrder(orderId: string, userId: string) {
+    const order = await this.prisma.commercePurchase.findFirst({
+      where: { id: orderId, buyerId: userId },
+      include: {
+        store: { select: { id: true, name: true, slug: true } },
+        creator: { select: { id: true, name: true, handle: true } },
+        items: {
+          include: {
+            product: { select: { id: true, title: true, slug: true, coverImageUrl: true } },
+            course: { select: { id: true, title: true, slug: true, coverImageUrl: true } },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return {
+      id: order.id,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      platformFee: order.platformFee,
+      sellerAmount: order.sellerAmount,
+      currency: order.currency,
+      createdAt: order.createdAt,
+      fulfilledAt: order.fulfilledAt,
+      store: order.store,
+      creator: order.creator,
+      items: order.items.map((item) => ({
+        id: item.id,
+        itemType: item.itemType,
+        titleSnapshot: item.titleSnapshot,
+        priceSnapshot: item.priceSnapshot,
+        product: item.product,
+        course: item.course,
+      })),
+    };
+  }
+
   async getRevenueOverview(userId: string, query: RevenueQueryDto) {
     const days = query.days || 30;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -637,12 +786,18 @@ export class CommerceService {
         status: { in: ['PAID', 'FULFILLED'] },
         createdAt: { gte: since },
       },
-      include: { items: true },
+      include: {
+        items: true,
+        buyer: { select: { name: true } },
+      },
       orderBy: { createdAt: 'asc' },
     });
 
     const grossRevenue = purchases.reduce((sum, purchase) => sum + purchase.totalAmount, 0);
+    const netRevenue = purchases.reduce((sum, purchase) => sum + purchase.sellerAmount, 0);
+    const platformFees = purchases.reduce((sum, purchase) => sum + purchase.platformFee, 0);
     const orderCount = purchases.length;
+    const uniqueBuyerCount = new Set(purchases.map((purchase) => purchase.buyerId)).size;
     const productRevenue = purchases
       .flatMap((purchase) => purchase.items)
       .filter((item) => item.itemType === 'PRODUCT')
@@ -661,7 +816,10 @@ export class CommerceService {
     return {
       currency: purchases[0]?.currency || 'usd',
       grossRevenue,
+      netRevenue,
+      platformFees,
       orderCount,
+      uniqueBuyerCount,
       productRevenue,
       courseRevenue,
       averageOrderValue: orderCount ? Math.round(grossRevenue / orderCount) : 0,
@@ -725,10 +883,21 @@ export class CommerceService {
       data: { lastDownloadedAt: new Date(), downloadCount: { increment: 1 } },
     });
 
+    // Generate a short-lived signed URL (60s) if Supabase storage is configured
+    // This prevents direct link sharing — each download link is unique and expires quickly
+    let downloadUrl = access.product.assetUrl;
+    if (this.supabase.isConfigured()) {
+      const objectPath = this.supabase.getObjectPathFromPublicUrl(access.product.assetUrl);
+      if (objectPath) {
+        const signedUrl = await this.supabase.createSignedUrl(objectPath, 60);
+        if (signedUrl) downloadUrl = signedUrl;
+      }
+    }
+
     return {
       productId: access.productId,
       title: access.product.title,
-      assetUrl: access.product.assetUrl,
+      assetUrl: downloadUrl,
       previewUrl: access.product.previewUrl,
       downloadsUsed: access.downloadCount + 1,
       downloadsRemaining: access.downloadLimit - access.downloadCount - 1,
@@ -898,8 +1067,8 @@ export class CommerceService {
     if (existing?.status === 'FULFILLED') return existing;
 
     const item = metadata.itemType === 'PRODUCT'
-      ? await this.prisma.product.findUnique({ where: { id: metadata.itemId } })
-      : await this.prisma.course.findUnique({ where: { id: metadata.itemId } });
+      ? await this.prisma.product.findUnique({ where: { id: metadata.itemId }, include: { store: true } })
+      : await this.prisma.course.findUnique({ where: { id: metadata.itemId }, include: { store: true } });
     if (!item) throw new NotFoundException('Purchased item not found');
 
     // Calculate platform fee
@@ -909,13 +1078,15 @@ export class CommerceService {
     const sellerAmount = totalAmount - platformFee;
 
     await this.prisma.$transaction(async (tx) => {
+      const promotion = this.resolvePromotion(item.store, metadata.promoCode || undefined);
+      const resolvedTotalAmount = metadata.discountedAmount ? Number(metadata.discountedAmount) : (session.amount_total || item.price);
       const purchase = existing
         ? await tx.commercePurchase.update({
             where: { id: existing.id },
             data: {
               stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : existing.stripePaymentIntentId,
               stripeCustomerId: typeof session.customer === 'string' ? session.customer : existing.stripeCustomerId,
-              totalAmount,
+              totalAmount: resolvedTotalAmount,
               platformFee,
               sellerAmount,
               currency: session.currency || existing.currency,
@@ -931,7 +1102,7 @@ export class CommerceService {
               stripeCheckoutSessionId: session.id,
               stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
               stripeCustomerId: typeof session.customer === 'string' ? session.customer : null,
-              totalAmount,
+              totalAmount: resolvedTotalAmount,
               platformFee,
               sellerAmount,
               currency: session.currency || item.currency,
@@ -949,7 +1120,7 @@ export class CommerceService {
             productId: metadata.itemType === 'PRODUCT' ? item.id : null,
             courseId: metadata.itemType === 'COURSE' ? item.id : null,
             titleSnapshot: item.title,
-            priceSnapshot: item.price,
+            priceSnapshot: resolvedTotalAmount,
           },
         });
       }
@@ -963,7 +1134,7 @@ export class CommerceService {
         // Update product sales stats
         await tx.product.update({
           where: { id: item.id },
-          data: { totalSales: { increment: 1 }, totalRevenue: { increment: totalAmount } },
+          data: { totalSales: { increment: 1 }, totalRevenue: { increment: resolvedTotalAmount } },
         });
       } else {
         await tx.courseEnrollment.upsert({
@@ -973,6 +1144,16 @@ export class CommerceService {
         });
       }
     });
+
+    if ((existing?.id || session.id)) {
+      const purchase = await this.prisma.commercePurchase.findFirst({
+        where: { stripeCheckoutSessionId: existing?.stripeCheckoutSessionId || session.id },
+        select: { id: true },
+      });
+      if (purchase?.id) {
+        await this.sendCommerceOrderConfirmation(purchase.id);
+      }
+    }
   }
 
   private async markPurchaseFailed(session: Stripe.Checkout.Session) {

@@ -55,6 +55,18 @@ function AuthHandlerContent() {
       pathname?.startsWith('/auth/');
     if (isAuthPage) return;
 
+    const routeAfterAuth = async () => {
+      const store = useAuthStore.getState();
+      if (!store.user && store.isAuthenticated) {
+        try {
+          await store.fetchMe();
+        } catch {}
+      }
+
+      const user = useAuthStore.getState().user;
+      router.push(user && !user.onboardingCompleted ? '/onboarding' : '/dashboard');
+    };
+
     const handleSession = async (accessToken: string) => {
       if (exchanging.current) return;
       exchanging.current = true;
@@ -64,8 +76,7 @@ function AuthHandlerContent() {
         if (typeof window !== 'undefined' && window.location.hash) {
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
-        const user = useAuthStore.getState().user;
-        router.push(user && !user.onboardingCompleted ? '/onboarding' : '/dashboard');
+        await routeAfterAuth();
       } catch {
         exchanging.current = false; // allow retry on next navigation
       }

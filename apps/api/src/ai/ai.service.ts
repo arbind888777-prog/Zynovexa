@@ -25,6 +25,8 @@ type AiJson = Record<string, any>;
 type TextModelResponse = { text: string; tokensUsed: number };
 type ChatOptions = { includeLongTermMemory: boolean };
 
+import { GamificationService } from '../gamification/gamification.service';
+
 @Injectable()
 export class AiService {
   private openai: OpenAI | null = null;
@@ -39,6 +41,7 @@ export class AiService {
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
+    private gamification: GamificationService,
   ) {
     const openAiKey = this.config.get('OPENAI_API_KEY') || '';
     const geminiKey = this.config.get('GEMINI_API_KEY') || '';
@@ -353,40 +356,60 @@ Return as JSON:
       ? `${prompt}\n\nReturn valid JSON only. Do not wrap it in markdown code fences.`
       : prompt;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: finalPrompt }] }],
-        generationConfig: {
-          temperature: options?.temperature ?? 0.8,
-          maxOutputTokens: options?.maxTokens || 1500,
-          responseMimeType: options?.jsonMode ? 'application/json' : 'text/plain',
-        },
-      }),
+    const requestBody = JSON.stringify({
+      contents: [{ parts: [{ text: finalPrompt }] }],
+      generationConfig: {
+        temperature: options?.temperature ?? 0.8,
+        maxOutputTokens: options?.maxTokens || 1500,
+        responseMimeType: options?.jsonMode ? 'application/json' : 'text/plain',
+      },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new BadRequestException(`Gemini request failed: ${errorText}`);
+    // Exponential backoff retry: handles 429 (rate limit) and 5xx (server errors)
+    const maxRetries = 3;
+    let lastError = '';
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: requestBody },
+      );
+
+      // Retryable errors: rate limit (429) or server-side errors (500, 503)
+      if (response.status === 429 || response.status >= 500) {
+        lastError = `Gemini HTTP ${response.status}`;
+        if (attempt < maxRetries - 1) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        throw new BadRequestException(`Gemini request failed after ${maxRetries} retries: ${lastError}`);
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new BadRequestException(`Gemini request failed: ${errorText}`);
+      }
+
+      const data = await response.json() as any;
+      const text = (data?.candidates || [])
+        .flatMap((candidate: any) => candidate?.content?.parts || [])
+        .map((part: any) => part?.text || '')
+        .join('')
+        .trim();
+
+      const tokensUsed = data?.usageMetadata?.totalTokenCount || 0;
+      await this.logRequest(userId, prompt, text, tokensUsed, type);
+      return { text, tokensUsed };
     }
 
-    const data = await response.json() as any;
-    const text = (data?.candidates || [])
-      .flatMap((candidate: any) => candidate?.content?.parts || [])
-      .map((part: any) => part?.text || '')
-      .join('')
-      .trim();
-
-    const tokensUsed = data?.usageMetadata?.totalTokenCount || 0;
-    await this.logRequest(userId, prompt, text, tokensUsed, type);
-    return { text, tokensUsed };
+    throw new BadRequestException(`Gemini request failed: ${lastError}`);
   }
 
   // ─── Google Nano Banana Image Generation ──────────────────────────────────
 
   private async generateImageWithNanoBanana(userId: string, dto: GenerateImageDto) {
-    const aspectRatio = this.mapImageSizeToAspectRatio(dto.size);
+    const aspectRatio = this.resolveImageAspectRatio(dto.aspectRatio, dto.size);
     const preferredModel = this.config.get('NANO_BANANA_MODEL') || 'gemini-3.1-flash-image-preview';
     const models = Array.from(new Set([
       preferredModel,
@@ -394,8 +417,8 @@ Return as JSON:
       'gemini-2.5-flash-image',
     ]));
     const apiKeys = Array.from(new Set([
-      this.nanoBananaApiKey,
       this.geminiApiKey,
+      this.nanoBananaApiKey,
     ].filter(Boolean)));
 
     let lastError = 'Nano Banana image generation failed.';
@@ -422,7 +445,10 @@ Return as JSON:
 
         const payload = await response.json().catch(() => null) as any;
         if (!response.ok) {
-          lastError = payload?.error?.message || payload?.message || lastError;
+          const errorMessage = payload?.error?.message || payload?.message || lastError;
+          lastError = /SERVICE_DISABLED|Gemini API has not been used|PERMISSION_DENIED/i.test(errorMessage)
+            ? 'Configured Nano Banana key ke Google project me Gemini API enabled nahi hai. Gemini API ko Google Cloud project me enable karo, ya working GEMINI_API_KEY use karo.'
+            : errorMessage;
           continue;
         }
 
@@ -444,6 +470,7 @@ Return as JSON:
           imageUrl,
           provider: model,
           mimeType,
+          aspectRatio,
         };
       }
     }
@@ -461,53 +488,62 @@ Return as JSON:
     }
 
     const aspectRatio = dto.aspectRatio || '16:9';
-    const durationSeconds = dto.durationSeconds || 6;
-    const model = this.config.get('VEO3_MODEL') || 'veo-3.1-generate-preview';
+    const durationSeconds = [4, 6, 8].includes(dto.durationSeconds || 6) ? (dto.durationSeconds || 6) : 6;
+    const modelCandidates = [
+      this.config.get('VEO3_MODEL') || '',
+      'veo-3.1-generate-preview',
+      'veo-3.1-fast-generate-preview',
+      'veo-3.0-generate-preview',
+    ].filter((m, i, arr) => !!m && arr.indexOf(m) === i);
+
     const apiKeys = Array.from(new Set([
-      this.veo3ApiKey,
       this.geminiApiKey,
+      this.veo3ApiKey,
     ].filter(Boolean)));
 
     let lastError = 'Veo 3 video generation failed.';
 
-    for (const apiKey of apiKeys) {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:predictLongRunning?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            instances: [{ prompt: dto.prompt }],
-            parameters: {
-              aspectRatio,
-              durationSeconds,
-              personGeneration: 'allow_all',
-              resolution: '720p',
-            },
-          }),
-        },
-      );
+    for (const model of modelCandidates) {
+      for (const apiKey of apiKeys) {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:predictLongRunning?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instances: [{ prompt: dto.prompt }],
+              parameters: {
+                aspectRatio,
+                durationSeconds,
+                personGeneration: 'allow_all',
+                resolution: '720p',
+              },
+            }),
+          },
+        );
 
-      const payload = await response.json().catch(() => null) as any;
-      if (!response.ok) {
-        lastError = payload?.error?.message || payload?.message || lastError;
-        continue;
+        const payload = await response.json().catch(() => null) as any;
+        if (!response.ok) {
+          lastError = payload?.error?.message || payload?.message || lastError;
+          continue;
+        }
+
+        const operationName = payload?.name;
+        if (!operationName) {
+          lastError = 'Veo 3 did not return an operation ID.';
+          continue;
+        }
+
+        await this.logRequest(userId, dto.prompt, `operation:${operationName}`, 0, 'VIDEO');
+
+        return {
+          operationName,
+          status: 'PROCESSING',
+          message: 'Video generation started. Usually takes 2-3 minutes.',
+          provider: 'veo-3',
+          model,
+        };
       }
-
-      const operationName = payload?.name;
-      if (!operationName) {
-        lastError = 'Veo 3 did not return an operation ID.';
-        continue;
-      }
-
-      await this.logRequest(userId, dto.prompt, `operation:${operationName}`, 0, 'VIDEO');
-
-      return {
-        operationName,
-        status: 'PROCESSING',
-        message: 'Video generation started. Use the check-video endpoint to poll for results.',
-        provider: 'veo-3',
-      };
     }
 
     throw new BadRequestException(lastError);
@@ -519,8 +555,8 @@ Return as JSON:
     }
 
     const apiKeys = Array.from(new Set([
-      this.veo3ApiKey,
       this.geminiApiKey,
+      this.veo3ApiKey,
     ].filter(Boolean)));
 
     let payload: any = null;
@@ -546,6 +582,15 @@ Return as JSON:
       throw new BadRequestException(lastError);
     }
 
+    if (payload?.error?.message) {
+      return {
+        operationName,
+        status: 'FAILED',
+        message: payload.error.message,
+        provider: 'veo-3',
+      };
+    }
+
     if (!payload?.done) {
       return {
         operationName,
@@ -557,6 +602,15 @@ Return as JSON:
     const generatedVideos = payload?.response?.generatedVideos || payload?.response?.generated_videos || [];
     const video = generatedVideos?.[0]?.video;
     const videoUri = video?.uri || video?.fileUri || null;
+    if (!videoUri) {
+      return {
+        operationName,
+        status: 'FAILED',
+        message: payload?.response?.error?.message || 'Video generation finished but no video file was returned.',
+        provider: 'veo-3',
+      };
+    }
+
     const playableVideoUrl = videoUri ? await this.buildGoogleMediaDataUrl(videoUri, video?.mimeType || 'video/mp4') : null;
 
     return {
@@ -594,7 +648,11 @@ Return as JSON:
     return null;
   }
 
-  private mapImageSizeToAspectRatio(size?: string) {
+  private resolveImageAspectRatio(aspectRatio?: string, size?: string) {
+    if (aspectRatio && ['1:1', '4:5', '16:9', '9:16', '4:3', '3:4', '21:9'].includes(aspectRatio)) {
+      return aspectRatio;
+    }
+
     switch (size) {
       case '1792x1024':
         return '16:9';
@@ -694,6 +752,8 @@ Return as JSON:
     await this.prisma.aiRequest.create({
       data: { userId, requestType: type, prompt: prompt.substring(0, 500), result: result.substring(0, 2000), tokensUsed: tokens },
     });
+    
+    this.gamification.recordAction(userId, 'ai_used').catch(() => {});
   }
 
   private async buildChatPrompt(userId: string | null, dto: ChatMessageDto, options: ChatOptions) {
@@ -745,9 +805,10 @@ ${memoryText}`;
   }
 
   private async getRecentChatMemory(userId: string, take: number) {
+    // Fetch in ascending order directly from DB — avoids in-memory .reverse() on large result sets
     const rows = await this.prisma.aiRequest.findMany({
       where: { userId, requestType: 'CHATBOT' },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
       take,
       select: { prompt: true, result: true, createdAt: true },
     });
@@ -755,7 +816,6 @@ ${memoryText}`;
     if (!rows.length) return '';
 
     return rows
-      .reverse()
       .map((r, idx) => {
         const q = (r.prompt || '').replace(/\s+/g, ' ').trim().slice(0, 220);
         const a = (r.result || '').replace(/\s+/g, ' ').trim().slice(0, 260);

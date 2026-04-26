@@ -65,16 +65,16 @@ export function getPublicApiBaseUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
   const browserOrigin = getBrowserOrigin();
 
+  if (browserOrigin && isLocalOrigin(browserOrigin)) {
+    return 'http://localhost:4000/api';
+  }
+
   if (shouldUseSameOriginApi(envUrl, browserOrigin)) {
     return trimTrailingSlash(`${browserOrigin}/api`);
   }
 
   if (envUrl) {
     return trimTrailingSlash(envUrl);
-  }
-
-  if (browserOrigin && isLocalOrigin(browserOrigin)) {
-    return 'http://localhost:4000/api';
   }
 
   if (browserOrigin) {
@@ -105,7 +105,11 @@ export function getPublicSiteUrl(): string {
 
 export function getPublicAuthRedirectUrl(path: string): string {
   const browserOrigin = getBrowserOrigin();
-  const baseUrl = browserOrigin || getPublicSiteUrl();
+  const isLocal = browserOrigin && (browserOrigin.includes('localhost') || browserOrigin.includes('127.0.0.1'));
+  const baseUrl = isLocal ? browserOrigin : (browserOrigin || getPublicSiteUrl());
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (isLocal) {
+    console.log('[DEBUG] Auth Redirect URL set to:', `${baseUrl}${normalizedPath}`);
+  }
   return `${baseUrl}${normalizedPath}`;
 }

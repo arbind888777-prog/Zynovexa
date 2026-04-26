@@ -20,7 +20,7 @@ type PlatformMeta = {
 const PLATFORM_META: Record<Platform, PlatformMeta> = {
   YOUTUBE:   { icon: '▶️',  color: '#ff0000', label: 'YouTube',    oauthSupported: true },
   INSTAGRAM: { icon: '📸',  color: '#e1306c', label: 'Instagram',  oauthSupported: true },
-  TWITTER:   { icon: '𝕏',  color: '#1da1f2', label: 'X / Twitter', oauthSupported: false, comingSoon: true },
+  TWITTER:   { icon: '𝕏',  color: '#1da1f2', label: 'X / Twitter', oauthSupported: false },
   LINKEDIN:  { icon: '💼',  color: '#0077b5', label: 'LinkedIn',   oauthSupported: false, comingSoon: true },
   FACEBOOK:  { icon: '👤',  color: '#1877f2', label: 'Facebook',   oauthSupported: true },
   SNAPCHAT:  { icon: '👻',  color: '#fffc00', label: 'Snapchat',   oauthSupported: false, comingSoon: true },
@@ -37,7 +37,7 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   instagram_failed: 'Instagram direct OAuth is not enabled here. Use the configured token flow instead.',
   linkedin_failed: 'LinkedIn direct OAuth connect is not available yet.',
   twitter_failed:  'X / Twitter connection failed. Verify app settings and callback URL, then try again.',
-  twitter_unavailable: 'X / Twitter direct connection is not available yet.',
+  twitter_unavailable: 'X / Twitter connect needs full OAuth 2.0 client credentials, not only API key or bearer token.',
   snapchat_failed: 'Snapchat direct OAuth connect is not available yet.',
 };
 
@@ -259,6 +259,38 @@ function AccountsPageContent() {
     } else {
       toast.info(capability?.statusMessage || `${meta.label} connection is not enabled in this environment yet.`);
     }
+  };
+
+  const getConnectAction = (platform: Platform) => {
+    const meta = PLATFORM_META[platform];
+    const capability = getPlatformCapability(platform);
+    const canConnect = platform === 'YOUTUBE'
+      ? capability?.connectAvailable !== false
+      : platform === 'INSTAGRAM' || platform === 'FACEBOOK'
+        ? capability?.connectAvailable === true
+        : !!capability?.oauthSupported;
+
+    if (platform === 'YOUTUBE') {
+      return {
+        canConnect,
+        label: ytConnecting ? 'Connecting...' : 'Connect now',
+        tone: 'danger' as const,
+      };
+    }
+
+    if (canConnect) {
+      return {
+        canConnect: true,
+        label: oauthConnectingPlatform === platform ? 'Connecting...' : 'Connect now',
+        tone: 'brand' as const,
+      };
+    }
+
+    return {
+      canConnect: false,
+      label: meta.comingSoon ? 'Coming soon' : 'Setup required',
+      tone: 'muted' as const,
+    };
   };
 
   const { data: queueData } = useQuery({
@@ -1106,49 +1138,47 @@ function AccountsPageContent() {
                   <h2 className="text-base font-semibold text-white">➕ Connect More Platforms</h2>
                   <span className="text-xs text-slate-500">({unconnectedPlatforms.length} available)</span>
                 </div>
+                <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                  <p className="text-sm font-medium text-white">Tap the button on each card to connect or see what is missing.</p>
+                  <p className="mt-1 text-xs text-slate-400">If a platform is not ready yet, the button will tell you whether setup is required or the feature is still coming soon.</p>
+                </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {unconnectedPlatforms.map(p => {
                     const meta = PLATFORM_META[p];
                     const capability = getPlatformCapability(p);
-                    const canConnect = p === 'YOUTUBE'
-                      ? capability?.connectAvailable !== false
-                      : p === 'INSTAGRAM' || p === 'FACEBOOK'
-                        ? capability?.connectAvailable === true
-                        : !!capability?.oauthSupported;
+                    const action = getConnectAction(p);
 
                     return (
-                      <div key={p} className="dashboard-surface p-4 flex items-center gap-3 transition-all duration-200">
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0"
+                      <div key={p} className="dashboard-surface p-4 transition-all duration-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0"
                           style={{ background: `${meta.color}22` }}>
-                          {meta.icon}
+                            {meta.icon}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-white">{meta.label}</p>
+                              {!action.canConnect && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium text-slate-500 bg-slate-500/10 shrink-0">
+                                  {meta.comingSoon ? 'Coming Soon' : 'Not Ready'}
+                                </span>
+                              )}
+                            </div>
+                            {capability?.statusMessage && (
+                              <p className="mt-1 text-[11px] text-slate-500 leading-4 line-clamp-2">{capability.statusMessage}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white">{meta.label}</p>
-                          {capability?.statusMessage && (
-                            <p className="text-[10px] text-slate-500 truncate">{capability.statusMessage}</p>
-                          )}
-                        </div>
-                        {p === 'YOUTUBE' ? (
-                          <button
-                            onClick={() => handleConnect(p)}
-                            disabled={ytConnecting}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all shrink-0"
-                            style={{ background: 'linear-gradient(135deg, #ff0000, #cc0000)' }}>
-                            {ytConnecting ? '...' : 'Connect'}
-                          </button>
-                        ) : canConnect ? (
-                          <button
-                            onClick={() => handleConnect(p)}
-                            disabled={oauthConnectingPlatform === p}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all shrink-0"
-                            style={{ background: `linear-gradient(135deg, ${meta.color}, ${meta.color}cc)` }}>
-                            {oauthConnectingPlatform === p ? '...' : 'Connect'}
-                          </button>
-                        ) : (
-                          <span className="text-[10px] px-2 py-1 rounded-full font-medium text-slate-500 bg-slate-500/10 shrink-0">
-                            {meta.comingSoon ? 'Coming Soon' : 'Not Ready'}
-                          </span>
-                        )}
+
+                        <button
+                          onClick={() => handleConnect(p)}
+                          disabled={p === 'YOUTUBE' ? ytConnecting : oauthConnectingPlatform === p}
+                          className={`mt-4 w-full rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${action.canConnect ? 'text-white' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
+                          style={action.canConnect
+                            ? { background: p === 'YOUTUBE' ? 'linear-gradient(135deg, #ff0000, #cc0000)' : `linear-gradient(135deg, ${meta.color}, ${meta.color}cc)` }
+                            : { border: '1px solid var(--border)' }}>
+                          {action.label}
+                        </button>
                       </div>
                     );
                   })}

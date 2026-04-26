@@ -4,6 +4,8 @@ import {
 import { Observable, tap } from 'rxjs';
 import { Request, Response } from 'express';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HTTP');
@@ -11,8 +13,9 @@ export class LoggingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest<Request>();
     const { method, url, ip } = req;
-    const userAgent = req.get('user-agent') || '';
-    const userId = (req as any).user?.id || 'anonymous';
+    // Skip User-Agent in production — reduces log file size on VPS
+    const userAgent = isProd ? '' : ` ua:${(req.get('user-agent') || '').slice(0, 50)}`;
+    const userId = (req as any).user?.id || 'anon';
     const now = Date.now();
 
     return next.handle().pipe(
@@ -21,7 +24,7 @@ export class LoggingInterceptor implements NestInterceptor {
           const res = context.switchToHttp().getResponse<Response>();
           const duration = Date.now() - now;
           this.logger.log(
-            `${method} ${url} ${res.statusCode} ${duration}ms — user:${userId} ip:${ip} ua:${userAgent.slice(0, 50)}`,
+            `${method} ${url} ${res.statusCode} ${duration}ms — user:${userId} ip:${ip}${userAgent}`,
           );
         },
         error: (err) => {

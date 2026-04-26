@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { commerceApi, unwrapApiResponse } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import { toast } from 'sonner';
 
 interface BuyerPurchase {
@@ -43,6 +44,7 @@ export default function BuyersPage() {
 
   const totalRevenue = purchases.reduce((s, p) => s + p.sellerAmount, 0);
   const totalFees = purchases.reduce((s, p) => s + p.platformFee, 0);
+  const summaryCurrency = purchases[0]?.currency || 'INR';
 
   return (
     <div className="p-6 md:p-8 animate-fade-in">
@@ -59,15 +61,15 @@ export default function BuyersPage() {
         </div>
         <div className="card p-4">
           <div className="text-xs text-slate-400 mb-1">Gross Revenue</div>
-          <div className="text-2xl font-bold text-emerald-400">₹{(purchases.reduce((s, p) => s + p.totalAmount, 0) / 100).toFixed(0)}</div>
+          <div className="text-2xl font-bold text-emerald-400">{formatMoneyFromMinor(purchases.reduce((s, p) => s + p.totalAmount, 0), summaryCurrency)}</div>
         </div>
         <div className="card p-4">
           <div className="text-xs text-slate-400 mb-1">Net Earnings</div>
-          <div className="text-2xl font-bold text-blue-400">₹{(totalRevenue / 100).toFixed(0)}</div>
+          <div className="text-2xl font-bold text-blue-400">{formatMoneyFromMinor(totalRevenue, summaryCurrency)}</div>
         </div>
         <div className="card p-4">
           <div className="text-xs text-slate-400 mb-1">Platform Fees</div>
-          <div className="text-2xl font-bold text-orange-400">₹{(totalFees / 100).toFixed(0)}</div>
+          <div className="text-2xl font-bold text-orange-400">{formatMoneyFromMinor(totalFees, summaryCurrency)}</div>
         </div>
       </div>
 
@@ -113,9 +115,9 @@ export default function BuyersPage() {
                           {purchase.items[0]?.itemType === 'COURSE' ? '🎓 Course' : '📦 Product'}
                         </span>
                       </td>
-                      <td className="p-4 text-sm text-white text-right">₹{(purchase.totalAmount / 100).toFixed(0)}</td>
-                      <td className="p-4 text-sm text-orange-400 text-right">₹{(purchase.platformFee / 100).toFixed(0)}</td>
-                      <td className="p-4 text-sm text-emerald-400 text-right font-medium">₹{(purchase.sellerAmount / 100).toFixed(0)}</td>
+                      <td className="p-4 text-sm text-white text-right">{formatMoneyFromMinor(purchase.totalAmount, purchase.currency)}</td>
+                      <td className="p-4 text-sm text-orange-400 text-right">{formatMoneyFromMinor(purchase.platformFee, purchase.currency)}</td>
+                      <td className="p-4 text-sm text-emerald-400 text-right font-medium">{formatMoneyFromMinor(purchase.sellerAmount, purchase.currency)}</td>
                       <td className="p-4 text-sm text-slate-400">
                         {new Date(purchase.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>

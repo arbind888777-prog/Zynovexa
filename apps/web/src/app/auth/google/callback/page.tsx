@@ -59,7 +59,14 @@ function GoogleCallbackContent() {
   const [status, setStatus] = useState<'loading' | 'error'>('loading');
   const ran = useRef(false);
 
-  const routeAfterAuth = () => {
+  const routeAfterAuth = async () => {
+    const store = useAuthStore.getState();
+    if (!store.user && store.isAuthenticated) {
+      try {
+        await store.fetchMe();
+      } catch {}
+    }
+
     const redirectTarget = params.get('redirect');
     if (redirectTarget) {
       router.push(redirectTarget);
@@ -107,7 +114,7 @@ function GoogleCallbackContent() {
 
           await fetchMe();
           toast.success('Welcome! Signed in with Google 🎉');
-          routeAfterAuth();
+          await routeAfterAuth();
           return;
         }
 
@@ -121,7 +128,7 @@ function GoogleCallbackContent() {
 
           await exchangeSupabaseToken(accessToken);
           toast.success('Welcome! Signed in with Google 🎉');
-          routeAfterAuth();
+          await routeAfterAuth();
           return;
         }
 

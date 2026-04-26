@@ -32,7 +32,14 @@ function LoginPageContent() {
 
   const redirectTarget = searchParams.get('redirect');
 
-  const routeAfterAuth = () => {
+  const routeAfterAuth = async () => {
+    const store = useAuthStore.getState();
+    if (!store.user && store.isAuthenticated) {
+      try {
+        await store.fetchMe();
+      } catch {}
+    }
+
     if (redirectTarget) {
       router.push(redirectTarget);
       return;
@@ -63,7 +70,7 @@ function LoginPageContent() {
       try {
         await exchangeSupabaseToken(accessToken);
         if (!cancelled) {
-          routeAfterAuth();
+          await routeAfterAuth();
         }
       } catch {
         // Keep the form usable for manual sign-in if exchange fails.
@@ -89,7 +96,7 @@ function LoginPageContent() {
     try {
       await login(email, password);
       toast.success('Welcome back! 🚀');
-      routeAfterAuth();
+      await routeAfterAuth();
     } catch (err: any) {
       if (isSupabaseEnabled && supabase) {
         try {
@@ -105,7 +112,7 @@ function LoginPageContent() {
 
           await exchangeSupabaseToken(accessToken);
           toast.success('Welcome back!');
-          routeAfterAuth();
+          await routeAfterAuth();
           return;
         } catch (supabaseErr: any) {
           toast.error(getErrorMessage(supabaseErr, getErrorMessage(err, 'Login failed. Check your credentials.')));
@@ -120,7 +127,28 @@ function LoginPageContent() {
   const fillDemo = () => { setEmail('demo@zynovexa.com'); setPassword('demo123'); };
 
   const handleGoogleLogin = async () => {
-    const frontend = encodeURIComponent(getPublicAuthRedirectUrl(''));
+    // Force localhost redirect for development to avoid Supabase fallback issues
+    const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
+    const localRedirect = `http://localhost:3001/auth/google/callback`;
+    const targetUrl = isLocal ? localRedirect : getPublicAuthRedirectUrl('/auth/google/callback');
+    
+    let redirectUrl = new URL(targetUrl);
+    
+    if (redirectTarget) {
+      redirectUrl.searchParams.set('redirect', redirectTarget);
+    }
+
+    if (isSupabaseEnabled && supabase) {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl.toString(),
+        },
+      });
+      return;
+    }
+
+    const frontend = encodeURIComponent(redirectUrl.toString());
     const apiBase = getPublicApiBaseUrl();
     window.location.href = `${apiBase}/auth/google?frontend=${frontend}`;
   };

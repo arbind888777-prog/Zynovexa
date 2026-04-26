@@ -2,6 +2,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { postsApi, aiApi, uploadsApi, accountsApi, commerceApi, unwrapApiResponse } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import MediaUploader from '@/components/MediaUploader';
 import TagsInput, { formatTagsAsInput, parseTagValue } from '@/components/TagsInput';
 import { toast } from 'sonner';
@@ -14,10 +15,69 @@ const MEDIA_TYPES: MediaType[] = ['TEXT', 'IMAGE', 'VIDEO'];
 const VIDEO_STUDIO_TRANSFER_KEY = 'zynovexa.videoStudioDraft';
 const AI_STUDIO_TRANSFER_KEY = 'zynovexa.aiStudioDraft';
 const DEMO_TOKEN = 'demo-token-zynovexa';
-const CREATE_AI_PROVIDER_BADGES = [
-  { label: 'Text', tone: 'text-cyan-200 border-cyan-500/30 bg-cyan-500/10' },
-  { label: 'Images', tone: 'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-500/10' },
+const CREATE_AI_TOOLS = [
+  { key: 'caption', label: 'Caption', icon: '✍️', hint: 'Post likhne me help' },
+  { key: 'hashtags', label: 'Hashtags', icon: '#️⃣', hint: 'Reach ke liye' },
+  { key: 'tags', label: 'Tags', icon: '🏷️', hint: 'Clean keywords' },
+  { key: 'image', label: 'Image', icon: '🖼️', hint: 'Post visual banao' },
 ] as const;
+const IMAGE_RATIO_OPTIONS = [
+  { value: 'auto', label: 'None', hint: 'Selected platforms se auto choose' },
+  { value: '1:1', label: '1:1', hint: 'Square post' },
+  { value: '4:5', label: '4:5', hint: 'Instagram portrait' },
+  { value: '16:9', label: '16:9', hint: 'YouTube thumbnail' },
+  { value: '9:16', label: '9:16', hint: 'Stories / vertical ads' },
+  { value: '4:3', label: '4:3', hint: 'LinkedIn / Facebook safe' },
+  { value: '3:4', label: '3:4', hint: 'Portrait graphic' },
+  { value: '21:9', label: '21:9', hint: 'Wide hero banner' },
+] as const;
+const PLATFORM_IMAGE_PRESETS: Record<Platform, { ratio: string; note: string }> = {
+  INSTAGRAM: { ratio: '4:5', note: 'Feed post ke liye best' },
+  YOUTUBE: { ratio: '16:9', note: 'Thumbnail / wide cover' },
+  TWITTER: { ratio: '16:9', note: 'X link preview style' },
+  LINKEDIN: { ratio: '4:3', note: 'Professional post layout' },
+  FACEBOOK: { ratio: '4:5', note: 'Feed graphic ke liye strong' },
+  SNAPCHAT: { ratio: '9:16', note: 'Vertical snap / story' },
+};
+
+function buildEnhancedImagePrompt(prompt: string, ratio: string, platforms: Platform[]) {
+  const cleanedPrompt = prompt.trim();
+  if (!cleanedPrompt) return '';
+
+  const platformNotes = platforms.length
+    ? platforms.map((platform) => `${PLATFORM_META[platform].label} style`).join(', ')
+    : 'social media campaign style';
+
+  return `${cleanedPrompt}. Create a polished, high-quality marketing visual for ${platformNotes}. Keep composition clean, subject clear, lighting professional, details sharp, and frame optimized for ${ratio} aspect ratio.`;
+}
+
+function inferImageAspectRatioFromPlatforms(platforms: Platform[]) {
+  const prioritizedPlatform = platforms.find((platform) => PLATFORM_IMAGE_PRESETS[platform]);
+  return prioritizedPlatform ? PLATFORM_IMAGE_PRESETS[prioritizedPlatform].ratio : '1:1';
+}
+
+function getImageRatioHint(ratio: string) {
+  if (ratio === 'auto') {
+    return 'Selected platforms se smart fit choose hoga';
+  }
+
+  return IMAGE_RATIO_OPTIONS.find((option) => option.value === ratio)?.hint || 'Smart social format';
+}
+
+function getSelectedPresetSummary(platforms: Platform[], ratio: string) {
+  if (ratio === 'auto') {
+    const inferredRatio = inferImageAspectRatioFromPlatforms(platforms);
+    return platforms.length ? `Auto • ${inferredRatio}` : 'Auto • 1:1';
+  }
+
+  const matchedPlatform = platforms.find((platform) => PLATFORM_IMAGE_PRESETS[platform].ratio === ratio);
+  if (matchedPlatform) {
+    return `${PLATFORM_META[matchedPlatform].label} fit`;
+  }
+
+  const fallbackPlatform = PLATFORMS.find((platform) => PLATFORM_IMAGE_PRESETS[platform].ratio === ratio);
+  return fallbackPlatform ? `${PLATFORM_META[fallbackPlatform].label} style` : 'Custom fit';
+}
 
 function countWords(value: string) {
   return value.trim() ? value.trim().split(/\s+/).length : 0;
@@ -191,6 +251,7 @@ function CreatePostPageContent() {
   const [aiInput, setAiInput] = useState('');
   const [aiResult, setAiResult] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [imageAspectRatio, setImageAspectRatio] = useState('auto');
   const [recentlyAttachedAiImage, setRecentlyAttachedAiImage] = useState<string | null>(null);
   const [addedAiImageUrl, setAddedAiImageUrl] = useState<string | null>(null);
   const mediaUploaderRef = useRef<HTMLDivElement | null>(null);
@@ -198,7 +259,11 @@ function CreatePostPageContent() {
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaLink, setMediaLink] = useState('');
   const [attachedProductId, setAttachedProductId] = useState<string | null>(null);
+  const [advancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
   const aiInputWordCount = countWords(aiInput);
+  const effectiveImageAspectRatio = imageAspectRatio === 'auto'
+    ? inferImageAspectRatioFromPlatforms(form.platforms)
+    : imageAspectRatio;
 
   const { data: connectedAccounts, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ['accounts'],
@@ -418,6 +483,7 @@ function CreatePostPageContent() {
         return;
       }
       else if (aiTab === 'image') res = await aiApi.generateImage({ prompt: aiInput });
+      else if (aiTab === 'image') res = await aiApi.generateImage({ prompt: aiInput, aspectRatio: effectiveImageAspectRatio });
       setAiResult(res ? unwrapApiResponse(res) : null);
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'AI request failed');
@@ -427,6 +493,17 @@ function CreatePostPageContent() {
   const applyCaption = (caption: string) => setForm(prev => ({ ...prev, caption }));
   const applyHashtags = (tags: string[]) => setForm(prev => ({ ...prev, hashtags: formatTagsAsInput(tags) }));
   const applyPlainTags = (tags: string[]) => setForm(prev => ({ ...prev, hashtags: formatTagsAsInput(toPlainTags(tags)) }));
+  const enhanceImagePrompt = () => {
+    const nextPrompt = buildEnhancedImagePrompt(aiInput, effectiveImageAspectRatio, form.platforms);
+    if (!nextPrompt) {
+      toast.error('Pehle image prompt likho.');
+      return;
+    }
+
+    setAiInput(nextPrompt);
+    toast.success('Prompt enhance ho gaya.');
+  };
+
   const applyGeneratedImage = (imageUrl: string) => {
     setMediaUrls([imageUrl]);
     setMediaLink('');
@@ -565,7 +642,7 @@ function CreatePostPageContent() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
         {/* Left: Form */}
         <div className="space-y-5">
           <div className="dashboard-surface p-6 space-y-5">
@@ -610,6 +687,23 @@ function CreatePostPageContent() {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white">Quick help chahiye?</p>
+                  <p className="text-xs text-slate-400 mt-1">Caption, tags aur image generate karne ke liye side me AI Quick Assist use karo.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAiTab((prev) => prev || 'caption')}
+                  className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white"
+                  style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}
+                >
+                  Open AI Assist
+                </button>
               </div>
             </div>
 
@@ -684,40 +778,58 @@ function CreatePostPageContent() {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">🛍️ Attach Product (Optional)</label>
-              <select
-                value={attachedProductId || ''}
-                onChange={e => setAttachedProductId(e.target.value || null)}
-                className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+            <div className="rounded-2xl border border-white/10 bg-white/5">
+              <button
+                type="button"
+                onClick={() => setAdvancedOptionsOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between px-4 py-3 text-left"
               >
-                <option value="">No product attached</option>
-                {(creatorProducts || []).filter((p: any) => p.status === 'PUBLISHED').map((p: any) => (
-                  <option key={p.id} value={p.id}>{p.title} — ${(p.price / 100).toFixed(2)}</option>
-                ))}
-              </select>
-              {attachedProductId && (
-                <p className="text-xs text-emerald-400 mt-1">✅ Product CTA will be added to your post. Buyers can purchase directly!</p>
-              )}
-              {(!creatorProducts || creatorProducts.filter((p: any) => p.status === 'PUBLISHED').length === 0) && (
-                <p className="text-xs text-slate-500 mt-1">
-                  Koi published product nahi hai? <a href="/products/create" className="text-purple-400 hover:underline">Pehle product banao →</a>
-                </p>
-              )}
-            </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Advanced options</p>
+                  <p className="text-xs text-slate-400 mt-1">Schedule aur product CTA jaise optional settings yahan hain.</p>
+                </div>
+                <span className={`text-xs text-slate-400 transition-transform ${advancedOptionsOpen ? 'rotate-180' : ''}`}>▼</span>
+              </button>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Schedule (Optional)</label>
-              <input type="datetime-local" value={form.scheduledAt} onChange={e => setForm(p => ({ ...p, scheduledAt: e.target.value }))}
-                className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
+              {advancedOptionsOpen && (
+                <div className="space-y-5 border-t border-white/10 px-4 py-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">🛍️ Attach Product (Optional)</label>
+                    <select
+                      value={attachedProductId || ''}
+                      onChange={e => setAttachedProductId(e.target.value || null)}
+                      className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none"
+                      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                    >
+                      <option value="">No product attached</option>
+                      {(creatorProducts || []).filter((p: any) => p.status === 'PUBLISHED').map((p: any) => (
+                        <option key={p.id} value={p.id}>{p.title} — {formatMoneyFromMinor(p.price, p.currency)}</option>
+                      ))}
+                    </select>
+                    {attachedProductId && (
+                      <p className="text-xs text-emerald-400 mt-1">✅ Product CTA post ke saath add hoga.</p>
+                    )}
+                    {(!creatorProducts || creatorProducts.filter((p: any) => p.status === 'PUBLISHED').length === 0) && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Koi published product nahi hai? <a href="/products/create" className="text-purple-400 hover:underline">Pehle product banao →</a>
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Schedule (Optional)</label>
+                    <input type="datetime-local" value={form.scheduledAt} onChange={e => setForm(p => ({ ...p, scheduledAt: e.target.value }))}
+                      className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl p-4" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)' }}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-white">Video banana hai? Video Studio use karo.</p>
-                  <p className="text-xs text-slate-400 mt-1">Reels, Shorts, duration guides aur future editing tools ke liye advanced workflow wahan hai.</p>
+                  <p className="text-xs text-slate-400 mt-1">Reels aur Shorts ke liye wahan better guided flow milega.</p>
                 </div>
                 <button
                   type="button"
@@ -789,51 +901,104 @@ function CreatePostPageContent() {
         {/* Right: AI Panel */}
         <div className="space-y-4">
           <div className="dashboard-surface p-6">
-            <h2 className="font-semibold text-white mb-2">🎥 Advanced Video Flow</h2>
-            <p className="text-sm text-slate-400">Video Studio me format choose karo, AI script banao, phir final video ko yahan quick scheduling ke liye bhejo.</p>
-            <div className="mt-4 space-y-2 text-xs text-slate-400">
-              <div className="dashboard-surface-muted px-3 py-2">1. Reel / Short format choose karo</div>
-              <div className="dashboard-surface-muted px-3 py-2">2. Script aur caption generate karo</div>
-              <div className="dashboard-surface-muted px-3 py-2">3. Send to Create Post karke schedule karo</div>
-            </div>
-          </div>
-
-          <div className="dashboard-surface p-6">
-            <h2 className="font-semibold text-white mb-4">🤖 AI Studio</h2>
-            <div className="mb-4 flex flex-wrap gap-2">
-              {CREATE_AI_PROVIDER_BADGES.map((badge) => (
-                <span
-                  key={badge.label}
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium ${badge.tone}`}
-                >
-                  <span>{badge.label}</span>
-                </span>
-              ))}
-            </div>
+            <h2 className="font-semibold text-white mb-1">Quick Assist</h2>
+            <p className="text-xs text-slate-400 mb-4">Jo chahiye woh choose karo. Ek tap me caption, hashtags, tags ya image bana lo.</p>
             <div className="grid grid-cols-2 gap-2 mb-4">
-              {(['caption', 'hashtags', 'tags', 'image'] as const).map(tab => (
-                <button key={tab} onClick={() => setAiTab(tab === aiTab ? null : tab)}
-                  className={`dashboard-tab capitalize text-[0] ${aiTab === tab ? 'dashboard-tab-active text-white' : 'text-gray-400 hover:text-white'}`}>
-                  <span className="text-sm">{tab === 'caption' ? 'Caption' : tab === 'hashtags' ? '#Tags' : tab === 'tags' ? 'Tags' : 'Image'}</span>
-                  {tab === 'caption' ? '✍️' : tab === 'hashtags' ? '#️⃣' : '🎨'} {tab}
-                </button>
-              ))}
+              {CREATE_AI_TOOLS.map((tool) => {
+                const active = aiTab === tool.key;
+                return (
+                  <button
+                    key={tool.key}
+                    onClick={() => setAiTab(tool.key === aiTab ? null : tool.key)}
+                    className={`rounded-2xl border px-3 py-3 text-left transition-all ${active ? 'text-white' : 'text-slate-300 hover:text-white hover:border-white/20'}`}
+                    style={{
+                      background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.22), rgba(168,85,247,0.18))' : 'rgba(255,255,255,0.03)',
+                      borderColor: active ? 'rgba(168,85,247,0.35)' : 'rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{tool.icon}</span>
+                      <span className="text-sm font-semibold">{tool.label}</span>
+                    </div>
+                    <p className="mt-1 text-[11px] leading-4 text-slate-400">{tool.hint}</p>
+                  </button>
+                );
+              })}
             </div>
 
             {aiTab && (
               <div className="space-y-3">
+                {aiTab === 'image' && (
+                  <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-3 shadow-[0_10px_30px_rgba(15,23,42,0.12)] space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-white">Smart Image Fit</p>
+                        <p className="mt-1 text-[11px] text-slate-400">Preset ya custom ratio choose karo.</p>
+                      </div>
+                      <div className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200 animate-fade-in">
+                        {effectiveImageAspectRatio}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5 transition-all hover:border-white/20 hover:bg-black/15">
+                        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Preset</label>
+                        <select
+                          value={imageAspectRatio}
+                          onChange={(e) => setImageAspectRatio(e.target.value)}
+                          className="w-full bg-transparent text-sm font-semibold text-white outline-none"
+                        >
+                          {IMAGE_RATIO_OPTIONS.map((option) => {
+                            return (
+                              <option key={option.value} value={option.value}>
+                                {option.label === 'None' ? 'None • Auto fit' : `${option.label} • ${option.hint}`}
+                              </option>
+                            );
+                          })}
+                        </select>
+                    </div>
+
+                    <div className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5 transition-all duration-200 hover:bg-black/15">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-sm">🪄</div>
+                      <div className="min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-xs font-semibold text-white">{getSelectedPresetSummary(form.platforms, imageAspectRatio)}</p>
+                          <span className="text-[10px] font-semibold text-slate-300">{effectiveImageAspectRatio}</span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-400">{getImageRatioHint(imageAspectRatio)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {aiTab === 'image' && (
+                  <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                    <div>
+                      <span className="block text-[11px] font-semibold text-white">Prompt</span>
+                      <span className="text-[10px] text-slate-400">AI isko aur cinematic aur polished bana dega.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={enhanceImagePrompt}
+                      className="inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-200 transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-500/20"
+                    >
+                      <span>✨</span>
+                      <span>Enhance Prompt</span>
+                    </button>
+                  </div>
+                )}
+
                 <textarea value={aiInput} onChange={e => setAiInput(e.target.value)} rows={3}
-                  placeholder={aiTab === 'caption' ? 'Describe your post...' : aiTab === 'hashtags' ? 'Describe your content for #tags...' : aiTab === 'tags' ? 'Describe your content for plain tags...' : 'Image description...'}
+                  placeholder={aiTab === 'caption' ? 'Post kis bare me hai? Short me likho...' : aiTab === 'hashtags' ? 'Content topic likho, main hashtags bana dunga...' : aiTab === 'tags' ? 'Topic likho, clean tags mil jayenge...' : 'Image me kya dikhna chahiye?'}
                   className="w-full px-4 py-3 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                   style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
                 <div className="flex items-center justify-between text-[11px] text-slate-400">
                   <span>{aiInputWordCount} words</span>
-                  <span>{aiTab === 'caption' ? 'Caption' : aiTab === 'hashtags' ? '#Tags' : aiTab === 'tags' ? 'Tags' : 'Image prompt'}</span>
+                  <span>{aiTab === 'caption' ? 'Caption draft' : aiTab === 'hashtags' ? 'Hashtag set' : aiTab === 'tags' ? 'Tag list' : `Image prompt • ${effectiveImageAspectRatio}`}</span>
                 </div>
                 <button onClick={runAi} disabled={aiLoading || !aiInput}
                   className="w-full rounded-xl py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition-all duration-200 disabled:opacity-50 hover:scale-[1.01]"
                   style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
-                  {aiLoading ? '⏳ Generating...' : '✨ Generate'}
+                  {aiLoading ? '⏳ Bana raha hai...' : 'Generate'}
                 </button>
 
                 {aiResult && (
@@ -887,19 +1052,33 @@ function CreatePostPageContent() {
                     )}
                     {aiTab === 'image' && aiResult.imageUrl && (
                       <div>
-                        <img src={aiResult.imageUrl} alt="Generated" className="w-full rounded-lg" />
-                        <button
-                          onClick={() => applyGeneratedImage(aiResult.imageUrl)}
-                          className="block w-full mt-3 rounded-lg py-2 text-xs font-semibold text-white"
-                          style={{
-                            background: addedAiImageUrl === aiResult.imageUrl
-                              ? 'linear-gradient(135deg, #059669, #10b981)'
-                              : 'linear-gradient(135deg, #6366f1, #a855f7)',
-                          }}
-                        >
-                          {addedAiImageUrl === aiResult.imageUrl ? 'Added to Post' : 'Use This Image In Post'}
-                        </button>
-                        <button onClick={() => { fetch(aiResult.imageUrl).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'zynovexa-ai-image.png'; a.click(); URL.revokeObjectURL(a.href); }); }} className="block w-full mt-2 text-purple-400 text-xs text-center hover:text-purple-300">↓ Download Image</button>
+                        {addedAiImageUrl === aiResult.imageUrl ? (
+                          <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3">
+                            <p className="text-sm font-semibold text-emerald-200">Image post me add ho gayi.</p>
+                            <p className="mt-1 text-xs text-emerald-100/80">Neeche Media Upload section me preview dekh sakte ho. Yahan duplicate preview hide kar diya gaya hai taaki confusion na ho.</p>
+                            <button
+                              onClick={() => {
+                                mediaUploaderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }}
+                              className="mt-3 block w-full rounded-lg py-2 text-xs font-semibold text-white"
+                              style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}
+                            >
+                              Go to Media Preview
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <img src={aiResult.imageUrl} alt="Generated" className="w-full rounded-lg" />
+                            <button
+                              onClick={() => applyGeneratedImage(aiResult.imageUrl)}
+                              className="block w-full mt-3 rounded-lg py-2 text-xs font-semibold text-white"
+                              style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}
+                            >
+                              Use This Image In Post
+                            </button>
+                            <button onClick={() => { fetch(aiResult.imageUrl).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'zynovexa-ai-image.png'; a.click(); URL.revokeObjectURL(a.href); }); }} className="block w-full mt-2 text-purple-400 text-xs text-center hover:text-purple-300">↓ Download Image</button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -908,7 +1087,7 @@ function CreatePostPageContent() {
             )}
 
             {!aiTab && (
-              <p className="text-xs text-gray-500 text-center py-4">Select an AI tool above to generate content for your post.</p>
+              <p className="text-xs text-gray-500 text-center py-4">Upar se ek option select karo, result yahin neeche dikh jayega.</p>
             )}
           </div>
         </div>

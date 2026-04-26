@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import Link from 'next/link';
 
 interface StoreProduct {
@@ -11,12 +12,13 @@ interface StoreProduct {
   slug: string;
   description: string;
   price: number;
+  currency?: string;
   coverImageUrl?: string;
   status: string;
 }
 
 interface StoreData {
-  store: { id: string; name: string; slug: string; description?: string; logoUrl?: string };
+  store: { id: string; name: string; slug: string; currency?: string; description?: string; logoUrl?: string };
   products: StoreProduct[];
 }
 
@@ -61,6 +63,7 @@ export default function StorefrontPage() {
 
   const { store, products } = data;
   const published = products.filter(p => p.status === 'PUBLISHED');
+  const currency = store.currency || 'INR';
 
   return (
     <div className="min-h-screen hero-bg">
@@ -104,7 +107,7 @@ export default function StorefrontPage() {
                   <h3 className="text-base font-semibold text-white mb-1 truncate">{product.title}</h3>
                   <p className="text-xs text-slate-400 line-clamp-2 mb-4">{product.description}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-white">${(product.price / 100).toFixed(2)}</span>
+                    <span className="text-xl font-bold text-white">{formatMoneyFromMinor(product.price, product.currency || currency)}</span>
                     <Link href={`/checkout/${product.id}`}
                       className="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-opacity">
                       Buy Now

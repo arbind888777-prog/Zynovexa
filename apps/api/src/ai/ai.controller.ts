@@ -10,6 +10,7 @@ import {
 
 @ApiTags('AI')
 @Controller('ai')
+@Throttle({ default: { limit: 10, ttl: 60000 } }) // Max 10 requests per minute
 export class AiController {
   constructor(private aiService: AiService) {}
 

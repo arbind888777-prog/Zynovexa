@@ -76,11 +76,11 @@ services:
       - ./apps/api/.env
     environment:
       NODE_ENV: production
+      PROCESS_TYPE: API
       REDIS_URL: redis://redis:6379
       PORT: 4000
       FRONTEND_URL: https://${DOMAIN:-zynovexa.com}
       BACKEND_URL: https://${DOMAIN:-zynovexa.com}/api
-      API_URL: https://${DOMAIN:-zynovexa.com}/api
       GOOGLE_CALLBACK_URL: https://${DOMAIN:-zynovexa.com}/api/auth/google/callback
       YOUTUBE_CONNECT_CALLBACK_URL: https://${DOMAIN:-zynovexa.com}/api/accounts/connect/youtube/callback
     depends_on:
@@ -100,6 +100,39 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  # ─── Worker (NestJS — Background Queue Processor) ───────────────────────────
+  # Same image as api, but PROCESS_TYPE=WORKER means no HTTP server starts.
+  # Only Bull queue processors run — handles post scheduling, emails, analytics.
+  # Scale: docker-compose -f docker-compose.prod.yml up -d --scale worker=2
+  worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: zynovexa-worker
+    restart: unless-stopped
+    env_file:
+      - ./apps/api/.env
+    environment:
+      NODE_ENV: production
+      PROCESS_TYPE: WORKER
+      REDIS_URL: redis://redis:6379
+      FRONTEND_URL: https://${DOMAIN:-zynovexa.com}
+      BACKEND_URL: https://${DOMAIN:-zynovexa.com}/api
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    volumes:
+      - api_uploads:/app/uploads
+    networks:
+      - zynovexa-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
 
   # ─── Web (Next.js) ──────────────────────────────────────────────────────────
   web:

@@ -96,7 +96,22 @@ export default function SignupPage() {
   const strength = form.password ? getStrength(form.password) : null;
 
   const handleGoogleSignup = async () => {
-    const frontend = encodeURIComponent(getPublicAuthRedirectUrl(''));
+    // Force localhost redirect for development to avoid Supabase fallback issues
+    const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
+    const localRedirect = `http://localhost:3001/auth/google/callback`;
+    const targetUrl = isLocal ? localRedirect : getPublicAuthRedirectUrl('/auth/google/callback');
+
+    if (isSupabaseEnabled && supabase) {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: targetUrl,
+        },
+      });
+      return;
+    }
+
+    const frontend = encodeURIComponent(targetUrl);
     const apiBase = getPublicApiBaseUrl();
     window.location.href = `${apiBase}/auth/google?frontend=${frontend}`;
   };

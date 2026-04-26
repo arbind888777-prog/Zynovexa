@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { sanitizeFrontendUrl } from '../common/utils/frontend-url';
 
 export interface SendMailOptions {
@@ -13,24 +14,30 @@ export interface SendMailOptions {
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private resend: Resend | null = null;
   private readonly fromAddress: string;
   private readonly isConfigured: boolean;
 
   constructor(private config: ConfigService) {
+    const resendKey = this.config.get('RESEND_API_KEY');
     const smtpHost = this.config.get('SMTP_HOST');
     const smtpUser = this.config.get('SMTP_USER');
-    this.isConfigured = !!(smtpHost && smtpUser);
-    this.fromAddress = this.config.get('SMTP_FROM', 'Zynovexa <noreply@zynovexa.com>');
+    
+    this.isConfigured = !!(resendKey || (smtpHost && smtpUser));
+    this.fromAddress = this.config.get('EMAIL_FROM') || this.config.get('SMTP_FROM') || 'Zynovexa <noreply@zynovexa.com>';
 
-    if (this.isConfigured) {
+    if (resendKey) {
+      this.resend = new Resend(resendKey);
+      this.logger.log('Mail service configured using Resend API');
+    } else if (smtpHost && smtpUser) {
       this.transporter = nodemailer.createTransport({
         host: smtpHost,
         port: this.config.get<number>('SMTP_PORT', 587),
         secure: this.config.get<number>('SMTP_PORT', 587) === 465,
         auth: { user: smtpUser, pass: this.config.get('SMTP_PASS') },
       });
-      this.logger.log('Mail service configured');
+      this.logger.log('Mail service configured using standard SMTP');
     } else {
       this.logger.warn('Mail service not configured — emails will be logged only');
     }
@@ -42,12 +49,36 @@ export class MailService {
       return { sent: false };
     }
 
-    const info = await this.transporter.sendMail({
-      from: this.fromAddress,
-      ...options,
-    });
-    this.logger.log(`Email sent: ${options.subject} -> ${options.to} (${info.messageId})`);
-    return { sent: true, messageId: info.messageId };
+    try {
+      if (this.resend) {
+        const { data, error } = await this.resend.emails.send({
+          from: this.fromAddress,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+          text: options.text,
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+        
+        this.logger.log(`Email sent via Resend: ${options.subject} -> ${options.to} (${data?.id})`);
+        return { sent: true, messageId: data?.id };
+      } else if (this.transporter) {
+        const info = await this.transporter.sendMail({
+          from: this.fromAddress,
+          ...options,
+        });
+        this.logger.log(`Email sent via SMTP: ${options.subject} -> ${options.to} (${info.messageId})`);
+        return { sent: true, messageId: info.messageId };
+      }
+    } catch (err: any) {
+      this.logger.error(`Failed to send email to ${options.to}: ${err.message}`, err.stack);
+      return { sent: false };
+    }
+
+    return { sent: false };
   }
 
   /** Welcome email after signup */

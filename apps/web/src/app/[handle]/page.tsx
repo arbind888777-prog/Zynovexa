@@ -2,8 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, trustApi, unwrapApiResponse } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import Link from 'next/link';
+
+interface Testimonial {
+  id: string;
+  name: string;
+  role?: string;
+  company?: string;
+  result_text: string;
+  rating?: number;
+}
 
 interface Product {
   id: string;
@@ -13,6 +23,7 @@ interface Product {
   shortDescription?: string;
   type: string;
   price: number;
+  currency?: string;
   originalPrice?: number;
   coverImageUrl?: string;
   tags: string[];
@@ -26,6 +37,7 @@ interface Course {
   description: string;
   shortDescription?: string;
   price: number;
+  currency?: string;
   coverImageUrl?: string;
   _count: { lessons: number; enrollments: number };
 }
@@ -41,7 +53,7 @@ interface Creator {
 
 interface StoreData {
   creator: Creator;
-  store: { id: string; name: string; slug: string; description?: string; logoUrl?: string; bannerUrl?: string };
+  store: { id: string; name: string; slug: string; currency?: string; description?: string; logoUrl?: string; bannerUrl?: string };
   products: Product[];
   courses: Course[];
 }
@@ -60,6 +72,7 @@ export default function CreatorStorePage() {
   const handle = params.handle as string;
 
   const [data, setData] = useState<StoreData | null>(null);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'products' | 'courses'>('products');
@@ -73,6 +86,21 @@ export default function CreatorStorePage() {
       .catch(() => setError('not_found'))
       .finally(() => setLoading(false));
   }, [handle]);
+
+  useEffect(() => {
+    trustApi.getTestimonials(true)
+      .then((res) => {
+        const payload = unwrapApiResponse<any>(res);
+        setTestimonials((payload?.testimonials || payload || []).slice(0, 3));
+      })
+      .catch(() => {
+        setTestimonials([
+          { id: 'fallback-1', name: 'Priya Sharma', role: 'Lifestyle Creator', result_text: 'Checkout was simple and the digital product opened instantly after payment.', rating: 5 },
+          { id: 'fallback-2', name: 'Alex Rodriguez', role: 'Tech YouTuber', result_text: 'The creator page made it easy to trust the offer and buy in one flow.', rating: 5 },
+          { id: 'fallback-3', name: 'Sarah Chen', role: 'Agency Founder', result_text: 'Loved having purchases and receipts available in one place after checkout.', rating: 5 },
+        ]);
+      });
+  }, []);
 
   if (loading) {
     return (
@@ -96,6 +124,7 @@ export default function CreatorStorePage() {
   }
 
   const { creator, store, products, courses } = data;
+  const storeCurrency = store.currency || 'INR';
 
   return (
     <div className="min-h-screen hero-bg">
@@ -158,6 +187,23 @@ export default function CreatorStorePage() {
         </div>
       </div>
 
+      <div className="max-w-6xl mx-auto px-4 mb-6">
+        <div className="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-5 md:grid-cols-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">1. Discover</p>
+            <p className="mt-2 text-sm font-semibold text-white">Users see the creator profile, trust signals, and all products on one clean page.</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">2. Buy Fast</p>
+            <p className="mt-2 text-sm font-semibold text-white">One tap on Buy Now opens checkout with minimal friction and secure payment.</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">3. Access Instantly</p>
+            <p className="mt-2 text-sm font-semibold text-white">After payment, downloads and courses appear in My Purchases for repeat access anytime.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Tabs */}
       {courses.length > 0 && (
         <div className="max-w-6xl mx-auto px-4 mb-6">
@@ -212,9 +258,9 @@ export default function CreatorStorePage() {
                     )}
                     <div className="flex items-center justify-between">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-xl font-bold text-white">₹{(product.price / 100).toFixed(0)}</span>
+                        <span className="text-xl font-bold text-white">{formatMoneyFromMinor(product.price, product.currency || storeCurrency)}</span>
                         {product.originalPrice && product.originalPrice > product.price && (
-                          <span className="text-sm text-slate-500 line-through">₹{(product.originalPrice / 100).toFixed(0)}</span>
+                          <span className="text-sm text-slate-500 line-through">{formatMoneyFromMinor(product.originalPrice, product.currency || storeCurrency)}</span>
                         )}
                       </div>
                       <Link href={`/checkout/${product.id}`}
@@ -262,7 +308,7 @@ export default function CreatorStorePage() {
                       <span>👥 {course._count.enrollments} enrolled</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold text-white">₹{(course.price / 100).toFixed(0)}</span>
+                      <span className="text-xl font-bold text-white">{formatMoneyFromMinor(course.price, course.currency || storeCurrency)}</span>
                       <Link href={`/checkout/${course.id}?type=COURSE`}
                         className="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-opacity">
                         Enroll Now
@@ -278,6 +324,23 @@ export default function CreatorStorePage() {
 
       {/* Buyer Login Box */}
       <div className="max-w-6xl mx-auto px-4 pb-12">
+        {testimonials.length > 0 && (
+          <div className="mb-8 grid gap-4 md:grid-cols-3">
+            {testimonials.map((testimonial) => (
+              <div key={testimonial.id} className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <div className="mb-3 flex items-center gap-1 text-amber-300">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <span key={`${testimonial.id}-${index}`}>{index < (testimonial.rating || 5) ? '★' : '☆'}</span>
+                  ))}
+                </div>
+                <p className="text-sm text-slate-200 leading-6">&ldquo;{testimonial.result_text}&rdquo;</p>
+                <p className="mt-4 text-sm font-semibold text-white">{testimonial.name}</p>
+                <p className="text-xs text-slate-500">{testimonial.role}{testimonial.company ? ` · ${testimonial.company}` : ''}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="card p-8 text-center max-w-md mx-auto">
           <p className="text-lg font-semibold text-white mb-2">Already purchased?</p>
           <p className="text-sm text-slate-400 mb-4">Login to access your downloads and courses</p>

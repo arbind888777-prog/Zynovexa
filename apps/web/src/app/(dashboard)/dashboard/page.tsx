@@ -1,6 +1,7 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { usersApi, analyticsApi, aiApi, postsApi, commerceApi, unwrapApiResponse } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import { useAuthStore } from '@/stores/auth.store';
 import Link from 'next/link';
 
@@ -364,10 +365,10 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-lg font-bold text-white mb-4">💰 Commerce Overview (Last 30 Days)</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon="💰" label="Gross Revenue" value={`₹${((revenueData as any).grossRevenue / 100).toLocaleString()}`} sub={`${(revenueData as any).orderCount} orders`} color="#10b981" />
-            <StatCard icon="📦" label="Product Sales" value={`₹${((revenueData as any).productRevenue / 100).toLocaleString()}`} color="#6366f1" />
-            <StatCard icon="🎓" label="Course Sales" value={`₹${((revenueData as any).courseRevenue / 100).toLocaleString()}`} color="#f59e0b" />
-            <StatCard icon="🧾" label="Avg Order" value={`₹${((revenueData as any).averageOrderValue / 100).toLocaleString()}`} color="#ec4899" />
+            <StatCard icon="💰" label="Gross Revenue" value={formatMoneyFromMinor((revenueData as any).grossRevenue, (revenueData as any).currency)} sub={`${(revenueData as any).orderCount} orders`} color="#10b981" />
+            <StatCard icon="📦" label="Product Sales" value={formatMoneyFromMinor((revenueData as any).productRevenue, (revenueData as any).currency)} color="#6366f1" />
+            <StatCard icon="🎓" label="Course Sales" value={formatMoneyFromMinor((revenueData as any).courseRevenue, (revenueData as any).currency)} color="#f59e0b" />
+            <StatCard icon="🧾" label="Avg Order" value={formatMoneyFromMinor((revenueData as any).averageOrderValue, (revenueData as any).currency)} color="#ec4899" />
           </div>
         </div>
       )}
@@ -426,16 +427,28 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 gap-3">
             {[
               { id: 'new-post', href: '/create', icon: '✏️', label: 'New Post' },
-              { id: 'create-video', href: '/video', icon: '🎬', label: 'Create Video' },
+              { id: 'create-video', href: '/video', icon: '🎬', label: 'Create Video', locked: true },
               { id: 'ai-caption', href: '/ai', icon: '🤖', label: 'AI Caption' },
               { id: 'ai-hashtags', href: '/ai', icon: '#️⃣', label: 'Generate Hashtags' },
               { id: 'analytics', href: '/analytics', icon: '📈', label: 'Analytics' },
               { id: 'connect-account', href: '/accounts', icon: '🔗', label: 'Connect Account' },
-            ].map(a => (
-              <Link key={a.id} href={a.href} className="dashboard-quick-link flex items-center gap-3 p-4 text-sm font-medium text-gray-300 hover:text-white transition-all hover:scale-[1.02]">
-                <span className="text-xl">{a.icon}</span>{a.label}
-              </Link>
-            ))}
+            ].map(a => {
+              if (a.locked) {
+                return (
+                  <div key={a.id} className="dashboard-quick-link flex items-center justify-between p-4 text-sm font-medium text-slate-500 opacity-60 cursor-not-allowed select-none bg-black/10 border border-white/5 rounded-xl" title="Coming Soon">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl grayscale opacity-50">{a.icon}</span>{a.label}
+                    </div>
+                    <span className="text-xs" title="Locked feature">🔒</span>
+                  </div>
+                );
+              }
+              return (
+                <Link key={a.id} href={a.href} className="dashboard-quick-link flex items-center gap-3 p-4 text-sm font-medium text-gray-300 hover:text-white transition-all hover:scale-[1.02]">
+                  <span className="text-xl">{a.icon}</span>{a.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

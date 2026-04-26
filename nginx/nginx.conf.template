@@ -38,6 +38,11 @@ http {
                application/rss+xml application/atom+xml image/svg+xml
                application/x-font-ttf font/opentype;
 
+    # Proxy buffer tuning: keeps large API responses in memory (avoids disk tmp files)
+    proxy_buffer_size          16k;
+    proxy_buffers              16 8k;
+    proxy_busy_buffers_size    32k;
+
     limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
     limit_req_zone $binary_remote_addr zone=web:10m rate=60r/s;
 
@@ -94,6 +99,11 @@ http {
             expires 30d;
             add_header Cache-Control "public, immutable";
             add_header X-Content-Type-Options "nosniff" always;
+            # Cache open file descriptors — avoids syscall overhead on repeated media loads
+            open_file_cache          max=1000 inactive=30s;
+            open_file_cache_valid    60s;
+            open_file_cache_min_uses 2;
+            open_file_cache_errors   on;
         }
 
         location /api/ {

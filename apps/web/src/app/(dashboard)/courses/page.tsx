@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { commerceApi, unwrapApiResponse } from '@/lib/api';
+import { formatMoneyFromMinor } from '@/lib/commerce';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -125,7 +126,7 @@ export default function CoursesPage() {
                     <span>📚 {course.lessons?.length || 0} lessons</span>
                     <span>👥 {course.enrollments?.length || 0} enrolled</span>
                     <span className="font-semibold text-purple-400">
-                      {course.price ? `$${(course.price / 100).toFixed(2)}` : 'Free'}
+                      {course.price ? formatMoneyFromMinor(course.price, course.currency) : 'Free'}
                     </span>
                   </div>
 

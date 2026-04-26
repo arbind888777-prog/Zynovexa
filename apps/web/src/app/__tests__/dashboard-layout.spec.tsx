@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 const mockAuthState = {
   isAuthenticated: true,
@@ -8,7 +8,11 @@ const mockAuthState = {
   user: { name: 'Test User', plan: 'PRO', onboardingCompleted: true },
   logout: jest.fn(),
   fetchMe: jest.fn(),
+  accessToken: 'token',
+  refreshToken: 'refresh',
 };
+
+const mockReplace = jest.fn();
 
 const mockUseAuthStore = Object.assign(
   () => mockAuthState,
@@ -23,7 +27,7 @@ jest.mock('@/stores/auth.store', () => ({
 }));
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
+  useRouter: () => ({ push: jest.fn(), replace: mockReplace, prefetch: jest.fn() }),
   usePathname: () => '/dashboard',
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -45,6 +49,13 @@ const expectLink = (label: string, href: string) => {
 
 describe('Dashboard Layout — sidebar buttons & links', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthState.isAuthenticated = true;
+    mockAuthState.user = { name: 'Test User', plan: 'PRO', onboardingCompleted: true } as any;
+    mockAuthState.fetchMe.mockReset();
+  });
+
+  beforeEach(() => {
     render(
       <DashboardLayout>
         <div data-testid="child">content</div>
@@ -65,6 +76,12 @@ describe('Dashboard Layout — sidebar buttons & links', () => {
     ['Create Post', '/create'],
     ['Video Studio', '/video'],
     ['My Posts', '/posts'],
+    ['Products', '/products'],
+    ['Courses', '/courses'],
+    ['My Store', '/store'],
+    ['Buyers', '/buyers'],
+    ['Revenue', '/revenue'],
+    ['My Purchases', '/purchases'],
     ['Analytics', '/analytics'],
     ['Accounts', '/accounts'],
     ['AI Studio', '/ai'],
@@ -97,5 +114,23 @@ describe('Dashboard Layout — sidebar buttons & links', () => {
   // ─── Children rendered ────────────────────────────────
   it('renders children content', () => {
     expect(screen.getByTestId('child')).toBeTruthy();
+  });
+
+  it('redirects to login if user restore fails after hydration', async () => {
+    mockAuthState.user = null as any;
+    mockAuthState.fetchMe.mockImplementation(async () => {
+      mockAuthState.isAuthenticated = false;
+      mockAuthState.user = null as any;
+    });
+
+    render(
+      <DashboardLayout>
+        <div data-testid="child">content</div>
+      </DashboardLayout>
+    );
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/login');
+    });
   });
 });
